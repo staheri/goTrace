@@ -25,9 +25,40 @@ func main(){
     log.Fatal(err)
   }
   trace.Print(events.Events)
-  /*for _,e := range events{
+  Procs(events.Events)
+  Grtns(events.Events)
+}
 
-  }*/
+func Procs(events []*trace.Event) {
+  m := make(map[int][]*trace.Event)
+  for _,e := range events{
+    if _,ok := m[e.P]; ok{
+      m[e.P] = append(m[e.P],e)
+    } else{
+      m[e.P] = append(m[e.P],e)
+    }
+  }
+  for k,v := range m{
+    fmt.Println(k)
+    fmt.Println("***")
+    trace.Print(v)
+    fmt.Println("***")
+  }
+}
 
-
+func Grtns(events []*trace.Event) {
+  m := make(map[uint64][]*trace.Event)
+  for _,e := range events{
+    if _,ok := m[e.G]; ok{
+      m[e.G] = append(m[e.G],e)
+    } else{
+      m[e.G] = append(m[e.G],e)
+    }
+  }
+  for k,v := range m{
+    fmt.Println(k)
+    fmt.Println("---")
+    trace.Print(v)
+    fmt.Println("---")
+  }
 }
