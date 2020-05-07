@@ -4,25 +4,27 @@ import (
   "flag"
   "fmt"
   "os"
-  "strings"
+  //"strings"
   "log"
-  "github.com/staheri/goTrace/trace"
+  //"github.com/staheri/goTrace/trace"
+  "trace"
 )
 
 
 func main(){
   flag.Parse()
   args := flag.Args()
+  fmt.Println(args[0], " - ", args[1])
   f,err := os.Open(args[0])
   if err != nil{
     log.Fatal(err)
   }
   defer f.Close()
-  events, err := trace.Parse(f)
+  events, err := trace.Parse(f,args[1])
   if err != nil{
     log.Fatal(err)
   }
-  trace.Print(events)
+  trace.Print(events.Events)
   /*for _,e := range events{
 
   }*/
