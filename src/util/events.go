@@ -52,14 +52,14 @@ func (t *TraceSource) Events() ([]*trace.Event, error) {
 }
 
 func parseTrace(r io.Reader, binary string) ([]*trace.Event, error) {
-	events, err := trace.Parse(r,binary)
+	parseResult, err := trace.Parse(r,binary)
 	if err != nil {
 		return nil, err
 	}
 
-	err = trace.Symbolize(events, binary)
+	err = trace.Symbolize(parseResult.Events, binary)
 
-	return events, err
+	return parseResult.Events, err
 }
 
 // NativeRun implements EventSource for running app locally,
@@ -90,10 +90,11 @@ func (r *NativeRun) Events() ([]*trace.Event, error) {
 		}
 	}(r.Path)
 
-	tmpBinary, err := ioutil.TempFile("", "gotracer_build")
+	tmpBinary, err := ioutil.TempFile("", "goTMP")
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("%v\n",tmpBinary.Name())
 	defer os.Remove(tmpBinary.Name())
 
 	// build binary
@@ -141,34 +142,4 @@ func (r *NativeRun) RewriteSource() error {
 	r.Path = path
 
 	return nil
-}
-
-// RawSource implements EventSource for
-// raw events in JSON file.
-type RawSource struct {
-	// Path is the path to the JSON file.
-	Path string
-}
-
-// NewRawSource inits new RawSource.
-func NewRawSource(path string) *RawSource {
-	return &RawSource{
-		Path: path,
-	}
-}
-
-// Events reads JSON file from filesystem and returns events.
-func (t *RawSource) Events() ([]*trace.Event, error) {
-	f, err := os.Open(t.Path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	var events []*trace.Event
-	err = json.NewDecoder(f).Decode(&events)
-	for _, ev := range events {
-		fmt.Println("Event", ev)
-	}
-	return events, err
 }

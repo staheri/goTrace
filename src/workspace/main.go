@@ -3,9 +3,9 @@ package main
 import (
   "flag"
   "fmt"
-  "os"
+  _"os"
   //"strings"
-  "log"
+  _"log"
   //"github.com/staheri/goTrace/trace"
   "trace"
   "util"
@@ -22,14 +22,15 @@ func main(){
   //defer f.Close()
   //events, err := trace.Parse(f,args[1])
   var src util.EventSource
-  src = NewNativeRun(args[0])
+  src = util.NewNativeRun(args[0])
   events, err := src.Events()
 	if err != nil {
 		panic(err)
 	}
   //trace.Print(events.Events)
   //Procs(events.Events)
-  Grtns(events.Events)
+  //Grtns(events.Events)
+  Grtns(events)
 }
 
 func Procs(events []*trace.Event) {
