@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ var ErrImported = errors.New("trace already imported")
 
 // rewriteSource rewrites current source and saves
 // into temporary file, returning it's path.
-func rewriteSource(path string) (string, error) {
+func RewriteSource(path string) (string, error) {
 	data, err := addCode(path)
 	if err == ErrImported {
 		data, err = ioutil.ReadFile(path)
@@ -156,4 +156,3 @@ func createTraceStmts() []ast.Stmt {
 
 	return ret
 }
-

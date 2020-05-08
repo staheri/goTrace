@@ -8,22 +8,25 @@ import (
   "log"
   //"github.com/staheri/goTrace/trace"
   "trace"
+  "util"
 )
-
 
 func main(){
   flag.Parse()
   args := flag.Args()
-  fmt.Println(args[0], " - ", args[1])
-  f,err := os.Open(args[0])
-  if err != nil{
-    log.Fatal(err)
-  }
-  defer f.Close()
-  events, err := trace.Parse(f,args[1])
-  if err != nil{
-    log.Fatal(err)
-  }
+  fmt.Println(args[0])
+  //f,err := os.Open(args[0])
+  //if err != nil{
+    //log.Fatal(err)
+  //}
+  //defer f.Close()
+  //events, err := trace.Parse(f,args[1])
+  var src util.EventSource
+  src = NewNativeRun(args[0])
+  events, err := src.Events()
+	if err != nil {
+		panic(err)
+	}
   //trace.Print(events.Events)
   //Procs(events.Events)
   Grtns(events.Events)
