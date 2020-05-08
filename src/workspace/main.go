@@ -24,8 +24,8 @@ func main(){
   if err != nil{
     log.Fatal(err)
   }
-  trace.Print(events.Events)
-  Procs(events.Events)
+  //trace.Print(events.Events)
+  //Procs(events.Events)
   Grtns(events.Events)
 }
 
@@ -57,8 +57,8 @@ func Grtns(events []*trace.Event) {
   }
   for k,v := range m{
     fmt.Println(k)
-    fmt.Println("---")
+    fmt.Println("___")
     trace.Print(v)
-    fmt.Println("---")
+    fmt.Println("___")
   }
 }
