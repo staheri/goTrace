@@ -52,7 +52,7 @@ func (t *TraceSource) Events() ([]*trace.Event, error) {
 }
 
 func parseTrace(r io.Reader, binary string) ([]*trace.Event, error) {
-	events, err := trace.Parse(r)
+	events, err := trace.Parse(r,binary)
 	if err != nil {
 		return nil, err
 	}

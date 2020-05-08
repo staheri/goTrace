@@ -120,7 +120,7 @@ func parse(r io.Reader, bin string) (int, ParseResult, error) {
 		}
 	}
 	if ver < 1007 && bin != "" {
-		if err := symbolize(events, bin); err != nil {
+		if err := Symbolize(events, bin); err != nil {
 			return 0, ParseResult{}, err
 		}
 	}
@@ -848,7 +848,7 @@ func postProcessTrace(ver int, events []*Event) error {
 }
 
 // symbolize attaches func/file/line info to stack traces.
-func symbolize(events []*Event, bin string) error {
+func Symbolize(events []*Event, bin string) error {
 	// First, collect and dedup all pcs.
 	pcs := make(map[uint64]*Frame)
 	for _, ev := range events {
