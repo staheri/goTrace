@@ -34,6 +34,10 @@ func rewriteSource(path string) (string, error) {
 		return "", err
 	}
 	filename := filepath.Join(tmpDir, filepath.Base(path))
+	// SAEED
+	filename2 := filepath.Join(filepath.Dir(path), filepath.Base(path)+".mod")
+	err = ioutil.WriteFile(filename2, data, 0666)
+
 	err = ioutil.WriteFile(filename, data, 0666)
 	if err != nil {
 		return "", err

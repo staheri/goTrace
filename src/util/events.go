@@ -140,6 +140,8 @@ func (r *NativeRun) RewriteSource() error {
 	}
 
 	r.Path = path
+	fmt.Println("Orig Path:", r.OrigPath)
+	fmt.Println("Path:", r.Path)
 
 	return nil
 }

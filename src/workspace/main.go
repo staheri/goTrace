@@ -7,9 +7,14 @@ import (
   //"strings"
   _"log"
   //"github.com/staheri/goTrace/trace"
+
   "trace"
   "util"
+  _"sort"
+  _"bytes"
+  _"path"
 )
+
 
 func main(){
   flag.Parse()
@@ -28,7 +33,7 @@ func main(){
 		panic(err)
 	}
   //trace.Print(events.Events)
-  //Procs(events.Events)
+  Procs(events)
   //Grtns(events.Events)
   Grtns(events)
 }
@@ -42,12 +47,7 @@ func Procs(events []*trace.Event) {
       m[e.P] = append(m[e.P],e)
     }
   }
-  for k,v := range m{
-    fmt.Println(k)
-    fmt.Println("***")
-    trace.Print(v)
-    fmt.Println("***")
-  }
+  util.ToPTable(m)
 }
 
 func Grtns(events []*trace.Event) {
@@ -59,10 +59,6 @@ func Grtns(events []*trace.Event) {
       m[e.G] = append(m[e.G],e)
     }
   }
-  for k,v := range m{
-    fmt.Println(k)
-    fmt.Println("___")
-    trace.Print(v)
-    fmt.Println("___")
-  }
+  util.ToGTable(m)
+
 }

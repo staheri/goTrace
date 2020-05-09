@@ -961,14 +961,14 @@ func (ev *Event) String() string {
 	for i, a := range desc.SArgs {
 		fmt.Fprintf(w, " %v=%v", a, ev.SArgs[i])
 	}
-	/*for _, a := range ev.Stk {
-		if a.Fn == "main.main" || strings.Contains(a.Fn,"send") || strings.Contains(a.Fn,"Send"){
-			fmt.Fprintf(w, " (%v-%v:%v)", a.File,a.Fn, a.Line)
-		}
-	}*/
-	if len(ev.Stk) != 0{
-		fmt.Fprintf(w, " (%v-%v:%v)", ev.Stk[len(ev.Stk)-1].File,ev.Stk[len(ev.Stk)-1].Fn, ev.Stk[len(ev.Stk)-1].Line)
+	for _, a := range ev.Stk {
+		//if a.Fn == "main.main" || strings.Contains(a.Fn,"send") || strings.Contains(a.Fn,"Send"){
+		fmt.Fprintf(w, "\n\t(%v-%v:%v)", a.File,a.Fn, a.Line)
+	//}
 	}
+	//if len(ev.Stk) != 0{
+	//	fmt.Fprintf(w, " (%v-%v:%v)", ev.Stk[len(ev.Stk)-1].File,ev.Stk[len(ev.Stk)-1].Fn, ev.Stk[len(ev.Stk)-1].Line)
+	//}
 
 	return w.String()
 }
