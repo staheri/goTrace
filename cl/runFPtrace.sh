@@ -1,0 +1,34 @@
+#!/bin/bash
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemMain.0 -k 10 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemMain.0 -k 20 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemMain.0 -k 30 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemMain.0 -k 40 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemAll.0 -k 10 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemAll.0 -k 20 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemAll.0 -k 30 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemAll.0 -k 40 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfem_addMult_a_AAt_1.0 -k 10 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfem_addMult_a_AAt_1.0 -k 20 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfem_addMult_a_AAt_1.0 -k 30 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfem_addMult_a_AAt_1.0 -k 40 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfem-DenseMatrix_invert_1.0 -k 10 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfem-DenseMatrix_invert_1.0 -k 20 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfem-DenseMatrix_invert_1.0 -k 30 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfem-DenseMatrix_invert_1.0 -k 40 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemxMain.0 -k 10 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemxMain.0 -k 20 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemxMain.0 -k 30 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemxMain.0 -k 40 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemxAll.0 -k 10 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemxAll.0 -k 20 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemxAll.0 -k 30 ;
+#./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemxAll.0 -k 40 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemx_addMult_a_AAt_1.0 -k 10 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemx_addMult_a_AAt_1.0 -k 20 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemx_addMult_a_AAt_1.0 -k 30 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemx_addMult_a_AAt_1.0 -k 40 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemx-DenseMatrix_invert_1.0 -k 10 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemx-DenseMatrix_invert_1.0 -k 20 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemx-DenseMatrix_invert_1.0 -k 30 ;
+./cltrace -m 3 -p /home/saeed/diffTrace/fpTrace/traces/mfem/june18/mfemx-DenseMatrix_invert_1.0 -k 40 ;
+

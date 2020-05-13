@@ -1,0 +1,36 @@
+digraph{
+	rankdir=LR;
+
+	S0 [label = "t: 0ms"]
+
+	P0 [label="P0\lrq: 0, gfcnt: 0\l", group=p, shape=box]
+	P1 [label="P1\lrq: 0, gfcnt: 0\l", group=p, shape=box]
+	G1 [label="G1", group=g, color=green4, shape=circle]
+	G17 [label="G17", group=g, color=black, shape=circle, style=dashed]
+	G2 [label="G2", group=g, color=red, shape=circle]
+	G3 [label="G3", group=g, color=red, shape=circle]
+	G4 [label="G4", group=g, color=red, shape=circle]
+	M4 [label="M4", group=m, shape=triangle, fillcolor=white, style=filled]
+	M3 [label="M3", group=m, shape=triangle, fillcolor=yellow , style=filled]
+	M2 [label="M2", group=m, shape=triangle, fillcolor=white, style="dashed,filled"]
+	M1 [label="M1", group=m, shape=triangle, fillcolor=white, style=filled]
+	M0 [label="M0", group=m, shape=triangle, fillcolor=white, style="dashed,filled"]
+	{rank=same; P0;P1;}
+	{rank=same; M4;M3;M2;M1;M0;}
+	{rank=same; G1;G17;G2;G3;G4;}
+	S0 -> G1 [style=invis]
+	S0 -> M0 [style=invis]
+	S0 -> P0 [style=invis]
+	G1 -> M0 [style=invis]
+	M0 -> P0 [style=invis]
+	G1 -> G2 [style=invis]
+	G2 -> G3 [style=invis]
+	G3 -> G4 [style=invis]
+	G4 -> G17 [style=invis]
+	P0 -> P1 [style=invis]
+	M0 -> M1 [style=invis]
+	M1 -> M2 [style=invis]
+	M2 -> M3 [style=invis]
+	M3 -> M4 [style=invis]
+	G17 -> M1
+	}

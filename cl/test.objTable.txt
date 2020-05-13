@@ -1,0 +1,61 @@
+--------------------------
+ID   |Trace               |
+--------------------------
+48   |main                |
+21   |mfem::AddMultABt    |
+25   |mfem::AddMult_a_AAt |
+19   |mfem::AddMult_a_VVt |
+43   |mfem::BiLinear2DFiniteElement::CalcDShape|
+45   |mfem::BlockOperator::Mult|
+33   |mfem::BlockOperator::MultTranspose|
+30   |mfem::CGSolver::Mult|
+56   |mfem::CalcAdjugate  |
+5    |mfem::CalcInverse   |
+8    |mfem::DenseMatrix::Det|
+44   |mfem::DenseMatrix::Invert|
+55   |mfem::DenseMatrix::Mult|
+42   |mfem::DenseMatrix::operator*=|
+49   |mfem::DenseMatrix::operator+=|
+47   |mfem::DenseMatrix::operator=|
+53   |mfem::DenseMatrixInverse::Mult|
+18   |mfem::DiffusionIntegrator::AssembleElementMatrix|
+38   |mfem::DiffusionIntegrator::AssembleElementMatrix2|
+51   |mfem::DomainLFIntegrator::AssembleRHSElementVect|
+16   |mfem::FiniteElement::FiniteElement|
+57   |mfem::H1_TriangleElement::CalcDShape|
+9    |mfem::H1_TriangleElement::CalcShape|
+1    |mfem::H1_TriangleElement::H1_TriangleElement|
+4    |mfem::IntegrationRule::IntegrationRule|
+17   |mfem::IterativeSolver::IterativeSolver|
+46   |mfem::L2_QuadrilateralElement::CalcDShape|
+13   |mfem::L2_QuadrilateralElement::CalcShape|
+22   |mfem::L2_TriangleElement::L2_TriangleElement|
+2    |mfem::LUFactors::Factor|
+41   |mfem::Linear1DFiniteElement::CalcShape|
+32   |mfem::Linear2DFiniteElement::CalcDShape|
+6    |mfem::Linear3DFiniteElement::CalcDShape|
+14   |mfem::LinearForm::Assemble|
+54   |mfem::MassIntegrator::AssembleElementMatrix|
+52   |mfem::Mesh::CheckElementOrientation|
+50   |mfem::Mesh::UniformRefinement2D|
+7    |mfem::Mult          |
+36   |mfem::Mult(mfem::SparseMatrix const&, mfem::SparseMatrix const&, mfem::SparseMatrix*) |
+23   |mfem::PCG           |
+3    |mfem::Poly_1D::Basis::Basis|
+39   |mfem::Poly_1D::Basis::Eval|
+10   |mfem::Poly_1D::CalcChebyshev|
+35   |mfem::SparseMatrix::AddMult|
+29   |mfem::SparseMatrix::AddMultTranspose|
+12   |mfem::SparseMatrix::AddSubMatrix|
+31   |mfem::SparseMatrix::Finalize|
+26   |mfem::SparseMatrix::InnerProduct|
+15   |mfem::SparseMatrix::Mult|
+11   |mfem::SparseMatrix::MultTranspose|
+24   |mfem::TraceJumpIntegrator::AssembleFaceMatrix|
+37   |mfem::Vector::Add   |
+27   |mfem::Vector::operator*|
+40   |mfem::Vector::operator-=|
+20   |mfem::Vector::operator=|
+28   |mfem::add           |
+34   |mfem::subtract      |
+--------------------------
