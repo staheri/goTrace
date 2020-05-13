@@ -32,7 +32,7 @@ func main(){
 	if err != nil {
 		panic(err)
 	}
-  //trace.Print(events.Events)
+  //trace.Print(events)
   Procs(events)
   //Grtns(events.Events)
   Grtns(events)

@@ -235,8 +235,8 @@ var EventDescriptions = [EvCount]struct {
 	EvUserTaskEnd:       {"UserTaskEnd", 1011, true, []string{"taskid"}, nil},
 	EvUserRegion:        {"UserRegion", 1011, true, []string{"taskid", "mode", "typeid"}, []string{"name"}},
 	EvUserLog:           {"UserLog", 1011, true, []string{"id", "keyid"}, []string{"category", "message"}},
-	EvGoSend:            {"GoSend", 1011, true, []string{}, nil}, // goTrace
-	EvGoRecv:            {"GoRecv", 1011, true, []string{}, nil}, // goTrace
-	EvGoMakeChan:        {"GoMakeChan", 1011, true, []string{}, nil}, // goTrace
-	EvGoCloseChan:       {"GoCloseChan", 1011, true, []string{}, nil}, // goTrace
+	EvGoSend:            {"GoSend", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
+	EvGoRecv:            {"GoRecv", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
+	EvGoMakeChan:        {"GoMakeChan", 1011, true, []string{"cid"}, nil}, // goTrace
+	EvGoCloseChan:       {"GoCloseChan", 1011, true, []string{"cid"}, nil}, // goTrace
 }

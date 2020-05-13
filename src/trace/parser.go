@@ -328,6 +328,7 @@ func parseEvents(ver int, rawEvents []rawEvent, strings map[uint64]string) (even
 			return
 		}
 		narg := argNum(raw, ver)
+		fmt.Printf(">> Event: %v has %v args\n",desc.Name,narg)
 		if len(raw.args) != narg {
 			err = fmt.Errorf("%v has wrong number of arguments at offset 0x%x: want %v, got %v",
 				desc.Name, raw.off, narg, len(raw.args))
