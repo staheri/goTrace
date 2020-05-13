@@ -1,0 +1,241 @@
+diff -Naur go-orig/src/internal/trace/parser.go go15/go/src/internal/trace/parser.go
+--- go-orig/src/internal/trace/parser.go	2020-04-08 13:16:12.000000000 -0600
++++ go15/go/src/internal/trace/parser.go	2020-05-12 16:11:45.000000000 -0600
+@@ -1058,7 +1058,11 @@
+ 	EvUserTaskEnd       = 46 // end of task [timestamp, internal task id, stack]
+ 	EvUserRegion        = 47 // trace.WithRegion [timestamp, internal task id, mode(0:start, 1:end), stack, name string]
+ 	EvUserLog           = 48 // trace.Log [timestamp, internal id, key string id, stack, value string]
+-	EvCount             = 49
++	EvGoSend            = 49 // goTrace: goroutine on chan send [timestamp, stack]
++	EvGoRecv            = 50 // goTrace: goroutine on chan recv [timestamp, stack]
++	EvGoMakeChan        = 51 // goTrace: goroutine on make chan [timestamp, stack]
++	EvGoCloseChan       = 52 // goTrace: goroutine on clsoe chan [timestamp, stack]
++	EvCount             = 53
+ )
+ 
+ var EventDescriptions = [EvCount]struct {
+@@ -1117,4 +1121,8 @@
+ 	EvUserTaskEnd:       {"UserTaskEnd", 1011, true, []string{"taskid"}, nil},
+ 	EvUserRegion:        {"UserRegion", 1011, true, []string{"taskid", "mode", "typeid"}, []string{"name"}},
+ 	EvUserLog:           {"UserLog", 1011, true, []string{"id", "keyid"}, []string{"category", "message"}},
++	EvGoSend:            {"GoSend", 1011, true, []string{}, nil}, // goTrace
++	EvGoRecv:            {"GoRecv", 1011, true, []string{}, nil}, // goTrace
++	EvGoMakeChan:        {"GoMakeChan", 1011, true, []string{}, nil}, // goTrace
++	EvGoCloseChan:       {"GoCloseChan", 1011, true, []string{}, nil}, // goTrace
+ }
+diff -Naur go-orig/src/runtime/chan.go go15/go/src/runtime/chan.go
+--- go-orig/src/runtime/chan.go	2020-04-08 13:16:12.000000000 -0600
++++ go15/go/src/runtime/chan.go	2020-05-12 16:06:21.000000000 -0600
+@@ -30,6 +30,7 @@
+ )
+ 
+ type hchan struct {
++	id       uint64         // goTrace: channel id for using in send/recv events
+ 	qcount   uint           // total data in the queue
+ 	dataqsiz uint           // size of the circular queue
+ 	buf      unsafe.Pointer // points to an array of dataqsiz elements
+@@ -68,6 +69,11 @@
+ 	return makechan(t, int(size))
+ }
+ 
++var (
++	chID uint64 = 1
++	evID uint64 = 1
++)
++
+ func makechan(t *chantype, size int) *hchan {
+ 	elem := t.elem
+ 
+@@ -109,6 +115,9 @@
+ 	c.elemsize = uint16(elem.size)
+ 	c.elemtype = elem
+ 	c.dataqsiz = uint(size)
++	chID = atomic.Xadd64(&chID,1) //goTrace: increment channel id
++	c.id = chID                   //goTrace: assign
++	traceGoMakeChan(chID)         //goTrace: trace channel make event
+ 
+ 	if debugChan {
+ 		print("makechan: chan=", c, "; elemsize=", elem.size, "; dataqsiz=", size, "\n")
+@@ -188,6 +197,7 @@
+ 	}
+ 
+ 	if sg := c.recvq.dequeue(); sg != nil {
++		sg.cid = c.id // goTrace: set sg.cid
+ 		// Found a waiting receiver. We pass the value we want to send
+ 		// directly to the receiver, bypassing the channel buffer (if any).
+ 		send(c, sg, ep, func() { unlock(&c.lock) }, 3)
+@@ -201,6 +211,10 @@
+ 			raceacquire(qp)
+ 			racerelease(qp)
+ 		}
++
++    evID = atomic.Xadd64(&evID,1)         //goTrace: increment event id
++		traceGoSend(evID, c.id, elem2int(ep)) //goTrace: trace send event
++
+ 		typedmemmove(c.elemtype, qp, ep)
+ 		c.sendx++
+ 		if c.sendx == c.dataqsiz {
+@@ -232,6 +246,12 @@
+ 	mysg.c = c
+ 	gp.waiting = mysg
+ 	gp.param = nil
++
++	mysg.cid = c.id                                //goTrace
++	evID = atomic.Xadd64(&evID,1)                  //goTrace
++	mysg.eventid = atomic.Load64(&evID)              //goTrace
++	traceGoSend(mysg.eventid, c.id, elem2int(ep))  //goTrace: trace send event
++
+ 	c.sendq.enqueue(mysg)
+ 	gopark(chanparkcommit, unsafe.Pointer(&c.lock), waitReasonChanSend, traceEvGoBlockSend, 2)
+ 	// Ensure the value being sent is kept alive until the
+@@ -287,6 +307,11 @@
+ 			c.sendx = c.recvx // c.sendx = (c.sendx+1) % c.dataqsiz
+ 		}
+ 	}
++
++  evID = atomic.Xadd64(&evID, 1)        //goTrace: trace send event
++	sg.eventid = atomic.Load64(&evID)     //goTrace: trace send event
++	traceGoSend(evID, c.id, elem2int(ep)) //goTrace: trace send event
++
+ 	if sg.elem != nil {
+ 		sendDirect(c.elemtype, sg, ep)
+ 		sg.elem = nil
+@@ -399,6 +424,7 @@
+ 		gp.schedlink = 0
+ 		goready(gp, 3)
+ 	}
++	traceGoCloseChan(c.id)   //goTrace: trace close channel event
+ }
+ 
+ // entry points for <- c from compiled code
+@@ -464,6 +490,7 @@
+ 		if raceenabled {
+ 			raceacquire(c.raceaddr())
+ 		}
++		traceGoRecv(222, c.id, elem2int(ep)) //goTrace: trace recv event
+ 		unlock(&c.lock)
+ 		if ep != nil {
+ 			typedmemclr(c.elemtype, ep)
+@@ -490,6 +517,9 @@
+ 		if ep != nil {
+ 			typedmemmove(c.elemtype, ep, qp)
+ 		}
++
++    traceGoRecv(333, c.id, elem2int(ep)) //goTrace: trace recv event
++
+ 		typedmemclr(c.elemtype, qp)
+ 		c.recvx++
+ 		if c.recvx == c.dataqsiz {
+@@ -524,6 +554,8 @@
+ 	c.recvq.enqueue(mysg)
+ 	gopark(chanparkcommit, unsafe.Pointer(&c.lock), waitReasonChanReceive, traceEvGoBlockRecv, 2)
+ 
++  traceGoRecv(mysg.eventid, c.id, elem2int(ep)) //goTrace: trace recv event
++
+ 	// someone woke us up
+ 	if mysg != gp.waiting {
+ 		throw("G waiting list is corrupted")
+@@ -562,6 +594,7 @@
+ 			// copy data from sender
+ 			recvDirect(c.elemtype, sg, ep)
+ 		}
++		traceGoRecv(sg.eventid, c.id, elem2int(ep)) //goTrace: trace recv event
+ 	} else {
+ 		// Queue is full. Take the item at the
+ 		// head of the queue. Make the sender enqueue
+@@ -580,6 +613,9 @@
+ 		}
+ 		// copy data from sender to queue
+ 		typedmemmove(c.elemtype, qp, sg.elem)
++
++		traceGoRecv(sg.eventid, c.id, elem2int(ep)) //goTrace: trace recv event
++
+ 		c.recvx++
+ 		if c.recvx == c.dataqsiz {
+ 			c.recvx = 0
+@@ -770,3 +806,11 @@
+ 	racereleaseg(sg.g, chanbuf(c, 0))
+ 	raceacquire(chanbuf(c, 0))
+ }
++
++//goTrace: convert element (pointer) to int
++func elem2int(elem unsafe.Pointer) uint64{
++	if elem == nil{
++		return 0
++	}
++	return uint64(*((*int)(elem)))
++}
+diff -Naur go-orig/src/runtime/runtime2.go go15/go/src/runtime/runtime2.go
+--- go-orig/src/runtime/runtime2.go	2020-04-08 13:16:12.000000000 -0600
++++ go15/go/src/runtime/runtime2.go	2020-05-12 14:34:05.000000000 -0600
+@@ -365,6 +365,10 @@
+ 	waitlink    *sudog // g.waiting list or semaRoot
+ 	waittail    *sudog // semaRoot
+ 	c           *hchan // channel
++
++	eventid     uint64 // goTrace: used for correlating send/recv
++	value       string // goTrace: used for representing value to tracer
++	cid         uint64 // goTrace: channel id
+ }
+ 
+ type libcall struct {
+diff -Naur go-orig/src/runtime/select.go go15/go/src/runtime/select.go
+--- go-orig/src/runtime/select.go	2020-04-08 13:16:12.000000000 -0600
++++ go15/go/src/runtime/select.go	2020-05-12 14:40:52.000000000 -0600
+@@ -307,6 +307,7 @@
+ 			c.recvq.enqueue(sg)
+ 
+ 		case caseSend:
++			traceGoSend(sg.eventid, c.id, elem2int(sg.elem)) //goTrace: trace send event
+ 			c.sendq.enqueue(sg)
+ 		}
+ 	}
+@@ -355,6 +356,9 @@
+ 				c.sendq.dequeueSudoG(sglist)
+ 			} else {
+ 				c.recvq.dequeueSudoG(sglist)
++				if sg != nil{                                      //goTrace
++					traceGoRecv(sg.eventid, c.id, elem2int(k.elem )) //goTrace: trace recv event
++				}                                                  //goTrace
+ 			}
+ 		}
+ 		sgnext = sglist.waitlink
+diff -Naur go-orig/src/runtime/trace.go go15/go/src/runtime/trace.go
+--- go-orig/src/runtime/trace.go	2020-04-08 13:16:12.000000000 -0600
++++ go15/go/src/runtime/trace.go	2020-05-12 17:06:10.000000000 -0600
+@@ -68,7 +68,11 @@
+ 	traceEvUserTaskEnd       = 46 // end of a task [timestamp, internal task id, stack]
+ 	traceEvUserRegion        = 47 // trace.WithRegion [timestamp, internal task id, mode(0:start, 1:end), stack, name string]
+ 	traceEvUserLog           = 48 // trace.Log [timestamp, internal task id, key string id, stack, value string]
+-	traceEvCount             = 49
++	traceEvGoSend            = 49 // goTrace: goroutine on chan send [timestamp, stack]
++	traceEvGoRecv            = 50 // goTrace: goroutine on chan recv [timestamp, stack]
++	traceEvGoMakeChan        = 51 // goTrace: goroutine on make chan [timestamp, stack]
++	traceEvGoCloseChan       = 52 // goTrace: goroutine on clsoe chan [timestamp, stack]
++	traceEvCount             = 53
+ 	// Byte is used but only 6 bits are available for event type.
+ 	// The remaining 2 bits are used to specify the number of arguments.
+ 	// That means, the max event type value is 63.
+@@ -1212,3 +1216,22 @@
+ 
+ 	traceReleaseBuffer(pid)
+ }
++
++
++func traceGoSend(eid, cid, val uint64){
++	traceEvent(traceEvGoSend, 1, eid, cid, val)
++}
++
++
++func traceGoRecv(eid, cid, val uint64){
++	traceEvent(traceEvGoRecv, 1, eid, cid, val)
++}
++
++
++func traceGoMakeChan(cid uint64){
++	traceEvent(traceEvGoMakeChan, 1, cid)
++}
++
++func traceGoCloseChan(cid uint64){
++	traceEvent(traceEvGoCloseChan, 1, cid)
++}

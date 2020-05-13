@@ -49,9 +49,12 @@ func ToGTable(m map[uint64][]*trace.Event) (){
       row = append(row,w)
 
       w = ""
-      if len(ev.Stk) != 0{
+      for _,a := range ev.Stk{
+        w = w + fmt.Sprintf(" %v-%v:%v\n", path.Base(a.File),a.Fn, a.Line)
+      }
+      /*if len(ev.Stk) != 0{
     	   w = w + fmt.Sprintf(" %v-%v:%v", path.Base(ev.Stk[len(ev.Stk)-1].File),ev.Stk[len(ev.Stk)-1].Fn, ev.Stk[len(ev.Stk)-1].Line)
-    	}
+    	}*/
       row = append(row,w)
 
       t.AppendRow(row)
@@ -101,9 +104,12 @@ func ToPTable(m map[int][]*trace.Event) (){
       row = append(row,w)
 
       w = ""
-      if len(ev.Stk) != 0{
+      for _,a := range ev.Stk{
+        w = w + fmt.Sprintf(" %v-%v:%v\n", path.Base(a.File),a.Fn, a.Line)
+      }
+      /*if len(ev.Stk) != 0{
     	   w = w + fmt.Sprintf(" %v-%v:%v", path.Base(ev.Stk[len(ev.Stk)-1].File),ev.Stk[len(ev.Stk)-1].Fn, ev.Stk[len(ev.Stk)-1].Line)
-    	}
+    	}*/
       row = append(row,w)
 
       t.AppendRow(row)
@@ -166,7 +172,11 @@ const (
 	EvUserTaskEnd       = 46 // end of task [timestamp, internal task id, stack]
 	EvUserRegion        = 47 // trace.WithRegion [timestamp, internal task id, mode(0:start, 1:end), stack, name string]
 	EvUserLog           = 48 // trace.Log [timestamp, internal id, key string id, stack, value string]
-	EvCount             = 49
+	EvGoSend            = 49 // goTrace: goroutine on chan send [timestamp, stack]
+	EvGoRecv            = 50 // goTrace: goroutine on chan recv [timestamp, stack]
+	EvGoMakeChan        = 51 // goTrace: goroutine on make chan [timestamp, stack]
+	EvGoCloseChan       = 52 // goTrace: goroutine on clsoe chan [timestamp, stack]
+	EvCount             = 53
 )
 
 var EventDescriptions = [EvCount]struct {
@@ -225,4 +235,8 @@ var EventDescriptions = [EvCount]struct {
 	EvUserTaskEnd:       {"UserTaskEnd", 1011, true, []string{"taskid"}, nil},
 	EvUserRegion:        {"UserRegion", 1011, true, []string{"taskid", "mode", "typeid"}, []string{"name"}},
 	EvUserLog:           {"UserLog", 1011, true, []string{"id", "keyid"}, []string{"category", "message"}},
+	EvGoSend:            {"GoSend", 1011, true, []string{}, nil}, // goTrace
+	EvGoRecv:            {"GoRecv", 1011, true, []string{}, nil}, // goTrace
+	EvGoMakeChan:        {"GoMakeChan", 1011, true, []string{}, nil}, // goTrace
+	EvGoCloseChan:       {"GoCloseChan", 1011, true, []string{}, nil}, // goTrace
 }

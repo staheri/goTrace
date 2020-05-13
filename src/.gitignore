@@ -1,2 +1,7 @@
 *.exe
 */*.exe
+*/*/*.mod
+*/*.mod
+*/*/*.out
+*/*.out
+*.out
