@@ -5,8 +5,10 @@ import (
   "fmt"
   _"os"
   _"log"
-  "trace"
+  _"trace"
   "util"
+  "instrument"
+  "analyze"
   _"sort"
   _"bytes"
   _"path"
@@ -23,8 +25,8 @@ func main(){
   //}
   //defer f.Close()
   //events, err := trace.Parse(f,args[1])
-  var src util.EventSource
-  src = util.NewNativeRun(args[0])
+  var src instrument.EventSource
+  src = instrument.NewNativeRun(args[0])
   events, err := src.Events()
 	if err != nil {
 		panic(err)
@@ -32,31 +34,12 @@ func main(){
   //trace.Print(events)
   //Procs(events)
   //Grtns(events.Events)
-  Grtns(events)
-}
-
-func Procs(events []*trace.Event) {
-  m := make(map[int][]*trace.Event)
-  for _,e := range events{
-    if _,ok := m[e.P]; ok{
-      m[e.P] = append(m[e.P],e)
-    } else{
-      m[e.P] = append(m[e.P],e)
-    }
+  //Grtns(events)
+  objCtg := "grtn"
+  context, err := analyze.Convert(events,objCtg,"101010",5)
+  if err != nil{
+    panic(err)
   }
-  util.ToPTable(m)
-}
-
-func Grtns(events []*trace.Event) {
-  m := make(map[uint64][]*trace.Event)
-  for _,e := range events{
-    if _,ok := m[e.G]; ok{
-      m[e.G] = append(m[e.G],e)
-    } else{
-      m[e.G] = append(m[e.G],e)
-    }
-  }
-  util.ToGTable(m)
-  //util.ToGAttribute(m)
-
+  util.DispAtrMap(context,objCtg)
+  //util.GroupGrtns(events)
 }
