@@ -182,8 +182,9 @@ func readTrace(r io.Reader) (ver int, events []rawEvent, strings map[uint64]stri
 			narg++
 			inlineArgs++
 		}
+		//fmt.Printf("\t> %v\n",EventDescriptions[typ].Name)
 		if typ == EvNone || typ >= EvCount || EventDescriptions[typ].minVersion > ver {
-			err = fmt.Errorf("unknown event type %v at offset 0x%x", typ, off0)
+			err = fmt.Errorf("unknown event type %v at offset 0x%x (ver: - %v)", typ, off0, ver)
 			return
 		}
 		if typ == EvString {
@@ -1067,10 +1068,10 @@ const (
 	EvUserTaskEnd       = 46 // end of task [timestamp, internal task id, stack]
 	EvUserRegion        = 47 // trace.WithRegion [timestamp, internal task id, mode(0:start, 1:end), stack, name string]
 	EvUserLog           = 48 // trace.Log [timestamp, internal id, key string id, stack, value string]
-	EvGoSend            = 49 // goTrace: goroutine on chan send [timestamp, stack]
-	EvGoRecv            = 50 // goTrace: goroutine on chan recv [timestamp, stack]
-	EvGoMakeChan        = 51 // goTrace: goroutine on make chan [timestamp, stack]
-	EvGoCloseChan       = 52 // goTrace: goroutine on clsoe chan [timestamp, stack]
+	EvChSend            = 49 // goTrace: chan send [timestamp, stack, event id, channel id, value]
+	EvChRecv            = 50 // goTrace: chan recv [timestamp, stack, event id, channel id, value]
+	EvChMake            = 51 // goTrace: chan make [timestamp, stack, channel id]
+	EvChClose           = 52 // goTrace: chan close [timestamp, stack, channel id]
 	EvCount             = 53
 )
 
@@ -1130,8 +1131,8 @@ var EventDescriptions = [EvCount]struct {
 	EvUserTaskEnd:       {"UserTaskEnd", 1011, true, []string{"taskid"}, nil},
 	EvUserRegion:        {"UserRegion", 1011, true, []string{"taskid", "mode", "typeid"}, []string{"name"}},
 	EvUserLog:           {"UserLog", 1011, true, []string{"id", "keyid"}, []string{"category", "message"}},
-	EvGoSend:            {"GoSend", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
-	EvGoRecv:            {"GoRecv", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
-	EvGoMakeChan:        {"GoMakeChan", 1011, true, []string{"cid"}, nil}, // goTrace
-	EvGoCloseChan:       {"GoCloseChan", 1011, true, []string{"cid"}, nil}, // goTrace
+	EvChSend:            {"ChSend", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
+	EvChRecv:            {"ChRecv", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
+	EvChMake:            {"ChMake", 1011, true, []string{"cid"}, nil}, // goTrace
+	EvChClose:           {"ChClose", 1011, true, []string{"cid"}, nil}, // goTrace
 }

@@ -4,10 +4,7 @@ import (
   "flag"
   "fmt"
   _"os"
-  //"strings"
   _"log"
-  //"github.com/staheri/goTrace/trace"
-
   "trace"
   "util"
   _"sort"
@@ -33,7 +30,7 @@ func main(){
 		panic(err)
 	}
   //trace.Print(events)
-  Procs(events)
+  //Procs(events)
   //Grtns(events.Events)
   Grtns(events)
 }
@@ -60,5 +57,6 @@ func Grtns(events []*trace.Event) {
     }
   }
   util.ToGTable(m)
+  //util.ToGAttribute(m)
 
 }

@@ -7,6 +7,7 @@ import (
   "github.com/jedib0t/go-pretty/table"
   "sort"
   "trace"
+	"strconv"
 )
 
 
@@ -120,6 +121,50 @@ func ToPTable(m map[int][]*trace.Event) (){
 }
 
 
+
+func ToGAttribute(m map[uint64][]*trace.Event) (){
+	t := table.NewWriter()
+  var keys []uint64
+  for k,_ := range m{
+    keys = append(keys,k)
+  }
+  sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+
+  t.SetOutputMirror(os.Stdout)
+  t.AppendHeader(table.Row{"Object(GoRoutine)","Attribute"})
+  //w := new(bytes.Buffer)
+  //var w string
+  var prev int
+  prev = -1
+  for _,k := range keys{
+    for _,ev := range m[k]{
+      var row []interface{}
+      if int(k) != prev{
+        row = append(row,"G"+strconv.Itoa(int(k)))
+        prev = int(k)
+      } else{
+        row = append(row,"")
+      }
+      desc := EventDescriptions[ev.Type]
+      row = append(row,desc.Name)
+      t.AppendRow(row)
+    }
+    t.AppendSeparator()
+  }
+  t.Render()
+}
+
+
+func Contains(s []string, e string) bool {
+    for _, a := range s {
+        if a == e {
+            return true
+        }
+    }
+    return false
+}
+
+
 // Event types in the trace.
 // Verbatim copy from src/runtime/trace.go with the "trace" prefix removed.
 const (
@@ -172,10 +217,10 @@ const (
 	EvUserTaskEnd       = 46 // end of task [timestamp, internal task id, stack]
 	EvUserRegion        = 47 // trace.WithRegion [timestamp, internal task id, mode(0:start, 1:end), stack, name string]
 	EvUserLog           = 48 // trace.Log [timestamp, internal id, key string id, stack, value string]
-	EvGoSend            = 49 // goTrace: goroutine on chan send [timestamp, stack]
-	EvGoRecv            = 50 // goTrace: goroutine on chan recv [timestamp, stack]
-	EvGoMakeChan        = 51 // goTrace: goroutine on make chan [timestamp, stack]
-	EvGoCloseChan       = 52 // goTrace: goroutine on clsoe chan [timestamp, stack]
+	EvChSend            = 49 // goTrace: chan send [timestamp, stack, event id, channel id, value]
+	EvChRecv            = 50 // goTrace: chan recv [timestamp, stack, event id, channel id, value]
+	EvChMake            = 51 // goTrace: chan make [timestamp, stack, channel id]
+	EvChClose           = 52 // goTrace: chan close [timestamp, stack, channel id]
 	EvCount             = 53
 )
 
@@ -235,8 +280,8 @@ var EventDescriptions = [EvCount]struct {
 	EvUserTaskEnd:       {"UserTaskEnd", 1011, true, []string{"taskid"}, nil},
 	EvUserRegion:        {"UserRegion", 1011, true, []string{"taskid", "mode", "typeid"}, []string{"name"}},
 	EvUserLog:           {"UserLog", 1011, true, []string{"id", "keyid"}, []string{"category", "message"}},
-	EvGoSend:            {"GoSend", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
-	EvGoRecv:            {"GoRecv", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
-	EvGoMakeChan:        {"GoMakeChan", 1011, true, []string{"cid"}, nil}, // goTrace
-	EvGoCloseChan:       {"GoCloseChan", 1011, true, []string{"cid"}, nil}, // goTrace
+	EvChSend:            {"ChSend", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
+	EvChRecv:            {"ChRecv", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
+	EvChMake:            {"ChMake", 1011, true, []string{"cid"}, nil}, // goTrace
+	EvChClose:           {"ChClose", 1011, true, []string{"cid"}, nil}, // goTrace
 }

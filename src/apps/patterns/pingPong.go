@@ -2,13 +2,13 @@ package main
 
 import "time"
 import "fmt"
-import "os"
+
 import "strconv"
 
 func main() {
     var Ball int
     table := make(chan int)
-    pls,_ := strconv.Atoi(os.Args[1])
+    pls,_ := strconv.Atoi("5")
     for cnt := 0 ; cnt < pls ; cnt++{
       go player(table,cnt)
     }

@@ -3,11 +3,12 @@ package main
 import (
     "fmt"
     "time"
+    "sync"
 )
 
-var bound = 100
+var bound = 20
 
-func producer(ch chan int, d time.Duration) {
+func producer(ch chan int, d time.Duration, wg *sync.WaitGroup) {
     var i int
     for {
         ch <- i
@@ -17,6 +18,7 @@ func producer(ch chan int, d time.Duration) {
         }
         time.Sleep(d)
     }
+    defer wg.Done();
 }
 
 func reader(out chan int) {
@@ -26,12 +28,20 @@ func reader(out chan int) {
 }
 
 func main() {
+    wg  := &sync.WaitGroup{}
     ch := make(chan int)
     out := make(chan int)
-    go producer(ch, 100*time.Millisecond)
-    go producer(ch, 150*time.Millisecond)
+    wg.Add(2)
+    go producer(ch, 100*time.Millisecond, wg)
+    go producer(ch, 150*time.Millisecond, wg)
+
+    go func() {
+      wg.Wait()
+      close(ch)
+    }()
     go reader(out)
     for i := range ch {
         out <- i
     }
+    close(out)
 }
