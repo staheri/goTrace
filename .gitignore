@@ -1,2 +1,7 @@
 *.exe
 .DS_Store
+
+cl/obj/*
+traces/*
+scripts/*/*.dot
+scripts/*/*.pdf

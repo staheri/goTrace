@@ -6,7 +6,7 @@
 TARGET=cltrace
 
 CC=g++
-CFLAGS=-Iinclude -std=c++11 -Wall -fopenmp
+CFLAGS=-Iinclude -std=c++11 -Wall
 
 OBJ_FILES= $(patsubst obj/%.cpp,obj/%.o,$(patsubst src/%,obj/%,$(wildcard src/*.cpp) ))
 #$(info $$OBJ_FILES is [${OBJ_FILES}])

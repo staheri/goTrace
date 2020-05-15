@@ -8,11 +8,6 @@ import (
 	"path"
 )
 
-type Attribute struct{
-  event        *trace.Event
-  value        string
-}
-
 const num_of_ctgs = 6
 const num_of_atrmodes = 9
 
@@ -20,12 +15,12 @@ var ctgDescriptions = [num_of_ctgs]struct {
 	Category      string
 	Members    []string
 }{
-	0:  {"G_Goroutine", []string{"EvGoCreate","EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoWaiting","EvGoInSyscall","EvGoStartLocal","EvGoUnblockLocal","EvGoSysExitLocal","EvGoStartLabel","EvGoBlockGC"}},
-  1:  {"G_Channel",[]string{"EvChSend","EvChRecv","EvChMake","EvChClose"}},
-  2:  {"G_Process",[]string{"EvNone","EvBatch","EvFrequency","EvStack","EvGomaxprocs","EvProcStart","EvProcStop"}},
-  3:  {"G_GCmemory",[]string{"EvGCStart","EvGCDone","EvGCSTWStart","EvGCSTWDone","EvGCSweepStart","EvGCSweepDone","EvHeapAlloc","EvNextGC","EvGCMarkAssistStart","EvGCMarkAssistDone"}},
-  4:  {"G_Syscall",[]string{"EvGoSysCall","EvGoSysExit","EvGoSysBlock"}},
-  5:  {"G_MISC",[]string{"EvUserTaskCreate","EvUserTaskEnd","EvUserRegion","EvUserLog","EvTimerGoroutine","EvFutileWakeup","EvString"}},
+	0:  {"GRTN", []string{"EvGoCreate","EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoWaiting","EvGoInSyscall","EvGoStartLocal","EvGoUnblockLocal","EvGoSysExitLocal","EvGoStartLabel","EvGoBlockGC"}},
+  1:  {"CHNL",[]string{"EvChSend","EvChRecv","EvChMake","EvChClose"}},
+  2:  {"PROC",[]string{"EvNone","EvBatch","EvFrequency","EvStack","EvGomaxprocs","EvProcStart","EvProcStop"}},
+  3:  {"GCMM",[]string{"EvGCStart","EvGCDone","EvGCSTWStart","EvGCSTWDone","EvGCSweepStart","EvGCSweepDone","EvHeapAlloc","EvNextGC","EvGCMarkAssistStart","EvGCMarkAssistDone"}},
+  4:  {"SYSC",[]string{"EvGoSysCall","EvGoSysExit","EvGoSysBlock"}},
+  5:  {"MISC",[]string{"EvUserTaskCreate","EvUserTaskEnd","EvUserRegion","EvUserLog","EvTimerGoroutine","EvFutileWakeup","EvString"}},
 }
 
 const (
@@ -34,10 +29,10 @@ const (
   AtrMode_StkTopFlFn        = 2 // Top element of stack (immediate parent) - File, Function
   AtrMode_StkTopFnLn        = 3 // Top element of stack (immediate parent) - Function, Line
   AtrMode_StkTopFn          = 4 // Top element of stack (immediate parent) - Function
-  AtrMode_StkBotAll         = 5 // Bottom element of stack (immediate parent) - File, Function, Line
-  AtrMode_StkBotFlFn        = 6 // Bottom element of stack (immediate parent) - File, Function
-  AtrMode_StkBotFnLn        = 7 // Bottom element of stack (immediate parent) - Function, Line
-  AtrMode_StkBotFn          = 8 // Bottom element of stack (immediate parent) - Function
+  AtrMode_StkBotAll         = 5 // Bottom element of stack (great ancesstor) - File, Function, Line
+  AtrMode_StkBotFlFn        = 6 // Bottom element of stack (great ancesstor) - File, Function
+  AtrMode_StkBotFnLn        = 7 // Bottom element of stack (great ancesstor) - Function, Line
+  AtrMode_StkBotFn          = 8 // Bottom element of stack (great ancesstor) - Function
 )
 
 func Convert(events []*trace.Event, obj string, bitstr string, atrmode int) (m map[int][]string, err error){
@@ -106,21 +101,21 @@ func getAttribute(e *trace.Event, atrmode int) string{
   desc := EventDescriptions[e.Type]
   if len(e.Stk) != 0{
     switch atrmode{
-    case 1:
+    case AtrMode_StkTopAll:
       return fmt.Sprintf("%v:%v:%v:%v",desc.Name,path.Base(e.Stk[len(e.Stk)-1].File),e.Stk[len(e.Stk)-1].Fn, e.Stk[len(e.Stk)-1].Line)
-    case 2:
+    case AtrMode_StkTopFlFn:
       return fmt.Sprintf("%v:%v:%v:",desc.Name,path.Base(e.Stk[len(e.Stk)-1].File),e.Stk[len(e.Stk)-1].Fn)
-    case 3:
+    case AtrMode_StkTopFnLn:
       return fmt.Sprintf("%v::%v:%v",desc.Name,e.Stk[len(e.Stk)-1].Fn,e.Stk[len(e.Stk)-1].Line)
-    case 4:
+    case AtrMode_StkTopFn:
       return fmt.Sprintf("%v::%v:",desc.Name,e.Stk[len(e.Stk)-1].Fn)
-    case 5:
+    case AtrMode_StkBotAll:
       return fmt.Sprintf("%v:%v:%v:%v",desc.Name,path.Base(e.Stk[0].File),e.Stk[0].Fn, e.Stk[0].Line)
-    case 6:
+    case AtrMode_StkBotFlFn:
       return fmt.Sprintf("%v:%v:%v:",desc.Name,path.Base(e.Stk[0].File),e.Stk[0].Fn)
-    case 7:
+    case AtrMode_StkBotFnLn:
       return fmt.Sprintf("%v::%v:%v",desc.Name,e.Stk[0].Fn, e.Stk[0].Line)
-    case 8:
+    case AtrMode_StkBotFn:
       return fmt.Sprintf("%v::%v:",desc.Name,e.Stk[len(e.Stk)-1].Fn)
     default:
       return desc.Name

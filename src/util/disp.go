@@ -197,6 +197,21 @@ func DispAtrMap(m map[int][]string, obj string) {
   t.Render()
 }
 
+
+func AttributeModesDescription() string {
+	s := "Include stack snapshots\n\t\t"
+	s = s + "0: no stack\n\t\t"
+	s = s + "1: Top element of stack (immediate parent) - File, Function, Line\n\t\t"
+	s = s + "2: Top element of stack (immediate parent) - File, Function\n\t\t"
+	s = s + "3: Top element of stack (immediate parent) - Function, Line\n\t\t"
+	s = s + "4: Top element of stack (immediate parent) - Function\n\t\t"
+	s = s + "5: Bottom element of stack (great ancesstor) - File, Function, Line\n\t\t"
+	s = s + "6: Bottom element of stack (great ancesstor) - File, Function\n\t\t"
+	s = s + "7: Bottom element of stack (great ancesstor) - Function, Line\n\t\t"
+	s = s + "8: Bottom element of stack (great ancesstor) - Function\n\t\t"
+	return s
+}
+
 // Event types in the trace.
 // Verbatim copy from src/runtime/trace.go with the "trace" prefix removed.
 const (

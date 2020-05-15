@@ -109,9 +109,6 @@ int main(int argc, char* argv[]) {
 		genFPCL(globalArgs.path,globalArgs.atrMode);
 	}
 	if ( globalArgs.mode == 5 ){
-		parallelPrep(globalArgs.trace,globalArgs.filtbit,globalArgs.output);
-	}
-	if ( globalArgs.mode == 6 ){
-		genGoCL(globalArgs.path,globalArgs.atrMode,globalArgs.atrFreq,globalArgs.atrOption,globalArgs.k); 
+		genGoCL(globalArgs.path,globalArgs.atrMode,globalArgs.atrFreq,globalArgs.atrOption,globalArgs.k);
 	}
 }

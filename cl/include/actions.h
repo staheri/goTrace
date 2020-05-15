@@ -21,7 +21,6 @@
 #include <iostream>
 #include <fstream>
 #include <iterator>
-#include <omp.h>
 
 #include "prep.h"
 #include "util.h"
@@ -51,8 +50,6 @@ void texTraceBatch(string _inpath);
 void fptrace(string _trace, int k);
 
 void genFPCL(string _inpath,int _atrMode);
-
-void parallelPrep(string _trace,string _filtbit,string _output);
 
 void genGoCL(string _inpath,int _atrMode, int _atrFreq, int _atrOption, int k);
 

@@ -14,19 +14,21 @@ import (
   _"path"
 )
 
+const dir = "/Users/saeed/goTrace/"
+const outpath = dir+"traces/"
+const inpath = dir+"/src/apps/"
 
 func main(){
+  appPtr := flag.String("app", "initial/ex1-2g/ex1.2g-ok.go", "Target application (*.go)")
+  objPtr := flag.String("obj", "grtn", "Object:[grtn,proc,chan]")
+  atrPtr := flag.String("atr", "110000", "Attributes: a bitstring showing 1/0 event groups :\n\t\t\"GoRoutine,Channel,Process,GCmem,Syscall,Other\"")
+  atrModePtr := flag.Int("atrMode", 0, util.AttributeModesDescription())
   flag.Parse()
-  args := flag.Args()
-  fmt.Println(args[0])
-  //f,err := os.Open(args[0])
-  //if err != nil{
-    //log.Fatal(err)
-  //}
-  //defer f.Close()
-  //events, err := trace.Parse(f,args[1])
+
+  fmt.Println("Analyzing ", inpath+(*appPtr), "...")
   var src instrument.EventSource
-  src = instrument.NewNativeRun(args[0])
+
+  src = instrument.NewNativeRun(inpath+(*appPtr))
   events, err := src.Events()
 	if err != nil {
 		panic(err)
@@ -35,11 +37,11 @@ func main(){
   //Procs(events)
   //Grtns(events.Events)
   //Grtns(events)
-  objCtg := "grtn"
-  context, err := analyze.Convert(events,objCtg,"101010",5)
+  context, err := analyze.Convert(events,*objPtr,*atrPtr,*atrModePtr)
   if err != nil{
     panic(err)
   }
-  util.DispAtrMap(context,objCtg)
+  util.DispAtrMap(context,*objPtr)
+  util.WriteContext(outpath+util.AppName(*appPtr), *objPtr , *atrPtr , context, *atrModePtr )
   //util.GroupGrtns(events)
 }
