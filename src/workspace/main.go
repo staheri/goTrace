@@ -37,11 +37,12 @@ func main(){
   //Procs(events)
   //Grtns(events.Events)
   //Grtns(events)
-  context, err := analyze.Convert(events,*objPtr,*atrPtr,*atrModePtr)
-  if err != nil{
-    panic(err)
-  }
-  util.DispAtrMap(context,*objPtr)
-  util.WriteContext(outpath+util.AppName(*appPtr), *objPtr , *atrPtr , context, *atrModePtr )
+  //context, err := analyze.Convert(events,*objPtr,*atrPtr,*atrModePtr)
+  //if err != nil{
+  //  panic(err)
+  //}
+  analyze.TestDB()
+  //util.DispAtrMap(context,*objPtr)
+  //util.WriteContext(outpath+util.AppName(*appPtr), *objPtr , *atrPtr , context, *atrModePtr )
   //util.GroupGrtns(events)
 }
