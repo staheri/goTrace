@@ -1,3 +1,5 @@
+// adapted from code by Ivan Daniluk from https://github.com/divan
+
 package instrument
 
 import (
