@@ -8,7 +8,7 @@ import (
 	"path"
 )
 
-const num_of_ctgs = 6
+const num_of_ctgs = 7
 const num_of_atrmodes = 9
 
 var ctgDescriptions = [num_of_ctgs]struct {
@@ -17,10 +17,11 @@ var ctgDescriptions = [num_of_ctgs]struct {
 }{
 	0:  {"GRTN", []string{"EvGoCreate","EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoWaiting","EvGoInSyscall","EvGoStartLocal","EvGoUnblockLocal","EvGoSysExitLocal","EvGoStartLabel","EvGoBlockGC"}},
   1:  {"CHNL",[]string{"EvChSend","EvChRecv","EvChMake","EvChClose"}},
-  2:  {"PROC",[]string{"EvNone","EvBatch","EvFrequency","EvStack","EvGomaxprocs","EvProcStart","EvProcStop"}},
-  3:  {"GCMM",[]string{"EvGCStart","EvGCDone","EvGCSTWStart","EvGCSTWDone","EvGCSweepStart","EvGCSweepDone","EvHeapAlloc","EvNextGC","EvGCMarkAssistStart","EvGCMarkAssistDone"}},
-  4:  {"SYSC",[]string{"EvGoSysCall","EvGoSysExit","EvGoSysBlock"}},
-  5:  {"MISC",[]string{"EvUserTaskCreate","EvUserTaskEnd","EvUserRegion","EvUserLog","EvTimerGoroutine","EvFutileWakeup","EvString"}},
+	2:  {"WGRP",[]string{"EvWgAdd","EvWgDone","EvWgWait"}},
+  3:  {"PROC",[]string{"EvNone","EvBatch","EvFrequency","EvStack","EvGomaxprocs","EvProcStart","EvProcStop"}},
+  4:  {"GCMM",[]string{"EvGCStart","EvGCDone","EvGCSTWStart","EvGCSTWDone","EvGCSweepStart","EvGCSweepDone","EvHeapAlloc","EvNextGC","EvGCMarkAssistStart","EvGCMarkAssistDone"}},
+  5:  {"SYSC",[]string{"EvGoSysCall","EvGoSysExit","EvGoSysBlock"}},
+  6:  {"MISC",[]string{"EvUserTaskCreate","EvUserTaskEnd","EvUserRegion","EvUserLog","EvTimerGoroutine","EvFutileWakeup","EvString"}},
 }
 
 const (
@@ -136,6 +137,7 @@ func validateBitstr(bitstr, obj string) bool{
   }
   return true
 }
+
 // Event types in the trace.
 // Verbatim copy from src/runtime/trace.go with the "trace" prefix removed.
 const (
@@ -192,7 +194,10 @@ const (
 	EvChRecv            = 50 // goTrace: chan recv [timestamp, stack, event id, channel id, value]
 	EvChMake            = 51 // goTrace: chan make [timestamp, stack, channel id]
 	EvChClose           = 52 // goTrace: chan close [timestamp, stack, channel id]
-	EvCount             = 53
+	EvWgAdd             = 53 // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
+	EvWgDone            = 54 // goTrace: wg done (add -1) [timestamp, stack, wg id]
+	EvWgWait            = 55 // goTrace: wg wait [timestamp, stack, wg id]
+	EvCount             = 56
 )
 
 var EventDescriptions = [EvCount]struct {
@@ -255,4 +260,7 @@ var EventDescriptions = [EvCount]struct {
 	EvChRecv:            {"ChRecv", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
 	EvChMake:            {"ChMake", 1011, true, []string{"cid"}, nil}, // goTrace
 	EvChClose:           {"ChClose", 1011, true, []string{"cid"}, nil}, // goTrace
+	EvWgAdd:             {"WgAdd", 1011, true, []string{"cid","val"}, nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
+	EvWgDone:            {"WgDone", 1011, true, []string{"cid"}, nil},// goTrace: wg done (add -1) [timestamp, stack, wg id]
+	EvWgWait:            {"WgWait", 1011, true, []string{"cid"}, nil},// goTrace: wg wait [timestamp, stack, wg id]
 }
