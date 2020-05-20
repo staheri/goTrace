@@ -1072,7 +1072,10 @@ const (
 	EvChRecv            = 50 // goTrace: chan recv [timestamp, stack, event id, channel id, value]
 	EvChMake            = 51 // goTrace: chan make [timestamp, stack, channel id]
 	EvChClose           = 52 // goTrace: chan close [timestamp, stack, channel id]
-	EvCount             = 53
+	EvWgAdd             = 53 // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
+	EvWgDone            = 54 // goTrace: wg done (add -1) [timestamp, stack, wg id]
+	EvWgWait            = 55 // goTrace: wg wait [timestamp, stack, wg id]
+	EvCount             = 56
 )
 
 var EventDescriptions = [EvCount]struct {
@@ -1135,4 +1138,7 @@ var EventDescriptions = [EvCount]struct {
 	EvChRecv:            {"ChRecv", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
 	EvChMake:            {"ChMake", 1011, true, []string{"cid"}, nil}, // goTrace
 	EvChClose:           {"ChClose", 1011, true, []string{"cid"}, nil}, // goTrace
+	EvWgAdd:             {"WgAdd", 1011, true, []string{"cid","val"}, nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
+	EvWgDone:            {"WgDone", 1011, true, []string{"cid"}, nil},// goTrace: wg done (add -1) [timestamp, stack, wg id]
+	EvWgWait:            {"WgWait", 1011, true, []string{"cid"}, nil},// goTrace: wg wait [timestamp, stack, wg id]
 }

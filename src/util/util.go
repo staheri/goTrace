@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const num_of_ctgs = 6
+const num_of_ctgs = 7
 const num_of_atrmodes = 9
 
 var ctgDescriptions = [num_of_ctgs]struct {
@@ -19,10 +19,11 @@ var ctgDescriptions = [num_of_ctgs]struct {
 }{
 	0:  {"GRTN", []string{"EvGoCreate","EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoWaiting","EvGoInSyscall","EvGoStartLocal","EvGoUnblockLocal","EvGoSysExitLocal","EvGoStartLabel","EvGoBlockGC"}},
   1:  {"CHNL",[]string{"EvChSend","EvChRecv","EvChMake","EvChClose"}},
-  2:  {"PROC",[]string{"EvNone","EvBatch","EvFrequency","EvStack","EvGomaxprocs","EvProcStart","EvProcStop"}},
-  3:  {"GCMM",[]string{"EvGCStart","EvGCDone","EvGCSTWStart","EvGCSTWDone","EvGCSweepStart","EvGCSweepDone","EvHeapAlloc","EvNextGC","EvGCMarkAssistStart","EvGCMarkAssistDone"}},
-  4:  {"SYSC",[]string{"EvGoSysCall","EvGoSysExit","EvGoSysBlock"}},
-  5:  {"MISC",[]string{"EvUserTaskCreate","EvUserTaskEnd","EvUserRegion","EvUserLog","EvTimerGoroutine","EvFutileWakeup","EvString"}},
+	2:  {"WGRP",[]string{"EvWgAdd","EvWgDone","EvWgWait"}},
+  3:  {"PROC",[]string{"EvNone","EvBatch","EvFrequency","EvStack","EvGomaxprocs","EvProcStart","EvProcStop"}},
+  4:  {"GCMM",[]string{"EvGCStart","EvGCDone","EvGCSTWStart","EvGCSTWDone","EvGCSweepStart","EvGCSweepDone","EvHeapAlloc","EvNextGC","EvGCMarkAssistStart","EvGCMarkAssistDone"}},
+  5:  {"SYSC",[]string{"EvGoSysCall","EvGoSysExit","EvGoSysBlock"}},
+  6:  {"MISC",[]string{"EvUserTaskCreate","EvUserTaskEnd","EvUserRegion","EvUserLog","EvTimerGoroutine","EvFutileWakeup","EvString"}},
 }
 
 func Contains(s []string, e string) bool {
