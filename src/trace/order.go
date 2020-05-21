@@ -276,4 +276,4 @@ func (l eventSeqList) Less(i, j int) bool {
 
 func (l eventSeqList) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
-}
+}  

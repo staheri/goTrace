@@ -35,7 +35,7 @@ func goCmd() string {
 type Event struct {
 	Off   int       // offset in input file (for debugging and error reporting)
 	Type  byte      // one of Ev*
-	Seq   int64     // sequence number
+	Seq   int64     // sequence number //goTrace: changed from seq to Seq
 	Ts    int64     // timestamp in nanoseconds
 	P     int       // P on which the event happened (can be one of TimerP, NetpollP, SyscallP)
 	G     uint64    // G on which the event happened
