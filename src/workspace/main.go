@@ -8,10 +8,11 @@ import (
   _"trace"
   "util"
   "instrument"
-  "analyze"
+  "cl"
   _"sort"
   _"bytes"
   _"path"
+  "db"
 )
 
 const dir = "/Users/saeed/goTrace/"
@@ -20,9 +21,9 @@ const inpath = dir+"/src/apps/"
 
 func main(){
   appPtr := flag.String("app", "initial/ex1-2g/ex1.2g-ok.go", "Target application (*.go)")
-  objPtr := flag.String("obj", "grtn", "Object:[grtn,proc,chan]")
-  atrPtr := flag.String("atr", "1110000", "Attributes: a bitstring showing 1/0 event groups :\n\t\t\"GoRoutine,Channel,Process,GCmem,Syscall,Other\"")
-  atrModePtr := flag.Int("atrMode", 0, util.AttributeModesDescription())
+  //objPtr := flag.String("obj", "grtn", "Object:[grtn,proc,chan]")
+  //atrPtr := flag.String("atr", "1110000", "Attributes: a bitstring showing 1/0 event groups :\n\t\t\"GoRoutine,Channel,Process,GCmem,Syscall,Other\"")
+  //atrModePtr := flag.Int("atrMode", 0, util.AttributeModesDescription())
   flag.Parse()
 
   fmt.Println("Analyzing ", inpath+(*appPtr), "...")
@@ -37,13 +38,14 @@ func main(){
   //Procs(events)
   //Grtns(events.Events)
   //Grtns(events)
-  //Store(events)
-  context, err := analyze.Convert(events,*objPtr,*atrPtr,*atrModePtr)
-  if err != nil{
-    panic(err)
-  }
+  //
+  //context, err := cl.Convert(events,*objPtr,*atrPtr,*atrModePtr)
+  //if err != nil{
+    //panic(err)
+  //}
   //analyze.TestDB()
-  util.DispAtrMap(context,*objPtr)
-  //util.WriteContext(outpath+util.AppName(*appPtr), *objPtr , *atrPtr , context, *atrModePtr )
-  util.GroupGrtns(events)
+  //cl.DispAtrMap(context,*objPtr)
+  //cl.WriteContext(outpath+util.AppName(*appPtr), *objPtr , *atrPtr , context, *atrModePtr )
+  cl.GroupGrtns(events)
+  db.Store(events,util.AppName(*appPtr))
 }
