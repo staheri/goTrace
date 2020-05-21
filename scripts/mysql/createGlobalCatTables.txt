@@ -1,0 +1,78 @@
+CREATE TABLE catGRTN(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
+CREATE TABLE catCHNL(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
+CREATE TABLE catWGRP(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
+CREATE TABLE catPROC(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
+CREATE TABLE catGCMM(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
+CREATE TABLE catSYSC(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
+CREATE TABLE catMUTX(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
+CREATE TABLE catMISC(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
+
+insert into catGRTN (eventName) VALUES ("EvGoCreate");
+insert into catGRTN (eventName) VALUES ("EvGoStart");
+insert into catGRTN (eventName) VALUES ("EvGoEnd");
+insert into catGRTN (eventName) VALUES ("EvGoStop");
+insert into catGRTN (eventName) VALUES ("EvGoSched");
+insert into catGRTN (eventName) VALUES ("EvGoPreempt");
+insert into catGRTN (eventName) VALUES ("EvGoSleep");
+insert into catGRTN (eventName) VALUES ("EvGoBlock");
+insert into catGRTN (eventName) VALUES ("EvGoUnblock");
+insert into catGRTN (eventName) VALUES ("EvGoBlockSend");
+insert into catGRTN (eventName) VALUES ("EvGoBlockRecv");
+insert into catGRTN (eventName) VALUES ("EvGoBlockSelect");
+insert into catGRTN (eventName) VALUES ("EvGoBlockSync");
+insert into catGRTN (eventName) VALUES ("EvGoBlockCond");
+insert into catGRTN (eventName) VALUES ("EvGoBlockNet");
+insert into catGRTN (eventName) VALUES ("EvGoWaiting");
+insert into catGRTN (eventName) VALUES ("EvGoInSyscall");
+insert into catGRTN (eventName) VALUES ("EvGoStartLocal");
+insert into catGRTN (eventName) VALUES ("EvGoUnblockLocal");
+insert into catGRTN (eventName) VALUES ("EvGoSysExitLocal");
+insert into catGRTN (eventName) VALUES ("EvGoStartLabel");
+insert into catGRTN (eventName) VALUES ("EvGoBlockGC");
+
+insert into catCHNL (eventName) VALUES ("EvChSend");
+insert into catCHNL (eventName) VALUES ("EvChRecv");
+insert into catCHNL (eventName) VALUES ("EvChMake");
+insert into catCHNL (eventName) VALUES ("EvChClose");
+
+
+insert into catWGRP (eventName) VALUES ("EvWgAdd");
+insert into catWGRP (eventName) VALUES ("EvWgDone");
+insert into catWGRP (eventName) VALUES ("EvWgWait");
+
+
+insert into catPROC (eventName) VALUES ("EvNone");
+insert into catPROC (eventName) VALUES ("EvBatch");
+insert into catPROC (eventName) VALUES ("EvFrequency");
+insert into catPROC (eventName) VALUES ("EvStack");
+insert into catPROC (eventName) VALUES ("EvGomaxprocs");
+insert into catPROC (eventName) VALUES ("EvProcStart");
+insert into catPROC (eventName) VALUES ("EvProcStop");
+
+insert into catGCMM (eventName) VALUES ("EvGCStart");
+insert into catGCMM (eventName) VALUES ("EvGCDone");
+insert into catGCMM (eventName) VALUES ("EvGCSTWStart");
+insert into catGCMM (eventName) VALUES ("EvGCSTWDone");
+insert into catGCMM (eventName) VALUES ("EvGCSweepStart");
+insert into catGCMM (eventName) VALUES ("EvGCSweepDone");
+insert into catGCMM (eventName) VALUES ("EvHeapAlloc");
+insert into catGCMM (eventName) VALUES ("EvNextGC");
+insert into catGCMM (eventName) VALUES ("EvGCMarkAssistStart");
+insert into catGCMM (eventName) VALUES ("EvGCMarkAssistDone");
+
+insert into catSYSC (eventName) VALUES ("EvGoSysCall");
+insert into catSYSC (eventName) VALUES ("EvGoSysExit");
+insert into catSYSC (eventName) VALUES ("EvGoSysBlock");
+
+insert into catMISC (eventName) VALUES ("EvUserTaskCreate");
+insert into catMISC (eventName) VALUES ("EvUserTaskEnd");
+insert into catMISC (eventName) VALUES ("EvUserRegion");
+insert into catMISC (eventName) VALUES ("EvUserLog");
+insert into catMISC (eventName) VALUES ("EvTimerGoroutine");
+insert into catMISC (eventName) VALUES ("EvFutileWakeup");
+insert into catMISC (eventName) VALUES ("EvString");
+
+insert into catMUTX (eventName) VALUES ("EvMuLock");
+insert into catMUTX (eventName) VALUES ("EvMuUnlock");
+insert into catMUTX (eventName) VALUES ("EvRWMLock");
+insert into catMUTX (eventName) VALUES ("EvRWMUnlock");
