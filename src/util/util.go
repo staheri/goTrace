@@ -4,6 +4,7 @@ import (
 	"strings"
 )
 
+// If s contains e
 func Contains(s []string, e string) bool {
     for _, a := range s {
         if a == "Ev"+e {
@@ -13,6 +14,7 @@ func Contains(s []string, e string) bool {
     return false
 }
 
+// Returns appName from long paths (omitting forbidden chars for database)
 func AppName(app string) string{
 	a := strings.Split(app,"/")
 	b := strings.Split(a[len(a)-1],".")
