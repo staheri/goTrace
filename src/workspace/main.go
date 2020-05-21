@@ -37,6 +37,7 @@ func main(){
   //Procs(events)
   //Grtns(events.Events)
   //Grtns(events)
+  //Store(events)
   context, err := analyze.Convert(events,*objPtr,*atrPtr,*atrModePtr)
   if err != nil{
     panic(err)
