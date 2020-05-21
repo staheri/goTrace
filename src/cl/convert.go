@@ -11,7 +11,6 @@ import (
 	"sort"
 )
 
-
 func Convert(events []*trace.Event, obj string, bitstr string, atrmode int) (m map[int][]string, err error){
   m = make(map[int][]string)
   var objkey int // hold object key

@@ -10,7 +10,6 @@ import (
 	"strconv"
 )
 
-
 func DispGTable(m map[uint64][]*trace.Event) (){
   t := table.NewWriter()
   var keys []uint64
@@ -65,8 +64,6 @@ func DispGTable(m map[uint64][]*trace.Event) (){
   t.Render()
 }
 
-
-
 func DispPTable(m map[int][]*trace.Event) (){
   t := table.NewWriter()
   var keys []int
@@ -120,8 +117,6 @@ func DispPTable(m map[int][]*trace.Event) (){
   t.Render()
 }
 
-
-
 func DispGAttribute(m map[uint64][]*trace.Event) (){
 	t := table.NewWriter()
   var keys []uint64
@@ -153,7 +148,6 @@ func DispGAttribute(m map[uint64][]*trace.Event) (){
   }
   t.Render()
 }
-
 
 func DispAtrMap(m map[int][]string, obj string) {
 	t := table.NewWriter()
