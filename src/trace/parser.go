@@ -1075,7 +1075,13 @@ const (
 	EvWgAdd             = 53 // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
 	EvWgDone            = 54 // goTrace: wg done (add -1) [timestamp, stack, wg id]
 	EvWgWait            = 55 // goTrace: wg wait [timestamp, stack, wg id]
-	EvCount             = 56
+	EvMuLock            = 56 // goTrace: mu lock [timestamp, stack, mu id]
+	EvMuUnlock          = 57 // goTrace: mu unlock [timestamp, stack, mu id]
+	EvRWMLock           = 58 // goTrace: rw lock [timestamp, stack, rw id]
+	EvRWMUnlock         = 59 // goTrace: rw unlock [timestamp, stack, rw id]
+	EvRWMrLock          = 60 // goTrace: rw rlock [timestamp, stack, rw id]
+	EvRWMrUnlock        = 61 // goTrace: rw runlock [timestamp, stack, rw id]
+	EvCount             = 62
 )
 
 var EventDescriptions = [EvCount]struct {
@@ -1141,4 +1147,10 @@ var EventDescriptions = [EvCount]struct {
 	EvWgAdd:             {"WgAdd", 1011, true, []string{"cid","val"}, nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
 	EvWgDone:            {"WgDone", 1011, true, []string{"cid"}, nil},// goTrace: wg done (add -1) [timestamp, stack, wg id]
 	EvWgWait:            {"WgWait", 1011, true, []string{"cid"}, nil},// goTrace: wg wait [timestamp, stack, wg id]
+	EvMuLock:            {"MuLock",1011,true,[]string{"muid"},nil}, // goTrace: mu lock [timestamp, stack, mu id]
+	EvMuUnlock:          {"MuUnlock",1011,true,[]string{"muid"},nil}, // goTrace: mu unlock [timestamp, stack, mu id]
+	EvRWMLock:           {"RWMLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw lock [timestamp, stack, rw id]
+	EvRWMUnlock:         {"RWMUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw unlock [timestamp, stack, rw id]
+	EvRWMrLock:          {"RWMrLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw rlock [timestamp, stack, rw id]
+	EvRWMrUnlock:        {"RWMrUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw runlock [timestamp, stack, rw id]
 }

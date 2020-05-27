@@ -280,7 +280,13 @@ const (
 	EvWgAdd             = 53 // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
 	EvWgDone            = 54 // goTrace: wg done (add -1) [timestamp, stack, wg id]
 	EvWgWait            = 55 // goTrace: wg wait [timestamp, stack, wg id]
-	EvCount             = 56
+	EvMuLock            = 56 // goTrace: mu lock [timestamp, stack, mu id]
+	EvMuUnlock          = 57 // goTrace: mu unlock [timestamp, stack, mu id]
+	EvRWMLock           = 58 // goTrace: rw lock [timestamp, stack, rw id]
+	EvRWMUnlock         = 59 // goTrace: rw unlock [timestamp, stack, rw id]
+	EvRWMrLock          = 60 // goTrace: rw rlock [timestamp, stack, rw id]
+	EvRWMrUnlock        = 61 // goTrace: rw runlock [timestamp, stack, rw id]
+	EvCount             = 62
 )
 
 var EventDescriptions = [EvCount]struct {
@@ -346,10 +352,16 @@ var EventDescriptions = [EvCount]struct {
 	EvWgAdd:             {"WgAdd", 1011, true, []string{"cid","val"}, nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
 	EvWgDone:            {"WgDone", 1011, true, []string{"cid"}, nil},// goTrace: wg done (add -1) [timestamp, stack, wg id]
 	EvWgWait:            {"WgWait", 1011, true, []string{"cid"}, nil},// goTrace: wg wait [timestamp, stack, wg id]
+	EvMuLock:            {"MuLock",1011,true,[]string{"muid"},nil}, // goTrace: mu lock [timestamp, stack, mu id]
+	EvMuUnlock:          {"MuUnlock",1011,true,[]string{"muid"},nil}, // goTrace: mu unlock [timestamp, stack, mu id]
+	EvRWMLock:           {"RWMLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw lock [timestamp, stack, rw id]
+	EvRWMUnlock:         {"RWMUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw unlock [timestamp, stack, rw id]
+	EvRWMrLock:          {"RWMrLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw rlock [timestamp, stack, rw id]
+	EvRWMrUnlock:        {"RWMrUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw runlock [timestamp, stack, rw id]
 }
 
 
-const num_of_ctgs = 7
+const num_of_ctgs = 8
 const num_of_atrmodes = 9
 
 var ctgDescriptions = [num_of_ctgs]struct {
@@ -359,10 +371,11 @@ var ctgDescriptions = [num_of_ctgs]struct {
 	0:  {"GRTN", []string{"EvGoCreate","EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoWaiting","EvGoInSyscall","EvGoStartLocal","EvGoUnblockLocal","EvGoSysExitLocal","EvGoStartLabel","EvGoBlockGC"}},
   1:  {"CHNL",[]string{"EvChSend","EvChRecv","EvChMake","EvChClose"}},
 	2:  {"WGRP",[]string{"EvWgAdd","EvWgDone","EvWgWait"}},
-  3:  {"PROC",[]string{"EvNone","EvBatch","EvFrequency","EvStack","EvGomaxprocs","EvProcStart","EvProcStop"}},
-  4:  {"GCMM",[]string{"EvGCStart","EvGCDone","EvGCSTWStart","EvGCSTWDone","EvGCSweepStart","EvGCSweepDone","EvHeapAlloc","EvNextGC","EvGCMarkAssistStart","EvGCMarkAssistDone"}},
-  5:  {"SYSC",[]string{"EvGoSysCall","EvGoSysExit","EvGoSysBlock"}},
-  6:  {"MISC",[]string{"EvUserTaskCreate","EvUserTaskEnd","EvUserRegion","EvUserLog","EvTimerGoroutine","EvFutileWakeup","EvString"}},
+	3:  {"MUTX",[]string{"EvMuLock","EvMuUnlock","EvRWMLock","EvRWMrLock","EvRWMrUnlock","EvRWMUnlock"}},
+  4:  {"PROC",[]string{"EvNone","EvBatch","EvFrequency","EvStack","EvGomaxprocs","EvProcStart","EvProcStop"}},
+  5:  {"GCMM",[]string{"EvGCStart","EvGCDone","EvGCSTWStart","EvGCSTWDone","EvGCSweepStart","EvGCSweepDone","EvHeapAlloc","EvNextGC","EvGCMarkAssistStart","EvGCMarkAssistDone"}},
+  6:  {"SYSC",[]string{"EvGoSysCall","EvGoSysExit","EvGoSysBlock"}},
+  7:  {"MISC",[]string{"EvUserTaskCreate","EvUserTaskEnd","EvUserRegion","EvUserLog","EvTimerGoroutine","EvFutileWakeup","EvString"}},
 }
 
 const (
