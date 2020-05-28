@@ -38,7 +38,7 @@ func DispGTable(m map[uint64][]*trace.Event) (){
       row = append(row,desc.Name)
       w = ""
       for i, a := range desc.Args {
-    		w = w + fmt.Sprintf(" %v=%v", a, ev.Args[i])
+    		w = w + fmt.Sprintf(" %v=%v", a, int64(ev.Args[i]))
     	}
       row = append(row,w)
 

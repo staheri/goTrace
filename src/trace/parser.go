@@ -957,7 +957,7 @@ func (ev *Event) String() string {
 	w := new(bytes.Buffer)
 	fmt.Fprintf(w, "%v %v p=%v g=%v off=%v", ev.Ts, desc.Name, ev.P, ev.G, ev.Off)
 	for i, a := range desc.Args {
-		fmt.Fprintf(w, " %v=%v", a, ev.Args[i])
+		fmt.Fprintf(w, " %v=%v", a, int64(ev.Args[i]))
 	}
 	for i, a := range desc.SArgs {
 		fmt.Fprintf(w, " %v=%v", a, ev.SArgs[i])

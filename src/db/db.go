@@ -157,7 +157,7 @@ func insertArgs(eventID int64, args [3]uint64, descArgs []string, db *sql.DB) {
 		s = s + " VALUES ("
 		s = s + strconv.FormatInt(eventID,10) + ", "
 		s = s + "\""+ a + "\", "
-		s = s + strconv.FormatUint(args[i],10)
+		s = s + strconv.FormatInt(int64(args[i]),10)
 		s = s +");"
 		fmt.Printf("> Executing %s ...\n",s)
 		_,err := db.Exec(s)
