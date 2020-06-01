@@ -1,9 +1,9 @@
 package main
 
 import (
+	"os"
 	"time"
 	"runtime/trace"
-	"os"
 )
 
 func main() {
@@ -15,7 +15,7 @@ func main() {
 	ch := make(chan int)
 	go send(ch)
 	go recv(ch)
-	time.Sleep(100 * time.Millisecond)
+
 }
 
 func send(ch chan int) {

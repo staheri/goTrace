@@ -1,12 +1,12 @@
 package main
 
-import "time"
+//import "time"
 
 func main(){
   ch := make(chan int)
   go send(ch)
   go recv(ch)
-  time.Sleep(100 * time.Millisecond)
+  //time.Sleep(100 * time.Millisecond)
 }
 
 func send(ch chan int){
