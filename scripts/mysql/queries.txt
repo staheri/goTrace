@@ -1,0 +1,42 @@
+- Number of distinct goroutines created (G IDs):
++
+SELECT COUNT(DISTINCT(g)) FROM Events;
+
+- Number of parent goroutines (GoCreate):
++
+SELECT COUNT(*) FROM Events WHERE type="EvGoCreate";
+
+- Show parent goroutines (GoCreate):
++
+SELECT * FROM Events WHERE type="EvGoCreate";
+
+- Number of goroutines ended (GoEnd):
++
+SELECT COUNT(*) FROM Events WHERE type="EvGoEnd";
+
+- Show GoCreate + Arguments
++
+SELECT t1.type, t1.g, t3.arg, t3.value
+FROM Events t1
+INNER JOIN Args t3 ON t1.id = t3.eventID
+ORDER BY g;
+
+- Show GoCreate + StackFrames
++
+SELECT t1.type, t1.g, t3.func, t3.file, t3.line
+FROM Events t1
+INNER JOIN StackFrames t3 ON t1.id = t3.eventID
+ORDER BY g;
+
+
+- Show Channel operations
+
+
+
+
+SELECT type,g,t3.arg, t3.value
+FROM Events t1
+INNER JOIN global.catCHNL t2 ON t1.type = t2.eventName
+INNER JOIN Args t3 ON t1.id = t3.eventID
+WHERE t3.arg="val"
+ORDER BY g;
