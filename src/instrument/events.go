@@ -66,12 +66,14 @@ func parseTrace(r io.Reader, binary string) ([]*trace.Event, error) {
 // using native Go installation.
 type NativeRun struct {
 	OrigPath, Path string
+	timeout        int
 }
 
 // NewNativeRun inits new NativeRun source.
-func NewNativeRun(path string) *NativeRun {
+func NewNativeRun(path string, to int) *NativeRun {
 	return &NativeRun{
 		OrigPath: path,
+		timeout:  to,
 	}
 }
 
@@ -80,7 +82,7 @@ func NewNativeRun(path string) *NativeRun {
 // installation and returns parsed events.
 func (r *NativeRun) Events() ([]*trace.Event, error) {
 	// rewrite AST
-	err := r.RewriteSource()
+	err := r.RewriteSource(r.timeout)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't rewrite source code: %v", err)
 	}
@@ -133,8 +135,8 @@ func (r *NativeRun) Events() ([]*trace.Event, error) {
 
 // RewriteSource attempts to add trace-related code if needed.
 // TODO: add support for multiple files and package selectors
-func (r *NativeRun) RewriteSource() error {
-	path, err := rewriteSource(r.OrigPath)
+func (r *NativeRun) RewriteSource(timeout int) error {
+	path, err := rewriteSource(r.OrigPath, timeout)
 	if err != nil {
 		return err
 	}

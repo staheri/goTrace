@@ -14,14 +14,16 @@ import (
 	"golang.org/x/tools/go/ast/astutil"
 
 	"golang.org/x/tools/go/loader"
+
+	"strconv"
 )
 
 var ErrImported = errors.New("trace already imported")
 
 // rewriteSource rewrites current source and saves
 // into temporary file, returning it's path.
-func rewriteSource(path string) (string, error) {
-	data, err := addCode(path)
+func rewriteSource(path string,timeout int) (string, error) {
+	data, err := addCode(path,timeout)
 	if err == ErrImported {
 		data, err = ioutil.ReadFile(path)
 		if err != nil {
@@ -50,7 +52,7 @@ func rewriteSource(path string) (string, error) {
 
 // addCode searches for main func in data, and updates AST code
 // adding tracing functions.
-func addCode(path string) ([]byte, error) {
+func addCode(path string, timeout int) ([]byte, error) {
 	var conf loader.Config
 	if _, err := conf.FromArgs([]string{path}, false); err != nil {
 		return nil, err
@@ -77,6 +79,9 @@ func addCode(path string) ([]byte, error) {
 	astutil.AddImport(prog.Fset, astFile, "os")
 	astutil.AddImport(prog.Fset, astFile, "runtime/trace")
 	astutil.AddImport(prog.Fset, astFile, "time")
+	if timeout > 0{
+		astutil.AddNamedImport(prog.Fset, astFile, "_", "net")
+	}
 
 	// add start/stop code
 	ast.Inspect(astFile, func(n ast.Node) bool {
@@ -84,7 +89,7 @@ func addCode(path string) ([]byte, error) {
 		case *ast.FuncDecl:
 			// find 'main' function
 			if x.Name.Name == "main" && x.Recv == nil {
-				stmts := createTraceStmts()
+				stmts := createTraceStmts(timeout)
 				stmts = append(stmts, x.Body.List...)
 				x.Body.List = stmts
 				return true
@@ -102,7 +107,7 @@ func addCode(path string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func createTraceStmts() []ast.Stmt {
+func createTraceStmts(timeout int) []ast.Stmt {
 	ret := make([]ast.Stmt, 2)
 
 	// trace.Start(os.Stderr)
@@ -120,44 +125,95 @@ func createTraceStmts() []ast.Stmt {
 			},
 		},
 	}
-
-	// defer func(){ time.Sleep(50*time.Millisecond; trace.Stop() }()
-	ret[1] = &ast.DeferStmt{
-		Call: &ast.CallExpr{
-			Fun: &ast.FuncLit{
-				Body: &ast.BlockStmt{
-					List: []ast.Stmt{
-						&ast.ExprStmt{
-							X: &ast.CallExpr{
-								Fun: &ast.SelectorExpr{
-									X:   &ast.Ident{Name: "time"},
-									Sel: &ast.Ident{Name: "Sleep"},
-								},
-								Args: []ast.Expr{
-									&ast.BinaryExpr{
-										X:  &ast.BasicLit{Kind: token.INT, Value: "50"},
-										Op: token.MUL,
-										Y: &ast.SelectorExpr{
-											X:   &ast.Ident{Name: "time"},
-											Sel: &ast.Ident{Name: "Millisecond"},
+	if timeout > 0{
+		// go func(){ <-time.After(5 * time.Second) trace.Stop() os.Exit(1) }()
+		ret[1] = &ast.GoStmt{
+			Call: &ast.CallExpr{
+				Fun: &ast.FuncLit{
+					Body: &ast.BlockStmt{
+						List: []ast.Stmt{
+							&ast.ExprStmt{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X:   &ast.Ident{Name: "time"},
+										Sel: &ast.Ident{Name: "Sleep"},
+									},
+									Args: []ast.Expr{
+										&ast.BinaryExpr{
+											X:  &ast.BasicLit{Kind: token.INT, Value: strconv.Itoa(timeout)},
+											Op: token.MUL,
+											Y: &ast.SelectorExpr{
+												X:   &ast.Ident{Name: "time"},
+												Sel: &ast.Ident{Name: "Second"},
+											},
 										},
 									},
 								},
 							},
-						},
-						&ast.ExprStmt{
-							X: &ast.CallExpr{
-								Fun: &ast.SelectorExpr{
-									X:   &ast.Ident{Name: "trace"},
-									Sel: &ast.Ident{Name: "Stop"},
+							&ast.ExprStmt{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X:   &ast.Ident{Name: "trace"},
+										Sel: &ast.Ident{Name: "Stop"},
+									},
+								},
+							},
+							&ast.ExprStmt{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X:   &ast.Ident{Name: "os"},
+										Sel: &ast.Ident{Name: "Exit"},
+									},
+									Args: []ast.Expr{
+										&ast.BasicLit{Kind: token.INT, Value: "0"},
+									},
 								},
 							},
 						},
 					},
+					Type: &ast.FuncType{Params: &ast.FieldList{}},
 				},
-				Type: &ast.FuncType{Params: &ast.FieldList{}},
 			},
-		},
+		}
+	} else{
+		// defer func(){ time.Sleep(50*time.Millisecond; trace.Stop() }()
+		ret[1] = &ast.DeferStmt{
+			Call: &ast.CallExpr{
+				Fun: &ast.FuncLit{
+					Body: &ast.BlockStmt{
+						List: []ast.Stmt{
+							&ast.ExprStmt{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X:   &ast.Ident{Name: "time"},
+										Sel: &ast.Ident{Name: "Sleep"},
+									},
+									Args: []ast.Expr{
+										&ast.BinaryExpr{
+											X:  &ast.BasicLit{Kind: token.INT, Value: "50"},
+											Op: token.MUL,
+											Y: &ast.SelectorExpr{
+												X:   &ast.Ident{Name: "time"},
+												Sel: &ast.Ident{Name: "Millisecond"},
+											},
+										},
+									},
+								},
+							},
+							&ast.ExprStmt{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X:   &ast.Ident{Name: "trace"},
+										Sel: &ast.Ident{Name: "Stop"},
+									},
+								},
+							},
+						},
+					},
+					Type: &ast.FuncType{Params: &ast.FieldList{}},
+				},
+			},
+		}
 	}
 
 	return ret

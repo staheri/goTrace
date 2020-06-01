@@ -1,7 +1,14 @@
 *.exe
 */*.exe
+
 */*/*.mod
 */*.mod
+
 */*/*.out
 */*.out
 *.out
+
+
+test.go
+*/test.go
+*/*/test.go
