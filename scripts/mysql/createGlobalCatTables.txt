@@ -76,3 +76,5 @@ insert into catMUTX (eventName) VALUES ("EvMuLock");
 insert into catMUTX (eventName) VALUES ("EvMuUnlock");
 insert into catMUTX (eventName) VALUES ("EvRWMLock");
 insert into catMUTX (eventName) VALUES ("EvRWMUnlock");
+insert into catMUTX (eventName) VALUES ("EvRWMrLock");
+insert into catMUTX (eventName) VALUES ("EvRWMrUnlock");
