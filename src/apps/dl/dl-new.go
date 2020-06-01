@@ -1,7 +1,6 @@
 package main
 
 import "fmt"
-import _ "net"
 
 func test_a(test_channel chan int) {
   test_channel <- 1
@@ -13,8 +12,8 @@ func test() {
   for i := 0; i < 10; i++ {
     go test_a(test_channel)
   }
-  for i := range test_channel {
-    fmt.Println(i)
+  for {
+    fmt.Println(<-test_channel)
   }
 }
 func main() {

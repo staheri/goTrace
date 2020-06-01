@@ -14,7 +14,8 @@ func main() {
   go func() {
     m.Lock()
     select{
-      case ch1 <- 1:
+    case res:= <- ch1:
+        fmt.Println(res)
       default:
     }
     m.Unlock()
@@ -24,7 +25,8 @@ func main() {
   go func() {
     m.Lock() // block here
     m.Unlock()
-    fmt.Println(<- ch1)
+    ch1 <- 1
+
   }()
   time.Sleep(time.Second)
 }

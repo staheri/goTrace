@@ -21,13 +21,13 @@ func Store(events []*trace.Event, app string) () {
 
 	// Creating new database for current experiment
 	idx := 0
-	dbName := app + strconv.Itoa(idx)
+	dbName := app + "_" + strconv.Itoa(idx)
 	fmt.Printf("Attempt to create database: %s\n",dbName)
 	_,err = db.Exec("CREATE DATABASE "+dbName + ";")
 	for err != nil{
 		fmt.Printf("Error: %v\n",err)
 		idx = idx + 1
-		dbName = app + strconv.Itoa(idx)
+		dbName = app + "_" + strconv.Itoa(idx)
 		fmt.Printf("Attempt to create database: %s\n",dbName)
 		_,err = db.Exec("CREATE DATABASE "+dbName+ ";")
 	}

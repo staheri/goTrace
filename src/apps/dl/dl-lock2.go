@@ -13,10 +13,7 @@ func main() {
   // goroutine 1
   go func() {
     m.Lock()
-    select{
-      case ch1 <- 1:
-      default:
-    }
+    fmt.Println(<- ch1)// block here
     m.Unlock()
   }()
 
@@ -24,7 +21,8 @@ func main() {
   go func() {
     m.Lock() // block here
     m.Unlock()
-    fmt.Println(<- ch1)
+    ch1 <- 1 
+
   }()
   time.Sleep(time.Second)
 }

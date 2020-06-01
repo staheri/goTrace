@@ -1,7 +1,6 @@
 package main
 
 import "fmt"
-import _ "net"
 
 func test_a(test_channel chan int) {
   test_channel <- 1
