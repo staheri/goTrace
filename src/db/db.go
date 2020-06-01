@@ -53,7 +53,7 @@ func createTables(db *sql.DB){
     									offset int NOT NULL,
     									type varchar(255) NOT NULL,
 											seq int NOT NULL,
-    									ts int NOT NULL,
+    									ts bigint NOT NULL,
     									g int NOT NULL,
     									p int NOT NULL,
     									stkID int,
