@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"strconv"
+	"log"
 )
 // Take sequence of events, create a new DB Schema and insert events into tables
 func Store(events []*trace.Event, app string) () {
@@ -75,10 +76,20 @@ func createTables(db *sql.DB){
     									eventID int NOT NULL,
     									arg varchar(255) NOT NULL,
     									value int NOT NULL);`
+	grtnCreateStmt  :=   `CREATE TABLE Goroutines (
+    									id int NOT NULL AUTO_INCREMENT,
+    									gid int NOT NULL,
+    									parent_id int NOT NULL,
+											ended bool,
+    									createLoc varchar(255),
+											startLoc varchar(255),
+    									PRIMARY KEY (id)
+											);`
 
 	createTable(eventsCreateStmt,"Events",db)
 	createTable(stkFrmCreateStmt,"StackFrames",db)
 	createTable(argsCreateStmt,"Args",db)
+	createTable(grtnCreateStmt,"Goroutines",db)
 }
 
 // Create individual tables for schema db
@@ -96,7 +107,27 @@ func insertEvent(e *trace.Event, db *sql.DB){
 	var q string
 	var eid int64
 	desc := EventDescriptions[e.Type]
-	q = "INSERT INTO Events (offset, type, seq , ts, g, p, stkID, hasStk, hasArgs)"
+	stmt, err := db.Prepare("INSERT INTO Events (offset, type, seq , ts, g, p, stkID, hasStk, hasArgs) VALUES(?, ?, ?, ?, ?, ?, ?, ?,?);")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close() // Prepared statements take up server resources and should be closed after use.
+	if res, err := stmt.Exec(strconv.Itoa(e.Off),
+	                       "\"Ev"+desc.Name + "\"",
+													strconv.Itoa(int(e.Seq)),
+													strconv.Itoa(int(e.Ts)),
+													strconv.FormatUint(e.G,10),
+													strconv.Itoa(e.P),
+													strconv.FormatUint(e.StkID,10),
+													strconv.FormatBool(len(e.Stk) != 0),
+													strconv.FormatBool(len(e.Args) != 0)
+													); err != nil {
+
+			log.Fatal(err)
+		}else{
+			eid, err = res.LastInsertId()
+		}
+	/*q = "INSERT INTO Events (offset, type, seq , ts, g, p, stkID, hasStk, hasArgs)"
 	q = q + " VALUES ("
 	q = q + strconv.Itoa(e.Off) + ", "
 	//q = q + desc.Name + ", "
@@ -115,7 +146,8 @@ func insertEvent(e *trace.Event, db *sql.DB){
 		panic(err)
 	} else{
 		eid, err = res.LastInsertId()
-	}
+	}*/
+
 	// insert stacks
 	if len(e.Stk) != 0{
 		insertStackframe(eid, e.StkID, e.Stk, db)
@@ -124,6 +156,11 @@ func insertEvent(e *trace.Event, db *sql.DB){
 	// insert args
 	if len(e.Args) != 0{
 		insertArgs(eid, e.Args, desc.Args, db)
+	}
+
+	// insert goroutines
+	if desc.Name == "GoCreate" || desc.Name == "GoStart" || desc.Name == "GoEnd"{
+		grtnEntry(e,desc)
 	}
 }
 
@@ -165,4 +202,95 @@ func insertArgs(eventID int64, args [3]uint64, descArgs []string, db *sql.DB) {
 			panic(err)
 		}
 	}
+}
+
+func Ops(){
+	// Connecting to mysql driver
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/")
+	defer db.Close()
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+
+	res,err := db.Query("SHOW DATABASES;")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var dbs string
+	for res.Next(){
+		err := res.Scan(&dbs)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("DB: %s \n",dbs)
+	}
+}
+
+func grtnEntry(e *trace.Event){
+	desc := EventDescriptions[e.Type]
+	//search for event gid in the table
+	res, err := db.Query("SELECT * FROM Goroutines WHERE gid="+strconv.FormatUint(e.G,10),+";")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if res.Next(){
+		// this goroutine already has been added
+		// do other stuff with it
+		if desc.Name == "GoCreate"{
+			// this goroutine has been inserted and it creates another goroutine
+			q = "INSERT INTO Goroutines (gid, parent_id, createLoc) VALUES (?,?,?)"
+			gid := strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
+			parent_id := res.idOfReturnedRow
+			createLoc := path.Base(e.Stk[-1].File)+":"+ e.Stk[-1].Fn + ":" + strconv.Itoa(e.Stk[-1].Line)
+			// insert child goroutine with (parent_id of current goroutine) (stack createLOC)
+
+		} else if desc.Name == "GoStart"{
+			// this goroutine has been inserted before (with create)
+			// Now we need to update its row with startLOC
+			// select * from
+			// update
+		} else if desc.Name == "GoEnd"{
+			// this goroutine has been inserted before (with create)
+			// Now we need to update its row with GoEnd eventID
+			// select * from
+			// update
+		}
+
+	} else{
+		if desc.Name == "GoCreate"{
+			// this goroutine has not been inserted (no create) and it creates another goroutine
+			// insert current goroutine
+			// insert child goroutine with (parent_id of current goroutine) (stack location of create)
+		} else if desc.Name == "GoStart"{
+			// this goroutine has not been inserted before (no create) and started out of nowhere
+			// assert false
+		} else if desc.Name == "GoEnd"{
+			// this goroutine has not been inserted before (no create) and ended out of nowhere
+			// assert false
+		}
+		insStmt, err := db.Prepare("INSERT INTO Goroutines* FROM Goroutines WHERE gid=?")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer chkStmt.Close()
+		res,err := chkStmt.Exec(e.g)
+
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var dbs string
+	for res.Next(){
+		err := res.Scan(&dbs)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("DB: %s \n",dbs)
+	}
+
 }

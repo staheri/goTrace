@@ -128,9 +128,9 @@ var EventDescriptions = [EvCount]struct {
 	EvChRecv:            {"ChRecv", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
 	EvChMake:            {"ChMake", 1011, true, []string{"cid"}, nil}, // goTrace
 	EvChClose:           {"ChClose", 1011, true, []string{"cid"}, nil}, // goTrace
-	EvWgAdd:             {"WgAdd", 1011, true, []string{"cid","val"}, nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
-	EvWgDone:            {"WgDone", 1011, true, []string{"cid"}, nil},// goTrace: wg done (add -1) [timestamp, stack, wg id]
-	EvWgWait:            {"WgWait", 1011, true, []string{"cid"}, nil},// goTrace: wg wait [timestamp, stack, wg id]
+	EvWgAdd:             {"WgAdd", 1011, true, []string{"wid","val"}, nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
+	EvWgDone:            {"WgDone", 1011, true, []string{"wid"}, nil},// goTrace: wg done (add -1) [timestamp, stack, wg id]
+	EvWgWait:            {"WgWait", 1011, true, []string{"wid"}, nil},// goTrace: wg wait [timestamp, stack, wg id]
 	EvMuLock:            {"MuLock",1011,true,[]string{"muid"},nil}, // goTrace: mu lock [timestamp, stack, mu id]
 	EvMuUnlock:          {"MuUnlock",1011,true,[]string{"muid"},nil}, // goTrace: mu unlock [timestamp, stack, mu id]
 	EvRWMLock:           {"RWMLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw lock [timestamp, stack, rw id]
@@ -168,3 +168,24 @@ const (
   AtrMode_StkBotFnLn        = 7 // Bottom element of stack (great ancesstor) - Function, Line
   AtrMode_StkBotFn          = 8 // Bottom element of stack (great ancesstor) - Function
 )
+
+
+const (
+	Q_showDatabases           = 0 // show all databases in the query
+	Q_cntDistGrtns            = 1
+	Q_cntParentGrtns          = 2
+	Q_dispParntGrtns          = 3
+	Q_cntTerminatedGrtns      = 4
+	Q_qcount                  = 5 // query counts
+)
+
+var QueryStruct = [Q_qcount]struct {
+	Query         string
+	Res           []string
+}{
+	Q_showDatabases:           {"SHOW DATABASES;",nil},
+	Q_cntDistGrtns:            {"SELECT COUNT(DISTINCT(g)) FROM %s.Events;",nil},
+	Q_cntParentGrtns:          {"SELECT COUNT(*) FROM %s.Events WHERE type=\"EvGoCreate\";",nil},
+	Q_dispParntGrtns:          {"SELECT * FROM %s.Events WHERE type=\"EvGoCreate\";",nil},
+	Q_cntTerminatedGrtns:      {"SELECT COUNT(*) FROM %s.Events WHERE type=\"EvGoEnd\";",nil},
+}s
