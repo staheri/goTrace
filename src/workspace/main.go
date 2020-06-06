@@ -49,5 +49,5 @@ func main(){
   //cl.WriteContext(outpath+util.AppName(*appPtr), *objPtr , *atrPtr , context, *atrModePtr )
   cl.GroupGrtns(events)
   db.Store(events,util.AppName(*appPtr))
-  db.Ops()
+  //db.Ops()
 }
