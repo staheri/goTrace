@@ -212,8 +212,7 @@ func insertArgs(eventID int64, args [3]uint64, descArgs []string, db *sql.DB) {
 	}
 }
 
-
-
+// insert/update Goroutine table
 func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 	desc := EventDescriptions[e.Type]
 	var q string
@@ -310,6 +309,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 	}
 }
 
+// insert/update channel/message tables
 func chanEntry(e *trace.Event, eid int64, db *sql.DB){
 	desc := EventDescriptions[e.Type]
 	var q string
@@ -342,11 +342,21 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
   				panic(err)
   			}
       } else if desc.Name == "ChSend"{
-        q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,\"%s\");",e.Args[0],e.G,eid)
-        // Insert Messages
-        // update channels
+        // update Channels
+        q = fmt.Sprintf("UPDATE Channels SET cntSends = cntSends + 1 WHERE cid=%v;",cid)
+        fmt.Printf(">>> Executing %s...\n",q)
+      	res, err := db.Query(q)
+      	if err != nil {
+      		panic(err)
+      	}
       } else if desc.Name == "ChRecv"{
-
+        // update Channels
+        q = fmt.Sprintf("UPDATE Channels SET cntRecvs = cntRecvs + 1 WHERE cid=%v;",cid)
+        fmt.Printf(">>> Executing %s...\n",q)
+      	res, err := db.Query(q)
+      	if err != nil {
+      		panic(err)
+      	}
       } else{
         panic("Wrong Place!")
       }
@@ -364,97 +374,6 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
     	}
     }
   }
-
-	//search for event gid in the table
-	q = "SELECT * FROM Goroutines WHERE gid="+strconv.FormatUint(e.G,10)+";"
-	fmt.Printf(">>> Executing %s...\n",q)
-	res, err := db.Query(q)
-	if err != nil {
-		panic(err)
-	}
-
-	if res.Next(){
-		// this goroutine already has been added
-		// do other stuff with it
-		if desc.Name == "GoCreate"{
-			// this goroutine has been inserted and it creates another goroutine
-
-			// insert child goroutine with (parent_id of current goroutine) (stack createLOC)
-			gid := strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
-			parent_id := e.G
-			createLoc := path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
-			q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id, createLoc) VALUES (%v,%v,\"%s\");",gid,parent_id,createLoc)
-			fmt.Printf(">>> Executing %s...\n",q)
-			_,err := db.Exec(q)
-			if err != nil{
-				panic(err)
-			}
-
-
-		} else if desc.Name == "GoStart"{
-			// this goroutine has been inserted before (with create)
-			// update its row with startLOC
-			gid := e.G
-			if len(e.Stk) > 0{
-				startLoc = path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
-			} else {
-				//startLoc = "NIL"
-				return
-			}
-
-			q = fmt.Sprintf("UPDATE Goroutines SET startLOC=\"%s\" WHERE gid=%v;",startLoc,gid)
-			fmt.Printf(">>> Executing %s...\n",q)
-			_,err := db.Exec(q)
-			if err != nil{
-				panic(err)
-			}
-
-		} else if desc.Name == "GoEnd"{
-			// this goroutine has been inserted before (with create)
-			// Now we need to update its row with GoEnd eventID
-			// select * from
-			// update
-			gid := e.G
-			q = fmt.Sprintf("UPDATE Goroutines SET ended=%v WHERE gid=%v;",eid,gid)
-			fmt.Printf(">>> Executing %s...\n",q)
-			_,err := db.Exec(q)
-			if err != nil{
-				panic(err)
-			}
-		}
-
-	} else{
-		if desc.Name == "GoCreate"{
-			// this goroutine has not been inserted (no create) and it creates another goroutine
-
-			// insert current goroutine
-			gid := strconv.FormatUint(e.G,10) // current G
-			parent_id := -1
-			q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id) VALUES (%s,%v);",gid,parent_id)
-			fmt.Printf(">>> Executing %s...\n",q)
-			res,err := db.Exec(q)
-			if err != nil{
-				panic(err)
-			}
-			tmp,_ := res.LastInsertId()
-			fmt.Printf(">>> LAST ID: %v \n",tmp)
-
-			// insert child goroutine with (parent_id of current goroutine) (stack location of create)
-			gid = strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
-			parent_id = int(e.G)
-			createLoc := path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
-			q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id, createLoc) VALUES (%v,%v,\"%s\");",gid,parent_id,createLoc)
-			fmt.Printf(">>> Executing %s...\n",q)
-			_,err = db.Exec(q)
-			if err != nil{
-				panic(err)
-			}
-
-		} else{
-			// this goroutine has not been inserted before (no create) and started/ended out of nowhere
-			panic("GoStart/End before creating...It is not possible!")
-		}
-	}
 }
 
 func Ops(){
