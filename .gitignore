@@ -12,3 +12,7 @@ scripts/*/*.pdf
 
 bin/*
 bin
+
+src/src
+
+pkg

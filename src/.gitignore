@@ -18,5 +18,3 @@ test.go
 */*.db
 
 bin/*
-
-workspace/workspace

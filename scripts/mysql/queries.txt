@@ -29,7 +29,7 @@ INNER JOIN StackFrames t3 ON t1.id = t3.eventID
 ORDER BY g;
 
 
-- Show Channel operations
+- Show Channel Operations
 
 
 
