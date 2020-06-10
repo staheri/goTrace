@@ -90,11 +90,32 @@ func createTables(db *sql.DB){
 											startLoc varchar(255),
     									PRIMARY KEY (id)
 											);`
+  chanCreateStmt  :=  `CREATE TABLE Channels (
+    									id int NOT NULL AUTO_INCREMENT,
+    									cid int NOT NULL,
+    									make_gid int NOT NULL DEFAULT -1,
+                      make_eid int NOT NULL DEFAULT -1,
+                      close_gid int NOT NULL DEFAULT -1,
+                      close_eid int NOT NULL DEFAULT -1,
+											cntSends int DEFAULT 0,
+                      cntRecvs int DEFAULT 0,
+    									PRIMARY KEY (id)
+											);`
+  msgCreateStmt   :=  `CREATE TABLE Messages (
+    									id int NOT NULL AUTO_INCREMENT,
+                      message_id int NOT NULL,
+                      channel_id int NOT NULL,
+    									sender_gid int NOT NULL DEFAULT -1,
+                      receiver_gid int NOT NULL DEFAULT -1,
+                      PRIMARY KEY (id)
+											);`
 
 	createTable(eventsCreateStmt,"Events",db)
 	createTable(stkFrmCreateStmt,"StackFrames",db)
 	createTable(argsCreateStmt,"Args",db)
 	createTable(grtnCreateStmt,"Goroutines",db)
+  createTable(chanCreateStmt,"Channels",db)
+  createTable(msgCreateStmt,"Messages",db)
 }
 
 // Create individual tables for schema db
@@ -112,26 +133,6 @@ func insertEvent(e *trace.Event, db *sql.DB){
 	var q string
 	var eid int64
 	desc := EventDescriptions[e.Type]
-	/*stmt, err := db.Prepare("INSERT INTO Events (offset, type, seq , ts, g, p, stkID, hasStk, hasArgs) VALUES(?, ?, ?, ?, ?, ?, ?, ?,?);")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close() // Prepared statements take up server resources and should be closed after use.
-	if res, err := stmt.Exec(strconv.Itoa(e.Off),
-	                       "\"Ev"+desc.Name + "\"",
-													strconv.Itoa(int(e.Seq)),
-													strconv.Itoa(int(e.Ts)),
-													strconv.FormatUint(e.G,10),
-													strconv.Itoa(e.P),
-													strconv.FormatUint(e.StkID,10),
-													strconv.FormatBool(len(e.Stk) != 0),
-													strconv.FormatBool(len(e.Args) != 0));
-													err != nil {
-
-			log.Fatal(err)
-		}else{
-			eid, err = res.LastInsertId()
-		}*/
 	q = "INSERT INTO Events (offset, type, seq , ts, g, p, stkID, hasStk, hasArgs)"
 	q = q + " VALUES ("
 	q = q + strconv.Itoa(e.Off) + ", "
@@ -166,6 +167,8 @@ func insertEvent(e *trace.Event, db *sql.DB){
 	// insert goroutines
 	if desc.Name == "GoCreate" || desc.Name == "GoStart" || desc.Name == "GoEnd"{
 		grtnEntry(e, eid, db)
+	} else if desc.Name == "ChSend" || desc.Name == "ChRecv" || desc.Name == "ChMake" || desc.Name == "ChClose"{
+		chanEntry(e, eid, db)
 	}
 }
 
@@ -209,8 +212,7 @@ func insertArgs(eventID int64, args [3]uint64, descArgs []string, db *sql.DB) {
 	}
 }
 
-
-
+// insert/update Goroutine table
 func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 	desc := EventDescriptions[e.Type]
 	var q string
@@ -307,9 +309,71 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 	}
 }
 
+// insert/update channel/message tables
+func chanEntry(e *trace.Event, eid int64, db *sql.DB){
+	desc := EventDescriptions[e.Type]
+	var q string
+  var cid uint64
 
+  // search for channel
+  if desc.Name == "ChMake" || desc.Name == "ChClose"{
+    cid = e.Args[0]
+  } else{
+    cid = e.Args[1]
+  }
+  q = "SELECT * FROM Channels WHERE cid="+strconv.FormatUint(cid,10)+";"
+  fmt.Printf(">>> Executing %s...\n",q)
+	res, err := db.Query(q)
+	if err != nil {
+		panic(err)
+	}
 
-
+  if res.Next(){ // this channel has already been inserted
+    if desc.Name == "ChMake"{ // making a made channel? PANIC!
+      panic("making a made channel? PANIC!")
+    }else{
+      if desc.Name == "ChClose"{
+        // update Channels
+        q = fmt.Sprintf("UPDATE Channels SET close_eid=%v close_gid=%v WHERE cid=%v;",eid,e.G,cid)
+  			fmt.Printf(">>> Executing %s...\n",q)
+  			_,err := db.Exec(q)
+  			if err != nil{
+  				panic(err)
+  			}
+      } else if desc.Name == "ChSend"{
+        // update Channels
+        q = fmt.Sprintf("UPDATE Channels SET cntSends = cntSends + 1 WHERE cid=%v;",cid)
+        fmt.Printf(">>> Executing %s...\n",q)
+      	_, err := db.Query(q)
+      	if err != nil {
+      		panic(err)
+      	}
+      } else if desc.Name == "ChRecv"{
+        // update Channels
+        q = fmt.Sprintf("UPDATE Channels SET cntRecvs = cntRecvs + 1 WHERE cid=%v;",cid)
+        fmt.Printf(">>> Executing %s...\n",q)
+      	_, err := db.Query(q)
+      	if err != nil {
+      		panic(err)
+      	}
+      } else{
+        panic("Wrong Place!")
+      }
+    }
+  } else{
+    if desc.Name != "ChMake"{ // Operation on un-made channel? PANIC!
+      panic("Operation on un-made channel? PANIC!")
+    } else{
+      // insert
+      q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",e.Args[0],e.G,eid)
+      fmt.Printf(">>> Executing %s...\n",q)
+    	_, err := db.Query(q)
+    	if err != nil {
+    		panic(err)
+    	}
+    }
+  }
+}
 
 func Ops(){
 	// Connecting to mysql driver

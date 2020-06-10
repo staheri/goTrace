@@ -9,3 +9,6 @@ cl/obj/*
 traces/*
 scripts/*/*.dot
 scripts/*/*.pdf
+
+bin/*
+bin

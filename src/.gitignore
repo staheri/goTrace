@@ -14,4 +14,9 @@ test.go
 */test.go
 */*/test.go
 
+*.db
+*/*.db
+
+bin/*
+
 workspace/workspace
