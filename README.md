@@ -101,7 +101,7 @@ mysql>
         t3.func="github.com/boltdb/bolt.(*DB).removeTx" ;
 ```
 
-|-------------|-----------|------|-------|---------------------------------------|
+
 | type        | ts        | arg  | value | func                                  |
 |-------------|-----------|------|-------|---------------------------------------|
 | EvMuLock    | 113889903 | muid |     7 | github.com/boltdb/bolt.(*DB).beginTx  |
@@ -143,7 +143,7 @@ mysql>
 | EvMuLock    | 114137250 | muid |     9 | github.com/boltdb/bolt.(*DB).removeTx |
 | EvRWMUnlock | 114141483 | rwid |     4 | github.com/boltdb/bolt.(*DB).removeTx |
 | EvMuUnlock  | 114145691 | muid |     9 | github.com/boltdb/bolt.(*DB).removeTx |
-|-------------|-----------|------|-------|---------------------------------------|
+
 
 
 ### Sample query (deadlock)
@@ -159,7 +159,7 @@ mysql>
         t3.func="github.com/boltdb/bolt.(*DB).removeTx" ;
 ```
 
-|-------------|----------|------|-------|---------------------------------------|
+
 | type        | ts       | arg  | value | func                                  |
 |-------------|----------|------|-------|---------------------------------------|
 | EvRWMrLock  | 76503916 | rwid |     3 | github.com/boltdb/bolt.(*DB).beginTx  |
@@ -201,4 +201,3 @@ mysql>
 | EvMuLock    | 76662176 | muid |     9 | github.com/boltdb/bolt.(*DB).removeTx |
 | EvRWMUnlock | 76664280 | rwid |     4 | github.com/boltdb/bolt.(*DB).removeTx |
 | EvMuUnlock  | 76666282 | muid |     9 | github.com/boltdb/bolt.(*DB).removeTx |
-|-------------|----------|------|-------|---------------------------------------|
