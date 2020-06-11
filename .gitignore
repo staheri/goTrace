@@ -3,12 +3,18 @@
 */.DS_Store
 */*/.DS_Store
 */*/*/.DS_Store
+*/*/*/*/.DS_Store
 
 
 cl/obj/*
 traces/*
+scripts/*.dot
 scripts/*/*.dot
+scripts/*/*/*.dot
+
+scripts/*.pdf
 scripts/*/*.pdf
+scripts/*/*/*.pdf
 
 bin/*
 bin
