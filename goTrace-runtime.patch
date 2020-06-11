@@ -1,6 +1,6 @@
-diff -Naur go-orig/src/internal/trace/parser.go go15/go/src/internal/trace/parser.go
---- go-orig/src/internal/trace/parser.go	2020-04-08 13:16:12.000000000 -0600
-+++ go15/go/src/internal/trace/parser.go	2020-06-03 18:23:22.000000000 -0600
+diff -Naur a/src/internal/trace/parser.go b/src/internal/trace/parser.go
+--- a/src/internal/trace/parser.go	2020-04-08 13:16:12.000000000 -0600
++++ b/src/internal/trace/parser.go	2020-06-03 18:23:22.000000000 -0600
 @@ -1058,7 +1058,20 @@
  	EvUserTaskEnd       = 46 // end of task [timestamp, internal task id, stack]
  	EvUserRegion        = 47 // trace.WithRegion [timestamp, internal task id, mode(0:start, 1:end), stack, name string]
@@ -21,7 +21,7 @@ diff -Naur go-orig/src/internal/trace/parser.go go15/go/src/internal/trace/parse
 +	EvRWMrUnlock        = 61 // goTrace: rw runlock [timestamp, stack, rw id]
 +	EvCount             = 62
  )
- 
+
  var EventDescriptions = [EvCount]struct {
 @@ -1117,4 +1130,17 @@
  	EvUserTaskEnd:       {"UserTaskEnd", 1011, true, []string{"taskid"}, nil},
@@ -41,49 +41,12 @@ diff -Naur go-orig/src/internal/trace/parser.go go15/go/src/internal/trace/parse
 +	EvRWMrLock:          {"RWMrLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw rlock [timestamp, stack, rw id]
 +	EvRWMrUnlock:        {"RWMrUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw runlock [timestamp, stack, rw id]
  }
-diff -Naur go-orig/src/log/log.go go15/go/src/log/log.go
---- go-orig/src/log/log.go	2020-04-08 13:16:12.000000000 -0600
-+++ go15/go/src/log/log.go	2020-05-28 13:44:37.000000000 -0600
-@@ -198,12 +198,16 @@
- 
- // Fatal is equivalent to l.Print() followed by a call to os.Exit(1).
- func (l *Logger) Fatal(v ...interface{}) {
-+	fmt.Println("GOTRACE FATAL ERROR") // goTrace
-+	runtime.StopTrace() // goTrace: flush the buffer before exit
- 	l.Output(2, fmt.Sprint(v...))
- 	os.Exit(1)
- }
- 
- // Fatalf is equivalent to l.Printf() followed by a call to os.Exit(1).
- func (l *Logger) Fatalf(format string, v ...interface{}) {
-+	fmt.Println("GOTRACE FATAL ERROR") // goTrace
-+	runtime.StopTrace() // goTrace: flush the buffer before exit
- 	l.Output(2, fmt.Sprintf(format, v...))
- 	os.Exit(1)
- }
-@@ -328,12 +332,16 @@
- 
- // Fatal is equivalent to Print() followed by a call to os.Exit(1).
- func Fatal(v ...interface{}) {
-+	fmt.Println("GOTRACE FATAL ERROR") // goTrace
-+	runtime.StopTrace() // goTrace: flush the buffer before exit
- 	std.Output(2, fmt.Sprint(v...))
- 	os.Exit(1)
- }
- 
- // Fatalf is equivalent to Printf() followed by a call to os.Exit(1).
- func Fatalf(format string, v ...interface{}) {
-+	fmt.Println("GOTRACE FATALF ERROR") // goTrace
-+	runtime.StopTrace() // goTrace: flush the buffer before exit
- 	std.Output(2, fmt.Sprintf(format, v...))
- 	os.Exit(1)
- }
-diff -Naur go-orig/src/runtime/chan.go go15/go/src/runtime/chan.go
---- go-orig/src/runtime/chan.go	2020-04-08 13:16:12.000000000 -0600
-+++ go15/go/src/runtime/chan.go	2020-05-13 15:26:56.000000000 -0600
+diff -Naur a/src/runtime/chan.go b/src/runtime/chan.go
+--- a/src/runtime/chan.go	2020-04-08 13:16:12.000000000 -0600
++++ b/src/runtime/chan.go	2020-05-13 15:26:56.000000000 -0600
 @@ -30,6 +30,7 @@
  )
- 
+
  type hchan struct {
 +	id       uint64         // goTrace: channel id for using in send/recv events
  	qcount   uint           // total data in the queue
@@ -92,7 +55,7 @@ diff -Naur go-orig/src/runtime/chan.go go15/go/src/runtime/chan.go
 @@ -68,6 +69,11 @@
  	return makechan(t, int(size))
  }
- 
+
 +var (
 +	chID uint64 = 1
 +	evID uint64 = 1
@@ -100,7 +63,7 @@ diff -Naur go-orig/src/runtime/chan.go go15/go/src/runtime/chan.go
 +
  func makechan(t *chantype, size int) *hchan {
  	elem := t.elem
- 
+
 @@ -109,6 +115,9 @@
  	c.elemsize = uint16(elem.size)
  	c.elemtype = elem
@@ -108,12 +71,12 @@ diff -Naur go-orig/src/runtime/chan.go go15/go/src/runtime/chan.go
 +	chID = atomic.Xadd64(&chID,1) //goTrace: increment channel id
 +	c.id = chID                   //goTrace: assign
 +	traceChMake(chID)         //goTrace: trace channel make event
- 
+
  	if debugChan {
  		print("makechan: chan=", c, "; elemsize=", elem.size, "; dataqsiz=", size, "\n")
 @@ -188,6 +197,7 @@
  	}
- 
+
  	if sg := c.recvq.dequeue(); sg != nil {
 +		sg.cid = c.id // goTrace: set sg.cid
  		// Found a waiting receiver. We pass the value we want to send
@@ -161,7 +124,7 @@ diff -Naur go-orig/src/runtime/chan.go go15/go/src/runtime/chan.go
  	}
 +	traceChClose(c.id)   //goTrace: trace close channel event
  }
- 
+
  // entry points for <- c from compiled code
 @@ -464,6 +490,7 @@
  		if raceenabled {
@@ -184,7 +147,7 @@ diff -Naur go-orig/src/runtime/chan.go go15/go/src/runtime/chan.go
 @@ -524,6 +554,8 @@
  	c.recvq.enqueue(mysg)
  	gopark(chanparkcommit, unsafe.Pointer(&c.lock), waitReasonChanReceive, traceEvGoBlockRecv, 2)
- 
+
 +  traceChRecv(mysg.eventid, c.id, elem2int(ep)) //goTrace: trace recv event
 +
  	// someone woke us up
@@ -220,9 +183,9 @@ diff -Naur go-orig/src/runtime/chan.go go15/go/src/runtime/chan.go
 +	}
 +	return uint64(*((*int)(elem)))
 +}
-diff -Naur go-orig/src/runtime/proc.go go15/go/src/runtime/proc.go
---- go-orig/src/runtime/proc.go	2020-04-08 13:16:12.000000000 -0600
-+++ go15/go/src/runtime/proc.go	2020-05-29 15:35:41.000000000 -0600
+diff -Naur a/src/runtime/proc.go b/src/runtime/proc.go
+--- a/src/runtime/proc.go	2020-04-08 13:16:12.000000000 -0600
++++ b/src/runtime/proc.go	2020-05-29 15:35:41.000000000 -0600
 @@ -4455,7 +4455,7 @@
  func sysmon() {
  	lock(&sched.lock)
@@ -230,11 +193,11 @@ diff -Naur go-orig/src/runtime/proc.go go15/go/src/runtime/proc.go
 -	checkdead()
 +	//checkdead()
  	unlock(&sched.lock)
- 
+
  	lasttrace := int64(0)
-diff -Naur go-orig/src/runtime/runtime2.go go15/go/src/runtime/runtime2.go
---- go-orig/src/runtime/runtime2.go	2020-04-08 13:16:12.000000000 -0600
-+++ go15/go/src/runtime/runtime2.go	2020-05-12 14:34:05.000000000 -0600
+diff -Naur a/src/runtime/runtime2.go b/src/runtime/runtime2.go
+--- a/src/runtime/runtime2.go	2020-04-08 13:16:12.000000000 -0600
++++ b/src/runtime/runtime2.go	2020-05-12 14:34:05.000000000 -0600
 @@ -365,6 +365,10 @@
  	waitlink    *sudog // g.waiting list or semaRoot
  	waittail    *sudog // semaRoot
@@ -244,14 +207,14 @@ diff -Naur go-orig/src/runtime/runtime2.go go15/go/src/runtime/runtime2.go
 +	value       string // goTrace: used for representing value to tracer
 +	cid         uint64 // goTrace: channel id
  }
- 
+
  type libcall struct {
-diff -Naur go-orig/src/runtime/select.go go15/go/src/runtime/select.go
---- go-orig/src/runtime/select.go	2020-04-08 13:16:12.000000000 -0600
-+++ go15/go/src/runtime/select.go	2020-05-13 15:28:15.000000000 -0600
+diff -Naur a/src/runtime/select.go b/src/runtime/select.go
+--- a/src/runtime/select.go	2020-04-08 13:16:12.000000000 -0600
++++ b/src/runtime/select.go	2020-05-13 15:28:15.000000000 -0600
 @@ -307,6 +307,7 @@
  			c.recvq.enqueue(sg)
- 
+
  		case caseSend:
 +			traceChSend(sg.eventid, c.id, elem2int(sg.elem)) //goTrace: trace send event
  			c.sendq.enqueue(sg)
@@ -267,9 +230,9 @@ diff -Naur go-orig/src/runtime/select.go go15/go/src/runtime/select.go
  			}
  		}
  		sgnext = sglist.waitlink
-diff -Naur go-orig/src/runtime/trace.go go15/go/src/runtime/trace.go
---- go-orig/src/runtime/trace.go	2020-04-08 13:16:12.000000000 -0600
-+++ go15/go/src/runtime/trace.go	2020-06-03 18:22:11.000000000 -0600
+diff -Naur a/src/runtime/trace.go b/src/runtime/trace.go
+--- a/src/runtime/trace.go	2020-04-08 13:16:12.000000000 -0600
++++ b/src/runtime/trace.go	2020-06-03 18:22:11.000000000 -0600
 @@ -68,7 +68,20 @@
  	traceEvUserTaskEnd       = 46 // end of a task [timestamp, internal task id, stack]
  	traceEvUserRegion        = 47 // trace.WithRegion [timestamp, internal task id, mode(0:start, 1:end), stack, name string]
@@ -293,7 +256,7 @@ diff -Naur go-orig/src/runtime/trace.go go15/go/src/runtime/trace.go
  	// The remaining 2 bits are used to specify the number of arguments.
  	// That means, the max event type value is 63.
 @@ -1212,3 +1225,58 @@
- 
+
  	traceReleaseBuffer(pid)
  }
 +
@@ -351,16 +314,16 @@ diff -Naur go-orig/src/runtime/trace.go go15/go/src/runtime/trace.go
 +func TraceRWMrUnlock(rwid uint64){
 +	traceEvent(traceEvRWMrUnlock, 2, rwid)
 +}
-diff -Naur go-orig/src/sync/mutex.go go15/go/src/sync/mutex.go
---- go-orig/src/sync/mutex.go	2020-04-08 13:16:12.000000000 -0600
-+++ go15/go/src/sync/mutex.go	2020-05-26 19:59:04.000000000 -0600
+diff -Naur a/src/sync/mutex.go b/src/sync/mutex.go
+--- a/src/sync/mutex.go	2020-04-08 13:16:12.000000000 -0600
++++ b/src/sync/mutex.go	2020-05-26 19:59:04.000000000 -0600
 @@ -14,6 +14,7 @@
  	"internal/race"
  	"sync/atomic"
  	"unsafe"
 +	"runtime"
  )
- 
+
  func throw(string) // provided by runtime
 @@ -25,6 +26,8 @@
  type Mutex struct {
@@ -369,12 +332,12 @@ diff -Naur go-orig/src/sync/mutex.go go15/go/src/sync/mutex.go
 +	id    uint64 // goTrace
 +	init  bool   // goTrace
  }
- 
+
  // A Locker represents an object that can be locked and unlocked.
 @@ -33,6 +36,11 @@
  	Unlock()
  }
- 
+
 +// goTrace - stores unique mu id
 +var(
 +	muID uint64 = 1
@@ -406,7 +369,7 @@ diff -Naur go-orig/src/sync/mutex.go go15/go/src/sync/mutex.go
 +	} // end goTrace
 +	runtime.TraceMuLock(m.id) // goTrace: trace m.Lock event
  }
- 
+
  func (m *Mutex) lockSlow() {
 @@ -188,7 +210,11 @@
  		// Outlined slow path to allow inlining the fast path.
@@ -418,18 +381,18 @@ diff -Naur go-orig/src/sync/mutex.go go15/go/src/sync/mutex.go
  	}
 +
  }
- 
+
  func (m *Mutex) unlockSlow(new int32) {
-diff -Naur go-orig/src/sync/rwmutex.go go15/go/src/sync/rwmutex.go
---- go-orig/src/sync/rwmutex.go	2020-04-08 13:16:12.000000000 -0600
-+++ go15/go/src/sync/rwmutex.go	2020-05-26 19:58:58.000000000 -0600
+diff -Naur a/src/sync/rwmutex.go b/src/sync/rwmutex.go
+--- a/src/sync/rwmutex.go	2020-04-08 13:16:12.000000000 -0600
++++ b/src/sync/rwmutex.go	2020-05-26 19:58:58.000000000 -0600
 @@ -8,6 +8,7 @@
  	"internal/race"
  	"sync/atomic"
  	"unsafe"
 +	"runtime"
  )
- 
+
  // There is a modified copy of this file in runtime/rwmutex.go.
 @@ -31,8 +32,15 @@
  	readerSem   uint32 // semaphore for readers to wait for completing writers
@@ -438,14 +401,14 @@ diff -Naur go-orig/src/sync/rwmutex.go go15/go/src/sync/rwmutex.go
 +	id          uint64 // goTrace
 +	init        bool   // goTrace
  }
- 
+
 +// goTrace - stores unique rw id
 +var(
 +	rwID uint64 = 1
 +)
 +
  const rwmutexMaxReaders = 1 << 30
- 
+
  // RLock locks rw for reading.
 @@ -49,6 +57,15 @@
  		// A writer is pending, wait for it.
@@ -498,16 +461,16 @@ diff -Naur go-orig/src/sync/rwmutex.go go15/go/src/sync/rwmutex.go
  	// Allow other writers to proceed.
  	rw.w.Unlock()
  	if race.Enabled {
-diff -Naur go-orig/src/sync/waitgroup.go go15/go/src/sync/waitgroup.go
---- go-orig/src/sync/waitgroup.go	2020-04-08 13:16:12.000000000 -0600
-+++ go15/go/src/sync/waitgroup.go	2020-05-26 19:59:01.000000000 -0600
+diff -Naur a/src/sync/waitgroup.go b/src/sync/waitgroup.go
+--- a/src/sync/waitgroup.go	2020-04-08 13:16:12.000000000 -0600
++++ b/src/sync/waitgroup.go	2020-05-26 19:59:01.000000000 -0600
 @@ -8,6 +8,7 @@
  	"internal/race"
  	"sync/atomic"
  	"unsafe"
 +	"runtime"
  )
- 
+
  // A WaitGroup waits for a collection of goroutines to finish.
 @@ -17,15 +18,22 @@
  // Wait can be used to block until all goroutines have finished.
@@ -531,7 +494,7 @@ diff -Naur go-orig/src/sync/waitgroup.go go15/go/src/sync/waitgroup.go
 +	id     uint64  // goTrace
 +	init   bool    // goTrace
  }
- 
+
  // state returns pointers to the state and sema fields stored within wg.state1.
 @@ -76,6 +84,14 @@
  	if w != 0 && delta > 0 && v == int32(delta) {
@@ -549,13 +512,13 @@ diff -Naur go-orig/src/sync/waitgroup.go go15/go/src/sync/waitgroup.go
  		return
  	}
 @@ -96,11 +112,13 @@
- 
+
  // Done decrements the WaitGroup counter by one.
  func (wg *WaitGroup) Done() {
 +	runtime.TraceWgDone(wg.id) // goTrace: trace wg.Done event
  	wg.Add(-1)
  }
- 
+
  // Wait blocks until the WaitGroup counter is zero.
  func (wg *WaitGroup) Wait() {
 +	runtime.TraceWgWait(wg.id)  // goTrace: trace wg.Wait event
