@@ -23,7 +23,7 @@ const datapath = dir+"DataBenchmark/"
 func main(){
   appPtr := flag.String("app", "small/initial/ex1-2g/ex1.2g-ok.go", "Target application (*.go)")
   tout   := flag.Int("to", -1, "Timeout for deadlocks")
-  outName   := flag.String("outName", "small/test.py", "Timeout for deadlocks")
+  outName   := flag.String("outName", "medium/test.py", "Timeout for deadlocks")
   //objPtr := flag.String("obj", "grtn", "Object:[grtn,proc,chan]")
   //atrPtr := flag.String("atr", "1110000", "Attributes: a bitstring showing 1/0 event groups :\n\t\t\"GoRoutine,Channel,Process,GCmem,Syscall,Other\"")
   //atrModePtr := flag.Int("atrMode", 0, util.AttributeModesDescription())
