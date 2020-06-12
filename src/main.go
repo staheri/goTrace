@@ -17,11 +17,13 @@ import (
 
 const dir = "/Users/saeed/goTrace/"
 const outpath = dir+"traces/"
-const inpath = dir+"/src/apps/"
+const inpath = dir+"/CodeBenchmark/"
+const datapath = dir+"DataBenchmark/"
 
 func main(){
-  appPtr := flag.String("app", "initial/ex1-2g/ex1.2g-ok.go", "Target application (*.go)")
+  appPtr := flag.String("app", "small/initial/ex1-2g/ex1.2g-ok.go", "Target application (*.go)")
   tout   := flag.Int("to", -1, "Timeout for deadlocks")
+  outName   := flag.String("outName", "small/test.py", "Timeout for deadlocks")
   //objPtr := flag.String("obj", "grtn", "Object:[grtn,proc,chan]")
   //atrPtr := flag.String("atr", "1110000", "Attributes: a bitstring showing 1/0 event groups :\n\t\t\"GoRoutine,Channel,Process,GCmem,Syscall,Other\"")
   //atrModePtr := flag.Int("atrMode", 0, util.AttributeModesDescription())
@@ -48,6 +50,7 @@ func main(){
   //cl.DispAtrMap(context,*objPtr)
   //cl.WriteContext(outpath+util.AppName(*appPtr), *objPtr , *atrPtr , context, *atrModePtr )
   cl.GroupGrtns(events)
-  db.Store(events,util.AppName(*appPtr))
+  dbname := db.Store(events,util.AppName(*appPtr))
+  db.WriteData(dbname,datapath+(*outName))
   //db.Ops()
 }

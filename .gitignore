@@ -26,3 +26,17 @@ pkg
 src/github.com
 src/go.mongodb.org
 src/golang.org
+
+
+*.exe
+*/*.exe
+
+*/*.mod
+*/*/*.mod
+*/*/*/*.mod
+*/*/*/*/*.mod
+
+*/*/*/*.out
+*/*/*.out
+*/*.out
+*.out

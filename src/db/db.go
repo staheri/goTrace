@@ -8,9 +8,10 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"strconv"
 	"log"
+	"os"
 )
 // Take sequence of events, create a new DB Schema and insert events into tables
-func Store(events []*trace.Event, app string) () {
+func Store(events []*trace.Event, app string) (dbName string) {
 	// Connecting to mysql driver
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/")
 	if err != nil {
@@ -21,7 +22,7 @@ func Store(events []*trace.Event, app string) () {
 
 	// Creating new database for current experiment
 	idx := 0
-	dbName := app + "_" + strconv.Itoa(idx)
+	dbName = app + "_" + strconv.Itoa(idx)
 	fmt.Printf("Attempt to create database: %s\n",dbName)
 	_,err = db.Exec("CREATE DATABASE "+dbName + ";")
 	for err != nil{
@@ -50,6 +51,7 @@ func Store(events []*trace.Event, app string) () {
 	for _,e := range events{
 		insertEvent(e, db)
 	}
+	return dbName
 }
 
 // Create tables for newly created schema db
@@ -397,5 +399,49 @@ func Ops(){
 			log.Fatal(err)
 		}
 		fmt.Printf("DB: %s \n",dbs)
+	}
+}
+
+func WriteData(dbName, output string){
+	// Re-establish
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+	res,err := db.Query("SELECT type From Events;")
+	if err != nil{
+		log.Fatal(err)
+	}
+
+	f,err := os.Create(output)
+	if err != nil{
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	var dbs string // store rows
+	var tmps string // store lines
+	var len  int
+	len = 0
+	tmps = "sentences_"+dbName+"_l11 = ["
+	for res.Next(){
+		err := res.Scan(&dbs)
+		if err != nil {
+			log.Fatal(err)
+		}
+		tmps = tmps + "\""
+		tmps = tmps + dbs
+		fmt.Printf("DB: %s \n",dbs)
+		tmps = tmps + "\","
+		len = len + 1
+		if len % 11 == 0{
+			len = 0
+			tmps = tmps + "],"
+			f.WriteString(tmps)
+			tmps = "["
+		}
 	}
 }
