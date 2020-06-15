@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"log"
 	"os"
+	"strings"
 )
 // Take sequence of events, create a new DB Schema and insert events into tables
 func Store(events []*trace.Event, app string) (dbName string) {
@@ -28,7 +29,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	for err != nil{
 		fmt.Printf("Error: %v\n",err)
 		idx = idx + 1
-		dbName = app + "_" + strconv.Itoa(idx)
+		dbName = app + "X" + strconv.Itoa(idx)
 		fmt.Printf("Attempt to create database: %s\n",dbName)
 		_,err = db.Exec("CREATE DATABASE "+dbName+ ";")
 	}
@@ -402,7 +403,7 @@ func Ops(){
 	}
 }
 
-func WriteData(dbName, output string){
+func WriteData(dbName, datapath, filter string, chunkSize int){
 	// Re-establish
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
 	if err != nil {
@@ -411,22 +412,34 @@ func WriteData(dbName, output string){
 		fmt.Println("Connection Established")
 	}
 	defer db.Close()
-	res,err := db.Query("SELECT type From Events;")
-	if err != nil{
-		log.Fatal(err)
-	}
 
+
+
+	var q,output, dbs,tmps string
+	var chunk  int
+	appgs := appGoroutineFinder(db)
+
+	// SeqAll
+	chunk = 0
+	dbs = ""
+	tmps = ""
+	output = datapath + dbName+"_l"+strconv.Itoa(chunkSize)+"_seqALL_"+filter+".py"
 	f,err := os.Create(output)
 	if err != nil{
 		log.Fatal(err)
 	}
-	defer f.Close()
+	if filter != "all"{
+		q = "SELECT t1.type FROM Events t1 INNER JOIN global.cat"+filter+" t2 ON t1.type = t2.eventName;"
+	} else{
+		q = "SELECT type FROM Events;"
+	}
 
-	var dbs string // store rows
-	var tmps string // store lines
-	var len  int
-	len = 0
-	tmps = "sentences_"+dbName+"_l11 = ["
+	fmt.Printf(">>> Executing %s...\n",q)
+	res,err := db.Query(q)
+	if err != nil{
+		log.Fatal(err)
+	}
+	tmps = "data = [\n\t["
 	for res.Next(){
 		err := res.Scan(&dbs)
 		if err != nil {
@@ -434,14 +447,149 @@ func WriteData(dbName, output string){
 		}
 		tmps = tmps + "\""
 		tmps = tmps + dbs
-		fmt.Printf("DB: %s \n",dbs)
+		//fmt.Printf("DB: %s \n",dbs)
 		tmps = tmps + "\","
-		len = len + 1
-		if len % 11 == 0{
-			len = 0
+		chunk = chunk + 1
+		if chunk % chunkSize == 0{
+			chunk = 0
 			tmps = tmps + "],"
 			f.WriteString(tmps)
-			tmps = "["
+			tmps = "\n\t["
 		}
 	}
+	tmps = tmps + "]\n]"
+	f.WriteString(tmps)
+	f.Close()
+
+	// SeqApp
+	chunk = 0
+	dbs = ""
+	tmps = ""
+	output = datapath + dbName+"_l"+strconv.Itoa(chunkSize)+"_seqAPP_"+filter+".py"
+
+	f,err = os.Create(output)
+	if err != nil{
+		log.Fatal(err)
+	}
+
+	if filter != "all"{
+		q = "SELECT t1.type FROM Events t1 INNER JOIN global.cat"+filter+" t2 ON t1.type = t2.eventName "
+	} else{
+		q = "SELECT t1.type FROM Events t1 "
+	}
+
+	// extend the query for selecting apps
+	fmt.Println(len(appgs))
+	q = q + "WHERE "
+	for i,g := range(appgs){
+		q = q + "t1.g=" + strconv.Itoa(g)
+		if i  !=  len(appgs) - 1 {
+			q = q + " OR "
+		}else{
+			q = q + ";"
+		}
+	}
+	// Executing Query
+	fmt.Printf(">>> Executing %s...\n",q)
+	res,err = db.Query(q)
+	if err != nil{
+		log.Fatal(err)
+	}
+	tmps = "data = [\n\t["
+	for res.Next(){
+		err := res.Scan(&dbs)
+		if err != nil {
+			log.Fatal(err)
+		}
+		tmps = tmps + "\""
+		tmps = tmps + dbs
+		//fmt.Printf("DB: %s \n",dbs)
+		tmps = tmps + "\","
+		chunk = chunk + 1
+		if chunk % chunkSize == 0{
+			chunk = 0
+			tmps = tmps + "],"
+			f.WriteString(tmps)
+			tmps = "\n\t["
+		}
+	}
+	tmps = tmps + "]\n]\n"
+	f.WriteString(tmps)
+	f.Close()
+
+
+	// Goroutines
+	chunk = 0
+	dbs = ""
+	tmps = ""
+	output = datapath + dbName+"_l"+strconv.Itoa(chunkSize)+"_grtnAPP_"+filter+".py"
+
+	f,err = os.Create(output)
+	if err != nil{
+		log.Fatal(err)
+	}
+
+	for i,g := range(appgs){
+		chunk = 0
+	  if filter != "all"{
+	    q = "SELECT t1.type FROM Events t1 INNER JOIN global.cat"+filter+" t2 ON t1.type = t2.eventName WHERE t1.g="+ strconv.Itoa(g)+";"
+	  } else{
+	    q = "SELECT t1.type FROM Events t1 WHERE t1.g="+ strconv.Itoa(g)+";"
+	  }
+
+		// Executing Query
+		fmt.Printf(">>> Executing %s...\n",q)
+		res,err := db.Query(q)
+		if err != nil{
+			log.Fatal(err)
+		}
+		tmps = "data_g"+strconv.Itoa(i)+" = [\n\t["
+		for res.Next(){
+			err := res.Scan(&dbs)
+			if err != nil {
+				log.Fatal(err)
+			}
+			tmps = tmps + "\""
+			tmps = tmps + dbs
+			//fmt.Printf("DB: %s \n",dbs)
+			tmps = tmps + "\","
+			chunk = chunk + 1
+			if chunk % chunkSize == 0{
+				chunk = 0
+				tmps = tmps + "],"
+				f.WriteString(tmps)
+				tmps = "\n\t["
+			}
+		}
+		tmps = tmps + "]\n]\n"
+		f.WriteString(tmps)
+	}
+	f.Close()
+}
+
+func appGoroutineFinder(db *sql.DB) (appGss []int){
+	var q string
+	q = "SELECT id,gid,startLoc FROM Goroutines;"
+	fmt.Printf(">>> Executing %s...\n",q)
+	res,err := db.Query(q)
+	if err != nil{
+		log.Fatal(err)
+	}
+	var dbs sql.NullString
+	var id,gid int
+
+	for res.Next(){
+		err := res.Scan(&id,&gid,&dbs)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if dbs.Valid{
+			if strings.Split(strings.Split(dbs.String,":")[1],".")[0] == "main" {
+				// this is the app goroutine
+				// add it to slice
+				appGss = append(appGss,gid)
+			}
+		}
+	}
+	return appGss
 }
