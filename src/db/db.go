@@ -11,6 +11,26 @@ import (
 	"os"
 	"strings"
 )
+
+type Node struct{
+	id         int
+	type       int
+	label      string
+	color      string
+	posx       float
+	posy       float
+	bold       bool
+	style      string
+}
+
+type Edge struct{
+	id       int
+	src      *Node
+	dest     *Node
+	color    string
+	bold     bool
+	style    string
+}
 // Take sequence of events, create a new DB Schema and insert events into tables
 func Store(events []*trace.Event, app string) (dbName string) {
 	// Connecting to mysql driver
@@ -592,4 +612,28 @@ func appGoroutineFinder(db *sql.DB) (appGss []int){
 		}
 	}
 	return appGss
+}
+
+func qNodes(){}
+
+func ToFile(dbName string){
+	// Establish connection
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+
+	// Query and generate nodes
+  // >> Goroutine eventes (create, start, end, ...)
+	     // count: select Count(*), t1.g from events t1 INNER JOIN global.catGRTN t3 ON t1.type = t3.eventName GROUP BY t1.g;
+			 // event list: select t1.id, t1.type, t1.g from events t1 INNER JOIN global.catGRTN t3 ON t1.type = t3.eventName WHERE t1.type="EvGoCreate" OR t1.type="EvGoStart" OR t1.type="EvGoEnd";
+	// >> Channel events (make, send, recv, close)
+	// >> (Other events: locks, waitingGroups, GC, PROC, etc.)
+
+	// Query and generate edges
+	// >>
+
 }

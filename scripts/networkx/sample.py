@@ -16,10 +16,11 @@ G.add_node(8)
 G.add_node(9)
 G.add_node(10)
 G.add_node(11)
+G.add_node("TEST")
 
 
 seq = [(0,1),(0,2),(2,3),(3,4),(3,5),(3,5),(4,7),(5,8),(7,9),(8,10),(9,10),(10,11),(1,6),(6,11)]
-msg = [(5,6),(7,8)]
+msg = [(5,6),(7,8),("TEST",2)]
 
 
 # G.add_edge(0,1)
@@ -50,6 +51,7 @@ pos = {0 : [0,0],
        9 : [9,2],
        10: [10,1],
        11: [11,0]}
+      # "Test": [12,0]}
 
 nx.draw_networkx_edges(G,pos,edgelist=seq)
 nx.draw_networkx_edges(G,pos,edgelist=msg,style='dashed')
