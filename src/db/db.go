@@ -12,13 +12,20 @@ import (
 	"strings"
 )
 
+const (
+	_grtnNode           = 0 // Goroutine events: EvGoCreate, EvGoStart, EvGoEnd
+	_chnlNode           = 1
+)
+
 type Node struct{
 	id         int
-	type       int
+	typ        int
+	g          int
+	eid        int
 	label      string
 	color      string
-	posx       float
-	posy       float
+	posx       float64
+	posy       float64
 	bold       bool
 	style      string
 }
@@ -31,6 +38,65 @@ type Edge struct{
 	bold     bool
 	style    string
 }
+
+
+
+func ToFile(dbName string){
+	// Establish connection
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+
+	//goEvents   := []string{"EvGoCreate","EvGoStart","EvGoEnd"}
+	//chanEvents := []string{"EvChMake","EvChSend","EvChRecv","EvChClose"}
+
+	// Vars
+	var q string
+	var id,gid,parent_id,end_eid,create_eid,start_eid int
+
+	// Store nodes
+	//var nodes []*Nodes
+	//data := make(map[int]*Node) // key: eventID
+
+
+
+	// GoCreate/GoStart nodes
+	q = `SELECT id, gid, parent_id, ended, create_eid, start_eid
+	     FROM Goroutines;`
+	fmt.Printf(">>> Executing %s...\n",q)
+	res, err := db.Query(q)
+	if err != nil {
+		panic(err)
+	}
+
+	for res.Next(){
+		err = res.Scan(&id, &gid, &parent_id, &end_eid, &create_eid, &start_eid)
+		//fmt.Printf("Goroutine %d created by %d @ %d\n",child_g,parent_g,eid)
+		if id == 1{
+			// gid=0 then there is no creator
+		} else{
+			// 
+		}
+	}
+
+
+	// Query and generate nodes
+  // >> Goroutine eventes (create, start, end, ...)
+	     // count: select Count(*), t1.g from events t1 INNER JOIN global.catGRTN t3 ON t1.type = t3.eventName GROUP BY t1.g;
+			 // event list: select t1.id, t1.type, t1.g from events t1 INNER JOIN global.catGRTN t3 ON t1.type = t3.eventName WHERE t1.type="EvGoCreate" OR t1.type="EvGoStart" OR t1.type="EvGoEnd";
+	// >> Channel events (make, send, recv, close)
+	// >> (Other events: locks, waitingGroups, GC, PROC, etc.)
+
+	// Query and generate edges
+	// >>
+
+}
+
+
 // Take sequence of events, create a new DB Schema and insert events into tables
 func Store(events []*trace.Event, app string) (dbName string) {
 	// Connecting to mysql driver
@@ -110,7 +176,9 @@ func createTables(db *sql.DB){
     									parent_id int NOT NULL,
 											ended int DEFAULT -1,
     									createLoc varchar(255),
+											create_eid int,
 											startLoc varchar(255),
+											start_eid int,
     									PRIMARY KEY (id)
 											);`
   chanCreateStmt  :=  `CREATE TABLE Channels (
@@ -258,7 +326,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 			gid := strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
 			parent_id := e.G
 			createLoc := path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
-			q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id, createLoc) VALUES (%v,%v,\"%s\");",gid,parent_id,createLoc)
+			q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id, createLoc, create_eid) VALUES (%v,%v,\"%s\",%v);",gid,parent_id,createLoc,eid)
 			fmt.Printf(">>> Executing %s...\n",q)
 			_,err := db.Exec(q)
 			if err != nil{
@@ -277,7 +345,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 				return
 			}
 
-			q = fmt.Sprintf("UPDATE Goroutines SET startLOC=\"%s\" WHERE gid=%v;",startLoc,gid)
+			q = fmt.Sprintf("UPDATE Goroutines SET startLOC=\"%s\", start_eid=%v WHERE gid=%v;",startLoc,eid,gid)
 			fmt.Printf(">>> Executing %s...\n",q)
 			_,err := db.Exec(q)
 			if err != nil{
@@ -318,7 +386,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 			gid = strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
 			parent_id = int(e.G)
 			createLoc := path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
-			q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id, createLoc) VALUES (%v,%v,\"%s\");",gid,parent_id,createLoc)
+			q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id, createLoc, create_eid) VALUES (%v,%v,\"%s\",%v);",gid,parent_id,createLoc,eid)
 			fmt.Printf(">>> Executing %s...\n",q)
 			_,err = db.Exec(q)
 			if err != nil{
@@ -615,25 +683,3 @@ func appGoroutineFinder(db *sql.DB) (appGss []int){
 }
 
 func qNodes(){}
-
-func ToFile(dbName string){
-	// Establish connection
-	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
-	if err != nil {
-		fmt.Println(err)
-	}else{
-		fmt.Println("Connection Established")
-	}
-	defer db.Close()
-
-	// Query and generate nodes
-  // >> Goroutine eventes (create, start, end, ...)
-	     // count: select Count(*), t1.g from events t1 INNER JOIN global.catGRTN t3 ON t1.type = t3.eventName GROUP BY t1.g;
-			 // event list: select t1.id, t1.type, t1.g from events t1 INNER JOIN global.catGRTN t3 ON t1.type = t3.eventName WHERE t1.type="EvGoCreate" OR t1.type="EvGoStart" OR t1.type="EvGoEnd";
-	// >> Channel events (make, send, recv, close)
-	// >> (Other events: locks, waitingGroups, GC, PROC, etc.)
-
-	// Query and generate edges
-	// >>
-
-}
