@@ -597,3 +597,46 @@ func appGoroutineFinder(db *sql.DB) (appGss []int){
 	}
 	return appGss
 }
+
+func FormalContext(dbName, outpath string, aspects ...string ){
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+
+	var q,subq,event string
+	var 
+
+
+	q = `SELECT t1.id, t2.type
+	     FROM Goroutines t1
+			 INNER JOIN Events t2 ON t1.gid=t2.g `
+
+	subq = ""
+	if len(aspects) != 0{
+		for i,asp := range aspects{
+			 subq = subq + "SELECT * FROM global.cat"+asp
+			 if i < len(aspects) - 1{
+				 subq = subq + " UNION "
+			 }
+		}
+		q = q + "INNER JOIN ("+subq+") t3 ON t3.eventName=t2.type ;"
+	} else{
+		q = q + ";"
+	}
+	// query the database
+	fmt.Printf(">>> Executing %s...\n",q)
+	res, err := db.Query(q)
+	if err != nil {
+		panic(err)
+	}
+
+ 	if res.Next(){
+
+	}
+	// store files in the outpath folder
+}

@@ -73,5 +73,5 @@ func main(){
   //db.WriteData(dbname,datapath,(*filterPtr),11)
   //db.Ops()
 
-  db.ToFile(dbName)
+  //db.ToFile(dbName)
 }
