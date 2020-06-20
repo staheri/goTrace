@@ -609,7 +609,9 @@ func FormalContext(dbName, outpath string, aspects ...string ){
 	defer db.Close()
 
 	var q,subq,event string
-	var 
+	var id int
+
+	data := make(map[int][]string)
 
 
 	q = `SELECT t1.id, t2.type
@@ -624,9 +626,9 @@ func FormalContext(dbName, outpath string, aspects ...string ){
 				 subq = subq + " UNION "
 			 }
 		}
-		q = q + "INNER JOIN ("+subq+") t3 ON t3.eventName=t2.type ;"
+		q = q + "INNER JOIN ("+subq+") t3 ON t3.eventName=t2.type ORDER BY t2.ts;"
 	} else{
-		q = q + ";"
+		q = q + " ORDER BY t2.ts;"
 	}
 	// query the database
 	fmt.Printf(">>> Executing %s...\n",q)
@@ -635,8 +637,20 @@ func FormalContext(dbName, outpath string, aspects ...string ){
 		panic(err)
 	}
 
- 	if res.Next(){
-
+ 	for res.Next(){
+		err = res.Scan(&id,&event)
+		if err != nil{
+			panic(err)
+		}
+		//if val,ok := data[id];ok{
+		data[id] = append(data[id],event)
+		//}else{}
+	}
+	for k,v := range data{
+		fmt.Printf("\ndata[%v]:\n\t",k)
+		for _,e := range v{
+			fmt.Printf("%v\n\t",e)
+		}
 	}
 	// store files in the outpath folder
 }

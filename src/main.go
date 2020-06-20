@@ -2,12 +2,12 @@ package main
 
 import (
   "flag"
-  "fmt"
+  _"fmt"
   _"os"
   _"log"
   _"trace"
-   "util"
-  "instrument"
+  _ "util"
+  _"instrument"
   _"cl"
   _"sort"
   _"bytes"
@@ -21,27 +21,27 @@ const inpath = dir+"/CodeBenchmark/"
 const datapath = dir+"DataBenchmark/medium/"
 
 func main(){
-  appPtr := flag.String("app", "small/initial/ex1-2g/ex1.2g-ok.go", "Target application (*.go)")
-  tout   := flag.Int("to", -1, "Timeout for deadlocks")
-  //dbName   := flag.String("dbName", "pingPongX9", "Table Name")
+  //appPtr := flag.String("app", "small/initial/ex1-2g/ex1.2g-ok.go", "Target application (*.go)")
+  //tout   := flag.Int("to", -1, "Timeout for deadlocks")
+  dbName   := flag.String("dbName", "pingPongX15", "Table Name")
   //outName   := flag.String("outName", "medium/test.py", "OutName")
   //filterPtr := flag.String("filter", "CHNL", "FILTERS: CHNL, GCMM, GRTN, MISC, MUTX, PROC, SYSC, WGRP ")
 
   //objPtr := flag.String("obj", "grtn", "Object:[grtn,proc,chan]")
   //atrPtr := flag.String("atr", "1110000", "Attributes: a bitstring showing 1/0 event groups :\n\t\t\"GoRoutine,Channel,Process,GCmem,Syscall,Other\"")
   //atrModePtr := flag.Int("atrMode", 0, util.AttributeModesDescription())
-
+  flag.Parse()
 
   // * main block for instrumentation and collecting traces
-  flag.Parse()
+  /*
   fmt.Println("Analyzing ", inpath+(*appPtr), "...")
   var src instrument.EventSource
-
   src = instrument.NewNativeRun(inpath+(*appPtr),(*tout))
   events, err := src.Events()
 	if err != nil {
 		panic(err)
 	}
+  */
 
 
 
@@ -60,7 +60,7 @@ func main(){
 
 
   //cl.GroupGrtns(events)
-  dbName := db.Store(events,util.AppName(*appPtr))
+  //dbName := db.Store(events,util.AppName(*appPtr))
 
   /* word2vec block
   filters := []string{"all","CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGRP"}
@@ -74,4 +74,5 @@ func main(){
   //db.Ops()
 
   //db.ToFile(dbName)
+  db.FormalContext(*dbName,"test","CHNL","GRTN")
 }
