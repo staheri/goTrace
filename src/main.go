@@ -16,7 +16,7 @@ import (
 )
 
 const dir = "/Users/saeed/goTrace/"
-const outpath = dir+"traces/"
+const outpath = dir+"traces/contexts/"
 const inpath = dir+"/CodeBenchmark/"
 const datapath = dir+"DataBenchmark/medium/"
 
@@ -74,5 +74,7 @@ func main(){
   //db.Ops()
 
   //db.ToFile(dbName)
-  db.FormalContext(*dbName,"test","CHNL","GRTN")
+  db.FormalContext(*dbName,outpath,"GRTN")
+  db.FormalContext(*dbName,outpath,"GRTN","CHNL")
+  //db.FormalContext(*dbName,outpath,"CHNL","GRTN","PROC","GCMM")
 }

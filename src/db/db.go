@@ -637,6 +637,24 @@ func FormalContext(dbName, outpath string, aspects ...string ){
 		panic(err)
 	}
 
+
+	// create directory
+	outdir := outpath + dbName + "_"
+	if len(aspects) != 0{
+		for i,asp := range aspects{
+			outdir = outdir + asp
+			if i < len(aspects) - 1{
+				 outdir = outdir + "_"
+			}
+		}
+	} else{
+		outdir = outdir + "all"
+	}
+	if _, err := os.Stat(outdir); os.IsNotExist(err) {
+    os.Mkdir(outdir, 0755)
+	}
+
+
  	for res.Next(){
 		err = res.Scan(&id,&event)
 		if err != nil{
@@ -646,11 +664,19 @@ func FormalContext(dbName, outpath string, aspects ...string ){
 		data[id] = append(data[id],event)
 		//}else{}
 	}
+
 	for k,v := range data{
+		output := outdir+"/g"+strconv.Itoa(k)+".txt"
+		f,err := os.Create(output)
+		if err != nil{
+			log.Fatal(err)
+		}
 		fmt.Printf("\ndata[%v]:\n\t",k)
 		for _,e := range v{
 			fmt.Printf("%v\n\t",e)
+			f.WriteString(fmt.Sprintf("%v\n",e))
 		}
+		f.Close()
 	}
 	// store files in the outpath folder
 }

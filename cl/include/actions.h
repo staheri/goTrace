@@ -43,14 +43,7 @@ using namespace std;
  * It first Preprocess data (decompress, filter, detect loops, extract attributes, etc.)
  * Then it creates the lattice from generated data
  */
-void genCL(string _inpath,string _filtbit, int _atrMode, int _atrFreq, int _atrOption, int k);
+void genGeneralCL(string _inpath,string _filtbit, int _atrMode, int _atrFreq, int _atrOption, int k);
 
-void texTraceBatch(string _inpath);
-
-void fptrace(string _trace, int k);
-
-void genFPCL(string _inpath,int _atrMode);
-
-void genGoCL(string _inpath,int _atrMode, int _atrFreq, int _atrOption, int k);
 
 #endif
