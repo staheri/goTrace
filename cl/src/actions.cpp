@@ -1,7 +1,7 @@
 /** actions.h
- * mid-level interface for communicting the front-end and back-end for trace and CL operations
- * Author: Saeed Taheri, University of Utah, staheri@cs.utah.edu, 2019, All rights reserved
- */
+* mid-level interface for communicting the front-end and back-end for trace and CL operations
+* Author: Saeed Taheri, University of Utah, staheri@cs.utah.edu, 2019, All rights reserved
+*/
 #include "actions.h"
 #include <cstdlib>
 #include <cstdio>
@@ -24,30 +24,29 @@ void genGeneralCL(string _inpath){
   printf("\nReading trace entries in %s\n",_inpath.c_str());
 
   // Get the list of all traces in _inpath/
-	lot = listOfFiles(_inpath+"/","txt");
+  lot = listOfFiles(_inpath+"/","txt");
 
   // Sort
   std::sort(lot.begin(),lot.end(),
-		[](string a,string b){
-			int ta = atoi(splitString(a,'.')[0].substr(1).c_str());
-			int tb = atoi(splitString(b,'.')[0].substr(1).c_str());
-			return ta < tb;
-		});
+  [](string a,string b){
+    int ta = atoi(splitString(a,'.')[0].substr(1).c_str());
+    int tb = atoi(splitString(b,'.')[0].substr(1).c_str());
+    return ta < tb;
+  });
 
 
-    string clName = clNameTranslator(_atrMode,_atrFreq,_atrOption);
-    Lattice lat = Lattice(clName);
-    // To hold an object of each trace and attribute for accessing their hashtables later
-    Trace trc;
-    Attribute<string> atr;
-    set<int> attrIDs;
+  string clName = clNameTranslator(_atrMode,_atrFreq,_atrOption);
+  Lattice lat = Lattice(clName);
+  // To hold an object of each trace and attribute for accessing their hashtables later
+  Trace trc;
+  Attribute<string> atr;
+  set<int> attrIDs;
+  
+  printf("\nExtracting Attributes & Creating CL %s\n",clName.c_str());
 
-    clock_t t = clock();
-    printf("\nExtracting Attributes & Creating CL %s\n",clName.c_str());
 
-
-	// preprocess all traces within _inpath/ptrace
-	for(vst_it = lot.begin();vst_it != lot.end();vst_it++){
+  // preprocess all traces within _inpath/ptrace
+  for(vst_it = lot.begin();vst_it != lot.end();vst_it++){
     _trace = _inpath+"/" + *vst_it;
 
     ifstream fin(_trace);
@@ -72,36 +71,36 @@ void genGeneralCL(string _inpath){
       lat.addSubgraph(lat.toDotEdges(c.getID(),0),c.toString());
     }
   }
-  	string ldot = lat.toDot(clName,0).c_str();
-  	//printf("%s\n",ldot.c_str());
-  	//printf("%s\n",trc.tableString().c_str());
-  	//printf("%s\n",atr.tableString().c_str());
-    printf("\nFinished CL generation in %.3f seconds\nWriting CLs to %s\n",(((float)t)/CLOCKS_PER_SEC),_outpath.c_str());
-    ofstream allDot;
-    printf("%s\n",(_outpath+clName+".dot").c_str());
-    allDot.open(_outpath+clName+".dot");
-    allDot << lat.toDot(clName,0).c_str();
-    allDot.close();
+  string ldot = lat.toDot(clName,0).c_str();
+  //printf("%s\n",ldot.c_str());
+  //printf("%s\n",trc.tableString().c_str());
+  //printf("%s\n",atr.tableString().c_str());
+  printf("\nFinished CL generation in %.3f seconds\nWriting CLs to %s\n",(((float)t)/CLOCKS_PER_SEC),_outpath.c_str());
+  ofstream allDot;
+  printf("%s\n",(_outpath+clName+".dot").c_str());
+  allDot.open(_outpath+clName+".dot");
+  allDot << lat.toDot(clName,0).c_str();
+  allDot.close();
 
-    ofstream ttbl;
-    ofstream atbl;
-    ofstream cmat; //context bit matrix
-    ofstream lmat; //lattice adjacency matrix
+  ofstream ttbl;
+  ofstream atbl;
+  ofstream cmat; //context bit matrix
+  ofstream lmat; //lattice adjacency matrix
 
-    ttbl.open(_outpath+clName+".objTable.txt");
-    ttbl << trc.tableString().c_str();
-    ttbl.close();
+  ttbl.open(_outpath+clName+".objTable.txt");
+  ttbl << trc.tableString().c_str();
+  ttbl.close();
 
-    atbl.open(_outpath+clName+".attrTable.txt");
-    atbl << atr.tableString().c_str();
-    atbl.close();
+  atbl.open(_outpath+clName+".attrTable.txt");
+  atbl << atr.tableString().c_str();
+  atbl.close();
 
-    lmat.open(_outpath+clName+".latmat.txt");
-    lmat << lat.toLatMat().c_str();
-    lmat.close();
+  lmat.open(_outpath+clName+".latmat.txt");
+  lmat << lat.toLatMat().c_str();
+  lmat.close();
 
-    cmat.open(_outpath+clName+".context.txt");
-    cmat << lat.toContextBitmax().c_str();
-    cmat.close();
-    printf("\n############ END ############\n\n");
+  cmat.open(_outpath+clName+".context.txt");
+  cmat << lat.toContextBitmax().c_str();
+  cmat.close();
+  printf("\n############ END ############\n\n");
 }

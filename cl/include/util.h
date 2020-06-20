@@ -31,8 +31,6 @@
 #include <map>
 #include <utility>
 
-#include "entry.h"
-#include "nlr.h"
 #include "lat_lat.h"
 #include "lat_atr.h"
 #include "lat_vec.h"

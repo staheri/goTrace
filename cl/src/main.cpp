@@ -97,18 +97,6 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	if ( globalArgs.mode == 1 ){
-		texTraceBatch(globalArgs.path);
-	}
-	if ( globalArgs.mode == 2 ){
-		genCL(globalArgs.path,globalArgs.filtbit,globalArgs.atrMode,globalArgs.atrFreq,globalArgs.atrOption,globalArgs.k);
-	}
-	if ( globalArgs.mode == 3 ){
-		fptrace(globalArgs.path,globalArgs.k);
-	}
-	if ( globalArgs.mode == 4 ){
-		genFPCL(globalArgs.path,globalArgs.atrMode);
-	}
-	if ( globalArgs.mode == 5 ){
-		genGoCL(globalArgs.path,globalArgs.atrMode,globalArgs.atrFreq,globalArgs.atrOption,globalArgs.k);
+		genGeneralCL(globalArgs.path);
 	}
 }
