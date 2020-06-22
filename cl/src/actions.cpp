@@ -13,7 +13,7 @@ void genGeneralCL(string _inpath){
   vector<string> lot; // list of all traces within _inpath
   vector<string>::iterator vst_it;
 
-  string _trace;
+  string _trace,line;
   // _outpath
   string _outpath = _inpath+"/cl/";
   if(mkdir(_outpath.c_str(),0777) == -1){
@@ -35,13 +35,14 @@ void genGeneralCL(string _inpath){
   });
 
 
-  string clName = clNameTranslator(_atrMode,_atrFreq,_atrOption);
+  //string clName = clNameTranslator(_atrMode,_atrFreq,_atrOption);
+  string clName = "test";
   Lattice lat = Lattice(clName);
   // To hold an object of each trace and attribute for accessing their hashtables later
   Trace trc;
   Attribute<string> atr;
   set<int> attrIDs;
-  
+
   printf("\nExtracting Attributes & Creating CL %s\n",clName.c_str());
 
 
@@ -60,7 +61,7 @@ void genGeneralCL(string _inpath){
     while(std::getline(fin, line)){
       printf("Crating Attribute Objects...\n\n");
       atr = Attribute<string>(line);
-      printf("\tatr: %s\n",(*sit).c_str() );
+      printf("\tatr: %s\n",line.c_str() );
       //printf("Adding Attribute Object to global ds\n\n");
       attrIDs.insert(atr.getID());
       lat.setMaxAttribute(atr.getAttributeCount());
@@ -75,7 +76,7 @@ void genGeneralCL(string _inpath){
   //printf("%s\n",ldot.c_str());
   //printf("%s\n",trc.tableString().c_str());
   //printf("%s\n",atr.tableString().c_str());
-  printf("\nFinished CL generation in %.3f seconds\nWriting CLs to %s\n",(((float)t)/CLOCKS_PER_SEC),_outpath.c_str());
+
   ofstream allDot;
   printf("%s\n",(_outpath+clName+".dot").c_str());
   allDot.open(_outpath+clName+".dot");

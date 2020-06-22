@@ -16,7 +16,7 @@ import (
 )
 
 const dir = "/Users/saeed/goTrace/"
-const outpath = dir+"traces/contexts/"
+const outpath = dir+"traces/clx/"
 const inpath = dir+"/CodeBenchmark/"
 const datapath = dir+"DataBenchmark/medium/"
 

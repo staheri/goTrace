@@ -89,11 +89,6 @@ string intToString(int i);
  */
 bool isDir(string path);
 
-/**
- * Read Entry files from .../prep/filtbit/... and returns a vector of entries
- */
- vector<Entry> readEntryFile(string path);
-
 
 
 #endif

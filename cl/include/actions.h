@@ -40,7 +40,7 @@ using namespace std;
  * It first Preprocess data (decompress, filter, detect loops, extract attributes, etc.)
  * Then it creates the lattice from generated data
  */
-void genGeneralCL(string _inpath,string _filtbit, int _atrMode, int _atrFreq, int _atrOption, int k);
+void genGeneralCL(string _inpath);
 
 
 #endif
