@@ -36,7 +36,14 @@ void genGeneralCL(string _inpath){
 
 
   //string clName = clNameTranslator(_atrMode,_atrFreq,_atrOption);
-  string clName = "test";
+  string clName;
+  if (splitString(_inpath,'/').rbegin()[0].length() != 0){
+    clName = splitString(_inpath,'/').rbegin()[0];
+  }
+  else{
+    clName = splitString(_inpath,'/').rbegin()[1];
+  }
+
   Lattice lat = Lattice(clName);
   // To hold an object of each trace and attribute for accessing their hashtables later
   Trace trc;
@@ -61,16 +68,17 @@ void genGeneralCL(string _inpath){
     while(std::getline(fin, line)){
       printf("Crating Attribute Objects...\n\n");
       atr = Attribute<string>(line);
-      printf("\tatr: %s\n",line.c_str() );
+      printf("\tatr: %s, id: %d\n",line.c_str(),atr.getID() );
       //printf("Adding Attribute Object to global ds\n\n");
       attrIDs.insert(atr.getID());
-      lat.setMaxAttribute(atr.getAttributeCount());
 
-      // Making concepts and injecting to CL
-      Concept c = Concept(trc.getID(),attrIDs);
-      lat.addConcept(c);
-      lat.addSubgraph(lat.toDotEdges(c.getID(),0),c.toString());
+      lat.setMaxAttribute(atr.getAttributeCount());
     }
+    // Making concepts and injecting to CL
+    Concept c = Concept(trc.getID(),attrIDs);
+    printf("\tNEW CONCEPT: %s\n",c.toString().c_str());
+    lat.addConcept(c);
+    lat.addSubgraph(lat.toDotEdges(c.getID(),0),c.toString());
   }
   string ldot = lat.toDot(clName,0).c_str();
   //printf("%s\n",ldot.c_str());

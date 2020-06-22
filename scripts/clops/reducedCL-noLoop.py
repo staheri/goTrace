@@ -212,7 +212,7 @@ class Lattice:
 		self.supID = -1
 		self.infID = -1
 	def addNode(self,id,content):
-		#print "Graph::AddNode(%s)..."%(id)
+		#print "Graph::AddNode(%s) Content: %s\n"%(id,content)
 		if id not in self.nodes.keys():
 			self.nodes[id] = {}
 			self.rnodes[hash(content.partition(":")[2].partition("\"")[0].strip())] = id
@@ -436,15 +436,7 @@ def attrSummary(l,type):
 			for item in l:
 				print item
 				print attrTable[item]
-				if attrTable[item].startswith("L"):
-					lkey = attrTable[item].partition("L")[2].rpartition(":")[0]
-					if lkey in loopTable.keys():
-						lval = loopTable[attrTable[item].partition("L")[2].rpartition(":")[0]]
-						llc = attrTable[item].partition("L")[2].rpartition(":")[2]
-						s = s +"L"+lkey+"("+ lval+"):"+ llc+" \\l "
-					else:
-						s = s + "<LOOP NOT FOUND> \\l"
-				elif ":" in attrTable[item] and attrTable[item].partition(":")[2] == "1":
+				if ":" in attrTable[item] and attrTable[item].partition(":")[2] == "1":
 					s = s + attrTable[item].partition(":")[0] + " \\l "
 				else:
 					s = s + attrTable[item] + " \\l "
@@ -622,18 +614,6 @@ for ccl in glob.glob(sys.argv[1]+"/cl/*.dot"):
 	fi = open(ccl,"r").read().split("\n")
 	f = [x for x in fi if "->" in x]
 
-	#READ LOOP TABLE
-	tmp = ccl.split("/")
-	stmp = ""
-	for i in range(0,len(tmp)-3):
-		stmp = stmp + tmp[i] + "/"
-	ltab = stmp + "prep/" + tmp[-2] + "/ltab.txt"
-	loopLines = open(ltab,"r").read().split("\n")
-	loopTable = {}
-	for item in loopLines:
-		if ":" in item:
-			loopTable[item.partition(":")[0]] = item.partition(":")[2]
-	print loopTable
 
 
 	# READ TABLES, CONTEXT AND LATMAT
@@ -678,7 +658,7 @@ for ccl in glob.glob(sys.argv[1]+"/cl/*.dot"):
 	lat.assignLabel()
 
 	#print lat.toString()
-	print lat.toReducedString()
+	#print lat.toReducedString()
 	out = sys.argv[2]
 	outname = out+"-"+ccl.rpartition(".")[0].rpartition("/")[2]
 	f = open(outname+".dot","w")
@@ -698,10 +678,10 @@ for ccl in glob.glob(sys.argv[1]+"/cl/*.dot"):
 
 
 	# Prepration for LCA
-	#ll.DFS(lat.supID)
-	#ll.LCA_1partition()
-	#ll.LCA_2createLists()
+	ll.DFS(lat.supID)
+	ll.LCA_1partition()
+	ll.LCA_2createLists()
 
 
 	# Compute Jaccard Similarity Matrix
-	#simmax(lat,ll,ccl)
+	simmax(lat,ll,ccl)
