@@ -31,7 +31,7 @@ func main(){
   //atrPtr := flag.String("atr", "1110000", "Attributes: a bitstring showing 1/0 event groups :\n\t\t\"GoRoutine,Channel,Process,GCmem,Syscall,Other\"")
   //atrModePtr := flag.Int("atrMode", 0, util.AttributeModesDescription())
 
-  //flag.Parse()
+  flag.Parse()
 
   // main block for instrumentation and collecting traces
 

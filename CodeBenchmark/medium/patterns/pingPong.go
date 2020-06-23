@@ -8,7 +8,7 @@ import "strconv"
 func main() {
     var Ball int
     table := make(chan int)
-    pls,_ := strconv.Atoi("2")
+    pls,_ := strconv.Atoi("10")
     for cnt := 0 ; cnt < pls ; cnt++{
       go player(table,cnt)
     }
