@@ -40,3 +40,6 @@ src/golang.org
 */*/*.out
 */*.out
 *.out
+
+scripts/*.pyc
+scripts/*/*.pyc

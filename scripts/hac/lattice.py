@@ -10,12 +10,11 @@
 import sys,subprocess
 import os
 import numpy as np
-
 from tabulate import tabulate
-import math
 from sets import Set
 from collections import defaultdict
 
+import readin
 
 
 class LiteLat:
@@ -49,10 +48,15 @@ class LiteLat:
 
 	# A function used by DFS
 	def DFSUtil(self,v,visited):
+
 		# Mark the current node as visited and print it
+		#print v
+		#print visited
 		visited[v]= True
+		#print self.firstOccur
 		if self.firstOccur[v] == -1:
 			self.firstOccur[v] = len(self.eulerTour)
+		#print v+1,
 		self.eulerTour.append(v)
 		if len(self.level) == 1 and self.level[0] == -1:
 			self.level[0] = 0
@@ -61,23 +65,32 @@ class LiteLat:
 
 		# Recur for all the vertices adjacent to this vertex
 		for i in self.graph[v]:
+
 			if visited[i] == False:
 				self.DFSUtil(i, visited)
 				# This extra print is for Euler tour
 				#print v+1,
 				self.eulerTour.append(v)
 				self.level.append(self.level[-1]-1)
+		#self.curLevel = self.curLevel - 1
 
 	# The function to do DFS traversal. It uses recursive DFSUtil()
 	def DFS(self,v):
+
 		# Mark all the vertices as not visited
 		visited = [False]*(len(self.graph))
+		#print visited
+		#print "KIRE KHAR %s >"%(v)
 		self.level.append(-1)
 		# Call the recursive helper function to print
 		# DFS traversal
 		self.DFSUtil(v,visited)
+		#print "Euler Tour: %s"%(self.eulerTour)
+		#print "Levels: %s"%(self.level)
+		#print "First Occur: %s"%(self.firstOccur)
 		for i in range(0,len(self.eulerTour)):
 			self.depths[self.eulerTour[i]] = self.level[i]
+		#print "Depths: %s"%(self.depths)
 
 	# Using RMQ, it returns the LCA of nodes x and y in TREE
 	def lca_t(self,x,y):
@@ -141,11 +154,8 @@ class LiteLat:
 				self.lca_remaining[key] = []
 				for item in val:
 					if item not in self.lca_spantree[key]:
+						#if key in self.remaining.keys():
 						self.lca_remaining[key].append(item)
-
-		#print "G: %s"%(sorted(self.graph.items()))
-		#print "T: %s"%(sorted(self.lca_spantree.items()))
-		#print "D: %s"%(sorted(self.lca_remaining.items()))
 
 	# Create list of ancestors of each node in remaining
 	def LCA_2createLists(self):
@@ -163,11 +173,13 @@ class LiteLat:
 				self.lca_revRemaining[key] = []
 		for key,val in self.lca_revRemaining.items():
 			self.lca_ancestors[key] = self.LCA_3listGen(key)
+		#print self.lca_ancestors
 
 	# Generating lists of ancestors for LCA operations (copy of DFSUtil)
 	def LCA_3listGenHelper(self,v,visited,alist):
 		# Mark the current node as visited and print it
 		visited[v]= True
+		#print v,
 		alist.append(v)
 		# Recur for all the vertices adjacent to this vertex
 		for i in self.lca_revRemaining[v]:
@@ -179,50 +191,53 @@ class LiteLat:
 	def LCA_3listGen(self,v):
 		# Mark all the vertices as not visited
 		visited = [False]*(len(self.lca_revRemaining))
+		#print visited
+		#self.lca_ancestors[v] = []
 		alist = []
 		# Call the recursive helper function to print
 		# DFS traversal
 		return self.LCA_3listGenHelper(v,visited,alist)
 
 class Lattice:
-	def __init__(self,name):
-		self.name = name
-		self.attributes = Set([])
-		self.objects = Set([])
-		self.nodes = {}
-		self.rnodes = {}
-		self.ncnt = 0
-		self.edges = {}
-		self.ecnt = 0
-		self.atr2node = defaultdict(list)
-		self.obj2node = defaultdict(list)
-		self.supID = -1
-		self.infID = -1
+    # INIT
+    def __init__(self,name):
+        self.name = name
+        self.attributes = Set([])
+        self.objects = Set([])
+        self.nodes = {}
+        self.rnodes = {}
+        self.ncnt = 0
+        self.edges = {}
+        self.ecnt = 0
+        self.atr2node = defaultdict(list)
+        self.obj2node = defaultdict(list)
+        self.supID = -1
+        self.infID = -1
 
+    # addNode
     def addNode(self,id,content):
-		#print "Graph::AddNode(%s)..."%(id)
-		if id not in self.nodes.keys():
-			self.nodes[id] = {}
-			self.rnodes[hash(content.partition(":")[2].partition("\"")[0].strip())] = id
-			self.nodes[id]["objs"] = [x for x in content.partition(">")[0].partition("<")[2].split(",") if len(x) > 0]
-			self.objects |= Set(self.nodes[id]["objs"])
-			self.nodes[id]["atrs"] = [x for x in content.partition(")")[0].partition("(")[2].split(",") if len(x) > 0]
-			self.attributes |= Set(self.nodes[id]["atrs"])
-			self.nodes[id]["redObjs"] = []
-			self.nodes[id]["redAtrs"] = []
-			self.nodes[id]["label"] = "n/a"
-			self.nodes[id]["childs"] = []
-			self.nodes[id]["parents"] = []
-			self.ncnt = self.ncnt + 1
-		#else:
-		#	print "Node(%s) already exist"%(id)
+        if id not in self.nodes.keys():
+            self.nodes[id] = {}
+            self.rnodes[hash(content.partition(":")[2].partition("\"")[0].strip())] = id
+            self.nodes[id]["objs"] = [x for x in content.partition(">")[0].partition("<")[2].split(",") if len(x) > 0]
+            self.objects |= Set(self.nodes[id]["objs"])
+            self.nodes[id]["atrs"] = [x for x in content.partition(")")[0].partition("(")[2].split(",") if len(x) > 0]
+            self.attributes |= Set(self.nodes[id]["atrs"])
+            self.nodes[id]["redObjs"] = []
+            self.nodes[id]["redAtrs"] = []
+            self.nodes[id]["label"] = "n/a"
+            self.nodes[id]["childs"] = []
+            self.nodes[id]["parents"] = []
+            self.ncnt = self.ncnt + 1
 
-	def addEdge(self,sid,did):
-		self.edges[self.ecnt] = (sid,did)
-		self.ecnt = self.ecnt + 1
-		self.nodes[sid]["childs"].append(did)
-		self.nodes[did]["parents"].append(sid)
+    # addEdge
+    def addEdge(self,sid,did):
+        self.edges[self.ecnt] = (sid,did)
+        self.ecnt = self.ecnt + 1
+        self.nodes[sid]["childs"].append(did)
+        self.nodes[did]["parents"].append(sid)
 
+    # detect supremum and infimum
     def supinfDetection(self):
 		for key,val in sorted(self.nodes.items()):
 			if len(val["parents"]) == 0:
@@ -268,8 +283,7 @@ class Lattice:
 			self.nodes[idd]["redObjs"].append(obj)
 			self.obj2node[obj]=idd
 
-	def toString(self):
-		global attrTable
+    def toString(self):
 		print "Nodes:"
 		hdrs = ["ID","Objects","Attributes","In Deg","Out Deg"]
 		tab = []
@@ -277,7 +291,7 @@ class Lattice:
 			tmp = []
 			tmp.append(key)
 			tmp.append(val["objs"])
-			ttt = [attrTable[x] for x in val["atrs"]]
+			ttt = [readin.attrTable[x] for x in val["atrs"]]
 			tmp.append(ttt)
 			tmp.append(len(val["parents"]))
 			tmp.append(len(val["childs"]))
@@ -293,9 +307,8 @@ class Lattice:
 			tmp.append(val[1])
 			tab.append(tmp)
 		print tabulate(tab,headers=hdrs,tablefmt="fancy_grid")
-
-	def toReducedString(self):
-		global attrTable
+    def toReducedString(self):
+		readin.attrTable
 		print "Reduced Nodes:"
 		hdrs = ["ID","Objects","Attributes"]
 		tab = []
@@ -303,7 +316,7 @@ class Lattice:
 			tmp = []
 			tmp.append(key)
 			tmp.append(val["redObjs"])
-			ttt = [attrTable[x] for x in val["redAtrs"]]
+			ttt = [readin.attrTable[x] for x in val["redAtrs"]]
 			tmp.append(ttt)
 			tab.append(tmp)
 		print tabulate(tab,headers=hdrs,tablefmt="fancy_grid")
@@ -324,43 +337,73 @@ class Lattice:
 			tmp.append(val)
 			tab.append(tmp)
 		print tabulate(tab,headers=hdrs,tablefmt="fancy_grid")
+    def toReucedFancyDot(self):
+		s = "digraph { \n\tnode[shape=record,style=filled,fillcolor=gray95]\n\n"
+		for key,val in self.nodes.items():
+			#print key
+			newObjs = [readin.objTable[x].rpartition(".")[0] for x in val["redObjs"]]
+			s2 = ""
+			#print newObjs
+			if len(newObjs) != 0:
+				for i in range(0,len(newObjs)):
+					s2 = s2 + newObjs[i]
+					if i != len(newObjs)-1:
+						s2 = s2 + "-"
+				objects = "Object(s) " + s2
+			else:
+				objects = "-"
+			attributes = attrSummary(val["redAtrs"],"x")
+			s = s + "\t" + `key` + " [label = \"{" + objects + " | " + attributes + "}\"]\n"
+		s = s + "\n"
+		# ADD edges
+		l = [self.supID]
+		edges = []
+		visited = []
+		while len(l) > 0:
+			n = l[0]
+			visited.append(n)
+			l = l[1:]
+			for child in self.nodes[n]["childs"]:
+				if child not in visited:
+					l.append(child)
+			for child in self.nodes[n]["childs"]:
+				edge = `n` + " -> " + `child`
+				if edge not in edges:
+					s = s + "\t" + edge + "\n"
+					edges.append(edge)
+		s = s + "}"
+		#print s
+		return s
 
-def readTable(list):
-	ret = {}
-	for line in list:
-		ll = line.split("|")
-		if len(ll) == 3:
-			value = ll[1].strip()
-			ret[ll[0].strip()] = value
-	return ret
 
 def firstClosure(id,type):
-	global cmat
+	#print cmat
 	if type == "a":
 		m = id-1
 		mp = []
-		for i in range(0,len(cmat)):
-			if cmat[i][m] == "1":
+		for i in range(0,len(readin.cmat)):
+			if readin.cmat[i][m] == "1":
 				mp.append(i+1)
 		ret = mp
 	else:
 		g = id-1
 		gp = []
-		for i in range(0,len(cmat[g])):
-			if cmat[g][i] == "1":
+		for i in range(0,len(readin.cmat[g])):
+			if readin.cmat[g][i] == "1":
 				gp.append(i+1)
 		ret = gp
+	#print ret
 	return ret
-
 def secondClosure(flist,ftype):
-	global cmat
 	if ftype == "a":
 		mp = flist
+		#print "mp"
+		#print mp
 		mpp = []
-		for i in range (0,len(cmat)):
+		for i in range (0,len(readin.cmat)):
 			flg = True
 			for item in mp:
-				if cmat[i][item-1] != "1":
+				if readin.cmat[i][item-1] != "1":
 					flg = False
 			if flg:
 				mpp.append(i+1)
@@ -368,39 +411,40 @@ def secondClosure(flist,ftype):
 	else:
 		gp = flist
 		gpp = []
-		for j in range(0,len(cmat[0])):
+		for j in range(0,len(readin.cmat[0])):
 			flg = True
 			for i in gp:
-				if cmat[i-1][j] != "1":
+				if readin.cmat[i-1][j] != "1":
 					flg = False
 			if flg:
 				gpp.append(j+1)
 		ret = gpp
+	#print ret
 	return ret
-
 def attrSummary(l,type):
-	global attrTable
 	s = ""
+
 	if len(l) == 0:
 		s = "[-]"
 	else:
 		if type == "StackMRR":
 			for item in l:
-				s = s + attrTable[item] + " \\l "
+				s = s + readin.attrTable[item] + " \\l "
 		else:
 			for item in l:
 				#print item
-				#print attrTable[item]
-				if ":" in attrTable[item] and attrTable[item].partition(":")[2] == "1":
-					s = s + attrTable[item].partition(":")[0] + " \\l "
+				#print readin.attrTable[item]
+				if ":" in readin.attrTable[item] and readin.attrTable[item].partition(":")[2] == "1":
+					s = s + readin.attrTable[item].partition(":")[0] + " \\l "
 				else:
-					s = s + attrTable[item] + " \\l "
+					s = s + readin.attrTable[item] + " \\l "
+	#if s[-4:-1] == " \\l":
+	#	s = s [:-4]
 	ss = ""
 	for ch in s:
 		if ch != ">":
 			ss = ss + ch
 	return ss
-
 def setSummary(l):
 	iprev= -1
 	istart= 0
@@ -438,7 +482,6 @@ def setSummary(l):
 		else:
 			tmps = tmps + sistart + "-" + siend
 	return tmps
-
 def fancyDot(lat,showSupAtr,showFull):
 	s = "digraph { \n\tnode[shape=record,style=filled,fillcolor=gray95]\n\n"
 	#for key,val in lat.edges.items():
@@ -477,24 +520,22 @@ def fancyDot(lat,showSupAtr,showFull):
 				s = s + "\t" + edge + "\n"
 				edges.append(edge)
 	s = s + "}"
-	print s
+	#print s
 	return s
-
 def latmatToFullMat(lm):
 	mat = []
 	irow = [0]*len(lm)
 	for i in range(0,len(lm)):
 		irow = [0]*len(lm)
 		irow[i] = 1
-		if latmatc[i] != "-":
+		if readin.latmatc[i] != "-":
 			#print latmatc[i].split(" ")
-			for u in latmatc[i].split(" "):
+			for u in readin.latmatc[i].split(" "):
 				if len(u) > 0:
 					irow[int(u)] = 1
 
 		mat.append(irow)
 	return mat
-
 def transitiveClosure(mat):
 	reach = [i[:] for i in mat]
 	for k in range(len(mat)):
@@ -502,7 +543,6 @@ def transitiveClosure(mat):
 			for j in range(len(mat)):
 				reach[i][j] = reach[i][j] or (reach[i][k] and reach[k][j])
 	return reach
-
 def unSum(lat,i,j):
 	# reverse parse in the lattice to sum the number of atributes
 	toCheck = [i,j]
@@ -519,6 +559,8 @@ def unSum(lat,i,j):
 				toCheck.append(item)
 	#print sum
 	return sum
+
+
 
 def simmax(lat,ll,path):
 	objects = sorted([int(x) for x in lat.objects])
@@ -546,16 +588,4 @@ def simmax(lat,ll,path):
 	fout = open(path.rpartition(".")[0]+".jacmat.txt","w")
 	fout.write(s)
 	fout.close()
-
-def simmax2(lobj,path):
-	mtx = np.zeros((lobj,lobj))
-	#print "%s"%mtx
-	s = ""
-	for i in range(0,len(mtx)):
-		for j in range (0,len(mtx[i])):
-			s = s + "%.3f,"%mtx[i][j]
-		s = s + "\n"
-	print "Writing to...\n"+path.rpartition(".")[0]+".jacmat.txt"
-	fout = open(path.rpartition(".")[0]+".jacmat.txt","w")
-	fout.write(s)
-	fout.close()
+	return mtx
