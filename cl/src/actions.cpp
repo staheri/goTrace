@@ -38,10 +38,10 @@ void genGeneralCL(string _inpath){
   //string clName = clNameTranslator(_atrMode,_atrFreq,_atrOption);
   string clName;
   if (splitString(_inpath,'/').rbegin()[0].length() != 0){
-    clName = splitString(_inpath,'/').rbegin()[0];
+    clName = splitString(_inpath,'/').rbegin()[1] +"_"+ splitString(_inpath,'/').rbegin()[0];
   }
   else{
-    clName = splitString(_inpath,'/').rbegin()[1];
+    clName = splitString(_inpath,'/').rbegin()[2] +"_"+ splitString(_inpath,'/').rbegin()[1];
   }
 
   Lattice lat = Lattice(clName);
