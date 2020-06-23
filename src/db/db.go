@@ -9,7 +9,9 @@ import (
 	"strconv"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
+	"bytes"
 )
 
 
@@ -25,7 +27,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 
 	// Creating new database for current experiment
 	idx := 0
-	dbName = app + "_" + strconv.Itoa(idx)
+	dbName = app + "X" + strconv.Itoa(idx)
 	fmt.Printf("Attempt to create database: %s\n",dbName)
 	_,err = db.Exec("CREATE DATABASE "+dbName + ";")
 	for err != nil{
@@ -652,19 +654,21 @@ func FormalContext(dbName, outpath string, aspects ...string ){
 
 
 	// create directory
-	outdir := outpath + dbName + "_"
+	outdir := outpath + "/" +dbName + "/"
+	filts := ""
 	if len(aspects) != 0{
 		for i,asp := range aspects{
-			outdir = outdir + asp
+			filts = filts + asp
 			if i < len(aspects) - 1{
-				 outdir = outdir + "_"
+				 filts = filts + "_"
 			}
 		}
 	} else{
-		outdir = outdir + "all"
+		filts = filts + "all"
 	}
+	outdir = outdir + filts
 	if _, err := os.Stat(outdir); os.IsNotExist(err) {
-    os.Mkdir(outdir, 0755)
+    os.MkdirAll(outdir, 0755)
 	}
 
 
@@ -678,6 +682,7 @@ func FormalContext(dbName, outpath string, aspects ...string ){
 		//}else{}
 	}
 
+	// store files in the outpath folder
 	for k,v := range data{
 		output := outdir+"/g"+strconv.Itoa(k)+".txt"
 		f,err := os.Create(output)
@@ -691,5 +696,30 @@ func FormalContext(dbName, outpath string, aspects ...string ){
 		}
 		f.Close()
 	}
-	// store files in the outpath folder
+
+	// Execute C++ cl on outdir
+	_cmd := CLPATH + "/cltrace -m 1 -p "+outdir
+	cmd := exec.Command(CLPATH + "/cltrace","-m","1","-p",outdir)
+	fmt.Printf(">>> Executing %s...\n",_cmd)
+	err = cmd.Run()
+	if err != nil{
+		log.Fatal(err)
+	}
+
+	// Execute python hac on outdir/cl
+	_cmd = "python "+ HACPATH + "/main.py " + outdir+"/cl/"+dbName+"_"+filts+".dot "+RESPATH+"/"+dbName+"_"+filts
+
+	cmd = exec.Command("python",HACPATH + "/main.py",outdir+"/cl/"+dbName+"_"+filts+".dot",RESPATH+"/"+dbName+"_"+filts)
+	fmt.Printf(">>> Executing %s...\n",_cmd)
+	//err = cmd.Run()
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+    fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+    return
+	}
+	fmt.Println("Result: " + out.String())
 }
