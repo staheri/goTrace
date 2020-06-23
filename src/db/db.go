@@ -382,7 +382,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
   }
 }
 
-func Ops(){
+func Ops(command string){
 	// Connecting to mysql driver
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/")
 	defer db.Close()
@@ -397,13 +397,26 @@ func Ops(){
 		log.Fatal(err)
 	}
 
-	var dbs string
+	var dbs,q string
 	for res.Next(){
 		err := res.Scan(&dbs)
 		if err != nil {
 			log.Fatal(err)
 		}
 		fmt.Printf("DB: %s \n",dbs)
+		if dbs[len(dbs)-1] >= '0' && dbs[len(dbs)-1] <= '9'{
+			q = "DROP DATABASE "+dbs+";"
+			fmt.Printf(">>> Executing %s...\n",q)
+			_,err2 := db.Exec(q)
+
+			if err2 != nil {
+				log.Fatal(err2)
+			}
+		}
+	}
+
+	if command == "CLEAN"{
+
 	}
 }
 
