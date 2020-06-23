@@ -343,7 +343,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
     }else{
       if desc.Name == "ChClose"{
         // update Channels
-        q = fmt.Sprintf("UPDATE Channels SET close_eid=%v close_gid=%v WHERE cid=%v;",eid,e.G,cid)
+        q = fmt.Sprintf("UPDATE Channels SET close_eid=%v, close_gid=%v WHERE cid=%v;",eid,e.G,cid)
   			fmt.Printf(">>> Executing %s...\n",q)
   			_,err := db.Exec(q)
   			if err != nil{
