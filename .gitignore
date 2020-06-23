@@ -43,3 +43,5 @@ src/golang.org
 
 scripts/*.pyc
 scripts/*/*.pyc
+
+results/*

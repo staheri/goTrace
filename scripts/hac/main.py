@@ -13,6 +13,7 @@ import hac
 import sys
 import glob
 import subprocess
+#import seaborn as sns ; sns.set(font_scale=0.9)
 
 if len(sys.argv) != 3:
     print "USAGE:\n\t " +sys.argv[0]+" dotFile out"
@@ -63,14 +64,14 @@ lat.assignLabel()
 #print lat.toReducedString()
 
 # Generate and write reduced-label output(dot) file
-out = sys.argv[2]
-outname = out+"-"+ccl.rpartition(".")[0].rpartition("/")[2]
+outname = sys.argv[2]
+#outname = out+"-"+ccl.rpartition(".")[0].rpartition("/")[2]
 fo = open(outname+".dot","w")
 fo.write(lat.toReucedFancyDot())
 fo.close()
 
 # Generate pdf from dot
-cmd = "dot -Tpdf "+outname+".dot -o "+outname+".pdf"
+cmd = "dot -Tpdf "+outname+".dot -o "+outname+"-cl.pdf"
 print cmd
 process = subprocess.Popen([cmd], stdout=subprocess.PIPE,shell=True)
 si, err = process.communicate()
@@ -86,4 +87,10 @@ ll.LCA_1partition()
 ll.LCA_2createLists()
 # Compute Jaccard Similarity Matrix
 jacmat=lattice.simmax(lat,ll,ccl)
-hac.cluster(jacmat,5)
+hac.cluster(jacmat,5,outname)
+
+#JSM
+#ax = sns.heatmap(jacmat, annot=True)
+#fig = ax.get_figure()
+#fig.tight_layout()
+#fig.savefig(outname+"-jsm.pdf")

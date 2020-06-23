@@ -26,17 +26,20 @@ def jac2pdist(m):
 	return ret
 
 
-def cluster(m,maxc):
+def cluster(m,maxc,out):
 	#print ward(jac2pdist(m))
 	#dendrogram(ward(jac2pdist(mat1)), truncate_mode='level', p=4)
 	plt.title("HAC")
 	plt.xlabel('Goroutine IDs')
 	plt.ylabel('Distance')
-	#dendrogram(ward(jac2pdist(mat1)))
+	dendrogram(ward(jac2pdist(m)))
 	#dendrogram(ward(jac2pdist(mat1)), truncate_mode='level', p=4)
 	#plt.show()
+	plt.savefig(out+"-dend.pdf")
 	ret = fcluster(ward(jac2pdist(m)),maxc,criterion='maxclust')
-	print clusterTable(ret)
+	f=open(out+"-rep.txt","w")
+	f.write(clusterTable(ret))
+	f.close()
 	return ret
 
 def clusterTable(c):
@@ -56,4 +59,5 @@ def clusterTable(c):
 			s = s + "g"+`item`+", "
 		ttab.append(s)
 		tab.append(ttab)
-	print tabulate(tab,headers=hdrs,tablefmt="fancy_grid")
+	#print tabulate(tab,headers=hdrs,tablefmt="fancy_grid")
+	return tabulate(tab,headers=hdrs)
