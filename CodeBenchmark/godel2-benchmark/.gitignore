@@ -1,0 +1,8 @@
+# Godel
+*.mcf
+go-model.lts
+go-model.lps
+model.crl2
+Godel
+migoinfer
+*/test-run.cgo
