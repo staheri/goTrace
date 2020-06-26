@@ -371,7 +371,43 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
     }
   } else{
     if desc.Name != "ChMake"{ // Operation on un-made channel? PANIC!
-      panic("Operation on un-made channel? PANIC!")
+			// panic("Operation on un-made channel? PANIC!")
+			// there might be a global channel creation, then what?
+			// First insert the uninitiated channel
+      q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",e.Args[0],-1,-1)
+      fmt.Printf(">>> Executing %s...\n",q)
+    	_, err := db.Query(q)
+    	if err != nil {
+    		panic(err)
+    	}
+			// Then handle current channel op
+			if desc.Name == "ChClose"{
+        // update Channels
+        q = fmt.Sprintf("UPDATE Channels SET close_eid=%v, close_gid=%v WHERE cid=%v;",eid,e.G,cid)
+  			fmt.Printf(">>> Executing %s...\n",q)
+  			_,err := db.Exec(q)
+  			if err != nil{
+  				panic(err)
+  			}
+      } else if desc.Name == "ChSend"{
+        // update Channels
+        q = fmt.Sprintf("UPDATE Channels SET cntSends = cntSends + 1 WHERE cid=%v;",cid)
+        fmt.Printf(">>> Executing %s...\n",q)
+      	_, err := db.Query(q)
+      	if err != nil {
+      		panic(err)
+      	}
+      } else if desc.Name == "ChRecv"{
+        // update Channels
+        q = fmt.Sprintf("UPDATE Channels SET cntRecvs = cntRecvs + 1 WHERE cid=%v;",cid)
+        fmt.Printf(">>> Executing %s...\n",q)
+      	_, err := db.Query(q)
+      	if err != nil {
+      		panic(err)
+      	}
+      } else{
+        panic("Wrong Place!")
+      }
     } else{
       // insert
       q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",e.Args[0],e.G,eid)
