@@ -91,4 +91,6 @@ func main(){
   //db.FormalContext(*dbName,outpath,"CHNL","GRTN","PROC","GCMM")
 
   db.ChannelReport(*dbName)
+  db.MutexReport(*dbName)
+  db.WaitingGroupReport(*dbName)
 }

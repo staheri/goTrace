@@ -885,7 +885,7 @@ func ChannelReport(dbName string){
 			// now find stack entry for current row
 			q = `SELECT file,func
 			     FROM StackFrames
-					 WHERE eventID=`+strconv.Itoa(id)+";"
+					 WHERE eventID=`+strconv.Itoa(id)+" ORDER BY id;"
 			fmt.Printf("Executing: %v\n",q)
 		 	res2, err2 := db.Query(q)
 		 	if err2 != nil {
@@ -904,6 +904,254 @@ func ChannelReport(dbName string){
 				row = append(row,tmp)
 				row = append(row,"-")
 			}else{
+				row = append(row,"-")
+				row = append(row,tmp)
+			}
+			t.AppendRow(row)
+		}
+		fmt.Printf("%v\n",report)
+		t.Render()
+	}
+}
+
+
+
+
+
+
+func MutexReport(dbName string){
+
+	// Variables
+	var q, event             string
+	var report, tmp               string
+	var file, funct          string
+	var muid,id, ts, gid     int
+
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+
+	// Query events to find mutex IDs
+	q = `SELECT t1.id, t1.type, t1.g, t1.ts, t3.arg, t3.value
+	     FROM Events t1
+			 INNER JOIN global.catMUTX t2 ON t1.type=t2.eventName
+			 INNER JOIN args t3 ON t1.id=t3.eventID
+			 WHERE t3.arg="muid";`
+	q = `SELECT DISTINCT(t3.value)
+ 	     FROM Events t1
+ 			 INNER JOIN global.catMUTX t2 ON t1.type=t2.eventName
+ 			 INNER JOIN args t3 ON t1.id=t3.eventID
+ 			 WHERE t3.arg="muid";`
+	fmt.Printf("Executing: %v\n",q)
+
+	res, err := db.Query(q)
+	if err != nil {
+		panic(err)
+	}
+	var lockIDs []int
+	for res.Next(){
+		err = res.Scan(&muid)
+		if err != nil {
+			panic(err)
+		}
+		lockIDs=append(lockIDs,muid)
+	}
+
+	for _,muid := range lockIDs{
+		report = "Mutex global ID: "+strconv.Itoa(muid)+"\n"
+
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.AppendHeader(table.Row{"TS","Lock", "Unlock","RWLock","RWUnlock"})
+
+		// query to obtain send/recv for mutexID=muid
+		q = `SELECT t1.id, t1.type, t1.ts, t1.g
+		     FROM Events t1
+				 INNER JOIN global.catMUTX t2 ON t1.type=t2.eventName
+				 INNER JOIN Args t3 ON t1.id=t3.eventID
+				 WHERE t3.arg="muid" AND t3.value=`+strconv.Itoa(muid)+`
+				 ORDER BY t1.ts;`
+		fmt.Printf("Executing: %v\n",q)
+		res1, err1 := db.Query(q)
+		if err1 != nil {
+			panic(err1)
+		}
+
+		for res1.Next(){
+			err1 = res1.Scan(&id,&event,&ts,&gid)
+			if err1 != nil{
+				panic(err1)
+			}
+			// now find stack entry for current row
+			q = `SELECT file,func
+			     FROM StackFrames
+					 WHERE eventID=`+strconv.Itoa(id)+`
+					 ORDER BY id`
+			fmt.Printf("Executing: %v\n",q)
+		 	res2, err2 := db.Query(q)
+		 	if err2 != nil {
+		 		panic(err2)
+		 	}
+			for res2.Next(){
+				err2 = res2.Scan(&file,&funct)
+				if err2 != nil{
+					panic(err2)
+				}
+			}
+			var row []interface{}
+			row = append(row,ts)
+			tmp = "G"+strconv.Itoa(gid)+": "+file+" >> "+funct+"\n"
+			if event == "EvMuLock"{
+				row = append(row,tmp)
+				row = append(row,"-")
+				row = append(row,"-")
+				row = append(row,"-")
+			}else if event == "EvMuUnlock"{
+				row = append(row,"-")
+				row = append(row,tmp)
+				row = append(row,"-")
+				row = append(row,"-")
+			} else if event == "EvRWMLock"{
+				row = append(row,"-")
+				row = append(row,"-")
+				row = append(row,tmp)
+				row = append(row,"-")
+			} else{
+				row = append(row,"-")
+				row = append(row,"-")
+				row = append(row,"-")
+				row = append(row,tmp)
+			}
+			t.AppendRow(row)
+		}
+		fmt.Printf("%v\n",report)
+		t.Render()
+	}
+}
+
+
+
+
+
+func WaitingGroupReport(dbName string){
+
+	// Variables
+	var q, event             string
+	var report, tmp               string
+	var file, funct          string
+	var wid,id, ts, gid, val    int
+
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+
+	// Query events to find mutex IDs
+	q = `SELECT t1.id, t1.type, t1.g, t1.ts, t3.arg, t3.value
+	     FROM Events t1
+			 INNER JOIN global.catWGRP t2 ON t1.type=t2.eventName
+			 INNER JOIN args t3 ON t1.id=t3.eventID
+			 WHERE t3.arg="wgid";`
+	q = `SELECT DISTINCT(t3.value)
+ 	     FROM Events t1
+ 			 INNER JOIN global.catWGRP t2 ON t1.type=t2.eventName
+ 			 INNER JOIN args t3 ON t1.id=t3.eventID
+ 			 WHERE t3.arg="wid";`
+	fmt.Printf("Executing: %v\n",q)
+
+	res, err := db.Query(q)
+	if err != nil {
+		panic(err)
+	}
+	var wIDs []int
+	for res.Next(){
+		err = res.Scan(&wid)
+		if err != nil {
+			panic(err)
+		}
+		wIDs=append(wIDs,wid)
+	}
+
+	for _,wid := range wIDs{
+		report = "WaitingGroup global ID: "+strconv.Itoa(wid)+"\n"
+
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.AppendHeader(table.Row{"TS","ADD(value+LOC)", "DONE","WAIT"})
+
+		// query to obtain send/recv for mutexID=muid
+		q = `SELECT t1.id, t1.type, t1.ts, t1.g
+		     FROM Events t1
+				 INNER JOIN global.catWGRP t2 ON t1.type=t2.eventName
+				 INNER JOIN Args t3 ON t1.id=t3.eventID
+				 WHERE t3.arg="wid" AND t3.value=`+strconv.Itoa(wid)+`
+				 ORDER BY t1.ts;`
+		fmt.Printf("Executing: %v\n",q)
+		res1, err1 := db.Query(q)
+		if err1 != nil {
+			panic(err1)
+		}
+
+		for res1.Next(){
+			err1 = res1.Scan(&id,&event,&ts,&gid)
+			if err1 != nil{
+				panic(err1)
+			}
+			// now find stack entry for current row
+			q = `SELECT file,func
+			     FROM StackFrames
+					 WHERE eventID=`+strconv.Itoa(id)+`
+					 ORDER BY id`
+			fmt.Printf("Executing: %v\n",q)
+		 	res2, err2 := db.Query(q)
+		 	if err2 != nil {
+		 		panic(err2)
+		 	}
+			for res2.Next(){
+				err2 = res2.Scan(&file,&funct)
+				if err2 != nil{
+					panic(err2)
+				}
+			}
+			var row []interface{}
+			row = append(row,ts)
+			tmp = "G"+strconv.Itoa(gid)+": "+file+" >> "+funct+"\n"
+			if event == "EvWgAdd"{
+				// find value
+				q =  `SELECT value FROM args WHERE arg="val" and eventID=`+strconv.Itoa(id)+`;`
+				fmt.Printf("Executing: %v\n",q)
+			 	res3, err3 := db.Query(q)
+			 	if err3 != nil {
+			 		panic(err3)
+			 	}
+				if res3.Next(){
+					err3 = res3.Scan(&val)
+					if err3 != nil{
+						panic(err3)
+					}
+				}
+				if val < 0{
+					continue
+				} else{
+					row = append(row,"Value: "+strconv.Itoa(val)+" * "+tmp)
+					row = append(row,"-")
+					row = append(row,"-")
+				}
+			}else if event == "EvWgDone"{
+				row = append(row,"-")
+				row = append(row,tmp)
+				row = append(row,"-")
+			} else if event == "EvWgWait"{
+				row = append(row,"-")
 				row = append(row,"-")
 				row = append(row,tmp)
 			}
