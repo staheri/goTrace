@@ -79,12 +79,150 @@ go build
 ```
 
 # Run
-`./src -app=test.go` would automatically take `test.go`, instruments, builds and executes it. The resulting traces are stored in the MySQL database which you can access separately.
+
+This repository is under heavy construction so to run the tool, you have to modify `main.go` file directly. Currently, here are the available functionalities that can be activated through main:
+
+## Instrument, Execute, Store
+Pass the Go source as argument `./src -app=<APP.GO>`. GoTrace then instruments, executes and stores the whole program (end to end) sequence of events in a database name `app_nameX?` where `?` is the id of execution (in case you execute the same app multiple times)
+
+## Generate reports, etc.
+Let us assume that we already stored traces in a database, now we want to study traces from different aspects. Here are the available functionalities that you can achieve by passing the DB name as argument `./src -dbName=<DB_NAME_X0>`:
+
+- Display events grouped by goroutines (through `cl.GroupGrtns()`)
+- Generate data for word2vec ideas (through `db.WriteData()`) **NEED SOME WORK**
+- Generate formal context, concept lattice, jaccard matrix, dendogram and flat cluster of goroutines (through `db.FormalContext()`)
+- Generate **Resource Reports** where resources are (a sample is provided in Case Studies section):
+   * Channels
+   * Mutexes
+   * WaitingGroups
+
+
 
 Do `./src --help` for more information
 
 # Case Studies
 
+## Sample Reports
+
+Considering the simple Go source in `CodeBenchmark/small/dl/dl-triple.go`, here are the resource reports of *successful* and *buggy* execution:
+
+### Channel Report (BUG-Free)
+First three lines of report show the internal ID of channel, its owner (with the creation site), and whether the channel is closed (with the termniation site).
+The table is a time-line of events for this particular channel id with their corresponding goroutine and invocation site.
+
+```
+Channel global ID: 5
+Owner: N/A (e.g., created globaly)
+Closed? No
+```
+
+|     TS | SEND                                 | RECV                                 |
++--------+--------------------------------------+--------------------------------------+
+|  92036 | G1: dl-triple-sol.go >> main.main    | -                                    |
+|        |                                      |                                      |
+| 189693 | -                                    | G19: dl-triple-sol.go >> main.worker |
+|        |                                      |                                      |
+| 207166 | G19: dl-triple-sol.go >> main.worker | -                                    |
+|        |                                      |                                      |
+| 233748 | -                                    | G23: dl-triple-sol.go >> main.worker |
+|        |                                      |                                      |
+| 236827 | G23: dl-triple-sol.go >> main.worker | -                                    |
+|        |                                      |                                      |
+| 243652 | -                                    | G22: dl-triple-sol.go >> main.worker |
+|        |                                      |                                      |
+| 246988 | G22: dl-triple-sol.go >> main.worker | -                                    |
+|        |                                      |                                      |
+| 264384 | -                                    | G21: dl-triple-sol.go >> main.worker |
+|        |                                      |                                      |
+| 267027 | G21: dl-triple-sol.go >> main.worker | -                                    |
+|        |                                      |                                      |
+| 281524 | -                                    | G20: dl-triple-sol.go >> main.worker |
+|        |                                      |                                      |
+| 284013 | G20: dl-triple-sol.go >> main.worker | -                                    |
+|        |                                      |                                      |
+| 307901 | -                                    | G1: dl-triple-sol.go >> main.main    |
+
+
+
+### Channel Report (BUGGY)
+```
+Channel global ID: 5
+Owner: N/A (e.g., created globaly)
+Closed? No
+```
+
+|    TS | SEND                          | RECV |
++-------+-------------------------------+------+
+| 99400 | G1: dl-triple.go >> main.main | -    |
+
+
+### Mutex Report (BUG-Free)
+**Mutex global ID: 3**
+|       TS | LOCK                              | UNLOCK                            | RWLOCK | RWUNLOCK |
++----------+-----------------------------------+-----------------------------------+--------+----------+
+|    73742 | -                                 | G1: dl-triple-sol.go >> main.main | -      | -        |
+|          |                                   |                                   |        |          |
+| 55187487 | G1: dl-triple-sol.go >> main.main | -                                 | -      | -        |
+
+**Mutex global ID: 4**
+|     TS | LOCK                                 | UNLOCK                               | RWLOCK | RWUNLOCK |
++--------+--------------------------------------+--------------------------------------+--------+----------+
+| 173271 | G19: dl-triple-sol.go >> main.worker | -                                    | -      | -        |
+|        |                                      |                                      |        |          |
+| 210630 | -                                    | G19: dl-triple-sol.go >> main.worker | -      | -        |
+|        |                                      |                                      |        |          |
+| 230951 | G23: dl-triple-sol.go >> main.worker | -                                    | -      | -        |
+|        |                                      |                                      |        |          |
+| 240958 | G22: dl-triple-sol.go >> main.worker | -                                    | -      | -        |
+|        |                                      |                                      |        |          |
+| 249323 | -                                    | G22: dl-triple-sol.go >> main.worker | -      | -        |
+|        |                                      |                                      |        |          |
+| 253377 | -                                    | G23: dl-triple-sol.go >> main.worker | -      | -        |
+|        |                                      |                                      |        |          |
+| 261793 | G21: dl-triple-sol.go >> main.worker | -                                    | -      | -        |
+|        |                                      |                                      |        |          |
+| 272364 | -                                    | G21: dl-triple-sol.go >> main.worker | -      | -        |
+|        |                                      |                                      |        |          |
+| 279420 | G20: dl-triple-sol.go >> main.worker | -                                    | -      | -        |
+|        |                                      |                                      |        |          |
+| 286322 | -                                    | G20: dl-triple-sol.go >> main.worker | -      | -        |
+
+
+**Mutex global ID: 5**
+|     TS | LOCK                              | UNLOCK                            | RWLOCK | RWUNLOCK |
++--------+-----------------------------------+-----------------------------------+--------+----------+
+| 325272 | G1: dl-triple-sol.go >> main.main | -                                 | -      | -        |
+|        |                                   |                                   |        |          |
+| 367070 | -                                 | G1: dl-triple-sol.go >> main.main | -      | -        |
+
+
+### WaitingGroup Report (BUG FREE)
+
+**WaitingGroup global ID: 2**
+|     TS | ADD(VALUE+LOC)                               | DONE                                 | WAIT                              |
++--------+----------------------------------------------+--------------------------------------+-----------------------------------+
+| 120184 | Value: 1 * G1: dl-triple-sol.go >> main.main | -                                    | -                                 |
+|        |                                              |                                      |                                   |
+| 142430 | Value: 1 * G1: dl-triple-sol.go >> main.main | -                                    | -                                 |
+|        |                                              |                                      |                                   |
+| 149255 | Value: 1 * G1: dl-triple-sol.go >> main.main | -                                    | -                                 |
+|        |                                              |                                      |                                   |
+| 187563 | Value: 1 * G1: dl-triple-sol.go >> main.main | -                                    | -                                 |
+|        |                                              |                                      |                                   |
+| 208090 | Value: 1 * G1: dl-triple-sol.go >> main.main | -                                    | -                                 |
+|        |                                              |                                      |                                   |
+| 214633 | -                                            | -                                    | G1: dl-triple-sol.go >> main.main |
+|        |                                              |                                      |                                   |
+| 223793 | -                                            | G19: dl-triple-sol.go >> main.worker | -                                 |
+|        |                                              |                                      |                                   |
+| 250939 | -                                            | G22: dl-triple-sol.go >> main.worker | -                                 |
+|        |                                              |                                      |                                   |
+| 255891 | -                                            | G23: dl-triple-sol.go >> main.worker | -                                 |
+|        |                                              |                                      |                                   |
+| 274032 | -                                            | G21: dl-triple-sol.go >> main.worker | -                                 |
+|        |                                              |                                      |                                   |
+| 288555 | -                                            | G20: dl-triple-sol.go >> main.worker | -                                 |
+|        |                                              |                                      |                                   |
 ## BoltDB - Deadlock
 According to the [ASPLOS'19 paper](https://dl.acm.org/doi/10.1145/3297858.3304069), there was a bug (deadlock) in BoltDB project which was fixed after [this commit](https://github.com/boltdb/bolt/commit/defdb743cdca840890fea24c3111a7bffe5cc0a3). This bug was clearly caused by different orderings of the acquiring/releasing of different data structure mutex.
 
