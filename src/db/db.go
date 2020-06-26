@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"strings"
 	"bytes"
+	"github.com/jedib0t/go-pretty/table"
 )
 
 
@@ -374,7 +375,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
 			// panic("Operation on un-made channel? PANIC!")
 			// there might be a global channel creation, then what?
 			// First insert the uninitiated channel
-      q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",e.Args[0],-1,-1)
+      q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",e.Args[1],-1,-1)
       fmt.Printf(">>> Executing %s...\n",q)
     	_, err := db.Query(q)
     	if err != nil {
@@ -410,7 +411,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
       }
     } else{
       // insert
-      q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",e.Args[0],e.G,eid)
+      q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",e.Args[1],e.G,eid)
       fmt.Printf(">>> Executing %s...\n",q)
     	_, err := db.Query(q)
     	if err != nil {
@@ -758,4 +759,157 @@ func FormalContext(dbName, outpath string, aspects ...string ){
     return
 	}
 	fmt.Println("Result: " + out.String())
+}
+
+func ChannelReport(dbName string){
+
+	// Variables
+	var q, event             string
+	var report, tmp               string
+	var file, funct          string
+	var id, cid, ts, gid     int
+	var make_eid, make_gid   int
+	var close_eid, close_gid int
+
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+
+	// Query channels
+	q = `SELECT id,cid,make_eid,make_gid,close_eid,close_gid
+	     FROM Channels;`
+	fmt.Printf("Executing: %v\n",q)
+
+	res, err := db.Query(q)
+	if err != nil {
+		panic(err)
+	}
+
+	// Generate report for each channel
+	for res.Next(){
+		err = res.Scan(&id,&cid,&make_eid,&make_gid,&close_eid,&close_gid)
+		if err != nil{
+			panic(err)
+		}
+		report = "Channel global ID: "+strconv.Itoa(cid)+"\n"
+		report = report + "Owner: "
+		// Now generate reports
+		// Channel ID:
+		// Owner: Goroutine ID + file + func
+		// Closed:
+		// Generate the tables of sends/recvs
+
+
+
+		if make_eid != -1{
+			// Query to find location of channel make
+			q = `SELECT t2.file,t2.func
+			     FROM Channels t1
+					 INNER JOIN StackFrames t2
+					 ON t1.make_eid=t2.eventID
+					 WHERE t1.cid=`+strconv.Itoa(cid)+";"
+
+			fmt.Printf("Executing: %v\n",q)
+			res1, err1 := db.Query(q)
+			if err1 != nil {
+				panic(err1)
+			}
+			for res1.Next(){
+				err1 = res1.Scan(&file,&funct)
+				if err1 != nil {
+					panic(err1)
+				}
+				//report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
+			}
+			report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
+		} else{ // global declaration of channel
+			report = report + "N/A (e.g., created globaly)\n"
+		}
+
+		report = report + "Closed? "
+
+		if close_eid != -1{
+			// Query to find location of channel make
+			q = `SELECT t2.file,t2.func
+			     FROM Channels t1
+					 INNER JOIN StackFrames t2
+					 ON t1.close_eid=t2.eventID
+					 WHERE t1.cid=`+strconv.Itoa(cid)+";"
+
+			fmt.Printf("Executing: %v\n",q)
+			res1, err1 := db.Query(q)
+			if err1 != nil {
+				panic(err1)
+			}
+			for res1.Next(){
+				err1 = res1.Scan(&file,&funct)
+				if err1 != nil {
+					panic(err1)
+				}
+				//report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
+			}
+			report = report + "Yes, G"+strconv.Itoa(close_gid)+": "+file+" >> "+funct+"\n"
+		} else{ // global declaration of channel
+			report = report + "No\n"
+		}
+
+		// now generate table
+
+		// query to obtain send/recv for channelID=cid
+		q = `SELECT t1.id, t1.type, t1.ts, t1.g
+		     FROM Events t1
+				 INNER JOIN global.catCHNL t2 ON t1.type=t2.eventName
+				 INNER JOIN Args t3 ON t1.id=t3.eventID
+				 WHERE t3.arg="cid" AND t3.value=`+strconv.Itoa(cid)+`
+				 ORDER BY t1.ts;`
+		fmt.Printf("Executing: %v\n",q)
+		res1, err1 := db.Query(q)
+		if err1 != nil {
+			panic(err1)
+		}
+
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.AppendHeader(table.Row{"TS","Send", "Recv"})
+
+		for res1.Next(){
+			err1 = res1.Scan(&id,&event,&ts,&gid)
+			if err1 != nil{
+				panic(err1)
+			}
+			// now find stack entry for current row
+			q = `SELECT file,func
+			     FROM StackFrames
+					 WHERE eventID=`+strconv.Itoa(id)+";"
+			fmt.Printf("Executing: %v\n",q)
+		 	res2, err2 := db.Query(q)
+		 	if err2 != nil {
+		 		panic(err2)
+		 	}
+			for res2.Next(){
+				err2 = res2.Scan(&file,&funct)
+				if err2 != nil{
+					panic(err2)
+				}
+			}
+			var row []interface{}
+			row = append(row,ts)
+			tmp = "G"+strconv.Itoa(gid)+": "+file+" >> "+funct+"\n"
+			if event == "EvChSend"{
+				row = append(row,tmp)
+				row = append(row,"-")
+			}else{
+				row = append(row,"-")
+				row = append(row,tmp)
+			}
+			t.AppendRow(row)
+		}
+		fmt.Printf("%v\n",report)
+		t.Render()
+	}
 }
