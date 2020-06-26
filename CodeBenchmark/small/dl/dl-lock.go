@@ -23,5 +23,6 @@ func main() {
     m.Unlock()
     fmt.Println(<- ch1)
   }()
+  
   time.Sleep(time.Second)
 }

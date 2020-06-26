@@ -21,7 +21,7 @@ func main() {
   go func() {
     m.Lock() // block here
     m.Unlock()
-    ch1 <- 1 
+    ch1 <- 1
 
   }()
   time.Sleep(time.Second)
