@@ -227,6 +227,7 @@ Closed? No
 |        |                                              |                                      |                                   |
 | 288555 | -                                            | G20: dl-triple-sol.go >> main.worker | -                                 |
 |        |                                              |                                      |                                   |
+
 ## BoltDB - Deadlock
 According to the [ASPLOS'19 paper](https://dl.acm.org/doi/10.1145/3297858.3304069), there was a bug (deadlock) in BoltDB project which was fixed after [this commit](https://github.com/boltdb/bolt/commit/defdb743cdca840890fea24c3111a7bffe5cc0a3). This bug was clearly caused by different orderings of the acquiring/releasing of different data structure mutex.
 
