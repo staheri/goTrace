@@ -783,7 +783,7 @@ func ChannelReport(dbName string){
 	// Query channels
 	q = `SELECT id,cid,make_eid,make_gid,close_eid,close_gid
 	     FROM Channels;`
-	fmt.Printf("Executing: %v\n",q)
+	//fmt.Printf("Executing: %v\n",q)
 
 	res, err := db.Query(q)
 	if err != nil {
@@ -814,7 +814,7 @@ func ChannelReport(dbName string){
 					 ON t1.make_eid=t2.eventID
 					 WHERE t1.cid=`+strconv.Itoa(cid)+";"
 
-			fmt.Printf("Executing: %v\n",q)
+			//fmt.Printf("Executing: %v\n",q)
 			res1, err1 := db.Query(q)
 			if err1 != nil {
 				panic(err1)
@@ -867,7 +867,7 @@ func ChannelReport(dbName string){
 				 INNER JOIN Args t3 ON t1.id=t3.eventID
 				 WHERE t3.arg="cid" AND t3.value=`+strconv.Itoa(cid)+`
 				 ORDER BY t1.ts;`
-		fmt.Printf("Executing: %v\n",q)
+		//fmt.Printf("Executing: %v\n",q)
 		res1, err1 := db.Query(q)
 		if err1 != nil {
 			panic(err1)
@@ -886,7 +886,7 @@ func ChannelReport(dbName string){
 			q = `SELECT file,func
 			     FROM StackFrames
 					 WHERE eventID=`+strconv.Itoa(id)+" ORDER BY id;"
-			fmt.Printf("Executing: %v\n",q)
+			//fmt.Printf("Executing: %v\n",q)
 		 	res2, err2 := db.Query(q)
 		 	if err2 != nil {
 		 		panic(err2)
@@ -915,10 +915,6 @@ func ChannelReport(dbName string){
 }
 
 
-
-
-
-
 func MutexReport(dbName string){
 
 	// Variables
@@ -937,17 +933,12 @@ func MutexReport(dbName string){
 	defer db.Close()
 
 	// Query events to find mutex IDs
-	q = `SELECT t1.id, t1.type, t1.g, t1.ts, t3.arg, t3.value
-	     FROM Events t1
-			 INNER JOIN global.catMUTX t2 ON t1.type=t2.eventName
-			 INNER JOIN args t3 ON t1.id=t3.eventID
-			 WHERE t3.arg="muid";`
 	q = `SELECT DISTINCT(t3.value)
  	     FROM Events t1
  			 INNER JOIN global.catMUTX t2 ON t1.type=t2.eventName
  			 INNER JOIN args t3 ON t1.id=t3.eventID
  			 WHERE t3.arg="muid";`
-	fmt.Printf("Executing: %v\n",q)
+	//fmt.Printf("Executing: %v\n",q)
 
 	res, err := db.Query(q)
 	if err != nil {
@@ -976,7 +967,7 @@ func MutexReport(dbName string){
 				 INNER JOIN Args t3 ON t1.id=t3.eventID
 				 WHERE t3.arg="muid" AND t3.value=`+strconv.Itoa(muid)+`
 				 ORDER BY t1.ts;`
-		fmt.Printf("Executing: %v\n",q)
+		//fmt.Printf("Executing: %v\n",q)
 		res1, err1 := db.Query(q)
 		if err1 != nil {
 			panic(err1)
@@ -992,7 +983,7 @@ func MutexReport(dbName string){
 			     FROM StackFrames
 					 WHERE eventID=`+strconv.Itoa(id)+`
 					 ORDER BY id`
-			fmt.Printf("Executing: %v\n",q)
+			//fmt.Printf("Executing: %v\n",q)
 		 	res2, err2 := db.Query(q)
 		 	if err2 != nil {
 		 		panic(err2)
@@ -1056,17 +1047,12 @@ func WaitingGroupReport(dbName string){
 	defer db.Close()
 
 	// Query events to find mutex IDs
-	q = `SELECT t1.id, t1.type, t1.g, t1.ts, t3.arg, t3.value
-	     FROM Events t1
-			 INNER JOIN global.catWGRP t2 ON t1.type=t2.eventName
-			 INNER JOIN args t3 ON t1.id=t3.eventID
-			 WHERE t3.arg="wgid";`
 	q = `SELECT DISTINCT(t3.value)
  	     FROM Events t1
  			 INNER JOIN global.catWGRP t2 ON t1.type=t2.eventName
  			 INNER JOIN args t3 ON t1.id=t3.eventID
  			 WHERE t3.arg="wid";`
-	fmt.Printf("Executing: %v\n",q)
+	//fmt.Printf("Executing: %v\n",q)
 
 	res, err := db.Query(q)
 	if err != nil {
@@ -1095,7 +1081,7 @@ func WaitingGroupReport(dbName string){
 				 INNER JOIN Args t3 ON t1.id=t3.eventID
 				 WHERE t3.arg="wid" AND t3.value=`+strconv.Itoa(wid)+`
 				 ORDER BY t1.ts;`
-		fmt.Printf("Executing: %v\n",q)
+		//fmt.Printf("Executing: %v\n",q)
 		res1, err1 := db.Query(q)
 		if err1 != nil {
 			panic(err1)
@@ -1111,7 +1097,7 @@ func WaitingGroupReport(dbName string){
 			     FROM StackFrames
 					 WHERE eventID=`+strconv.Itoa(id)+`
 					 ORDER BY id`
-			fmt.Printf("Executing: %v\n",q)
+			//fmt.Printf("Executing: %v\n",q)
 		 	res2, err2 := db.Query(q)
 		 	if err2 != nil {
 		 		panic(err2)
@@ -1128,7 +1114,7 @@ func WaitingGroupReport(dbName string){
 			if event == "EvWgAdd"{
 				// find value
 				q =  `SELECT value FROM args WHERE arg="val" and eventID=`+strconv.Itoa(id)+`;`
-				fmt.Printf("Executing: %v\n",q)
+				//fmt.Printf("Executing: %v\n",q)
 			 	res3, err3 := db.Query(q)
 			 	if err3 != nil {
 			 		panic(err3)
