@@ -16,6 +16,11 @@ scripts/*.pdf
 scripts/*/*.pdf
 scripts/*/*/*.pdf
 
+test.*
+*/test.*
+*/*/test.*
+*/*/*/test.*
+
 bin/*
 bin
 
