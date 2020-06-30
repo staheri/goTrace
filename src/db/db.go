@@ -88,7 +88,7 @@ func createTables(db *sql.DB){
 											id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
     									eventID int NOT NULL,
     									arg varchar(255) NOT NULL,
-    									value int NOT NULL);`
+    									value bigint NOT NULL);`
 	grtnCreateStmt  :=  `CREATE TABLE Goroutines (
     									id int NOT NULL AUTO_INCREMENT,
     									gid int NOT NULL,
@@ -375,7 +375,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
 			// panic("Operation on un-made channel? PANIC!")
 			// there might be a global channel creation, then what?
 			// First insert the uninitiated channel
-      q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",e.Args[1],-1,-1)
+      q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",cid,-1,-1)
       fmt.Printf(">>> Executing %s...\n",q)
     	_, err := db.Query(q)
     	if err != nil {
@@ -411,7 +411,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
       }
     } else{
       // insert
-      q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",e.Args[1],e.G,eid)
+      q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",cid,e.G,eid)
       fmt.Printf(">>> Executing %s...\n",q)
     	_, err := db.Query(q)
     	if err != nil {
@@ -765,11 +765,12 @@ func ChannelReport(dbName string){
 
 	// Variables
 	var q, event             string
-	var report, tmp               string
+	var report, tmp          string
 	var file, funct          string
 	var id, cid, ts, gid     int
 	var make_eid, make_gid   int
 	var close_eid, close_gid int
+	var line                 int
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -808,7 +809,7 @@ func ChannelReport(dbName string){
 
 		if make_eid != -1{
 			// Query to find location of channel make
-			q = `SELECT t2.file,t2.func
+			q = `SELECT t2.file,t2.func,t2.line
 			     FROM Channels t1
 					 INNER JOIN StackFrames t2
 					 ON t1.make_eid=t2.eventID
@@ -820,13 +821,13 @@ func ChannelReport(dbName string){
 				panic(err1)
 			}
 			for res1.Next(){
-				err1 = res1.Scan(&file,&funct)
+				err1 = res1.Scan(&file,&funct,&line)
 				if err1 != nil {
 					panic(err1)
 				}
 				//report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
 			}
-			report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
+			report = report + "G"+strconv.Itoa(make_gid)+": "+file+">"+funct+":"+line+"\n"
 		} else{ // global declaration of channel
 			report = report + "N/A (e.g., created globaly)\n"
 		}
@@ -835,7 +836,7 @@ func ChannelReport(dbName string){
 
 		if close_eid != -1{
 			// Query to find location of channel make
-			q = `SELECT t2.file,t2.func
+			q = `SELECT t2.file,t2.func,t2.line
 			     FROM Channels t1
 					 INNER JOIN StackFrames t2
 					 ON t1.close_eid=t2.eventID
@@ -847,13 +848,13 @@ func ChannelReport(dbName string){
 				panic(err1)
 			}
 			for res1.Next(){
-				err1 = res1.Scan(&file,&funct)
+				err1 = res1.Scan(&file,&funct,&line)
 				if err1 != nil {
 					panic(err1)
 				}
 				//report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
 			}
-			report = report + "Yes, G"+strconv.Itoa(close_gid)+": "+file+" >> "+funct+"\n"
+			report = report + "Yes, G"+strconv.Itoa(close_gid)+": "+file+">"+funct+":"+line+"\n"
 		} else{ // global declaration of channel
 			report = report + "No\n"
 		}
@@ -883,7 +884,7 @@ func ChannelReport(dbName string){
 				panic(err1)
 			}
 			// now find stack entry for current row
-			q = `SELECT file,func
+			q = `SELECT file,func,line
 			     FROM StackFrames
 					 WHERE eventID=`+strconv.Itoa(id)+" ORDER BY id;"
 			//fmt.Printf("Executing: %v\n",q)
@@ -892,14 +893,14 @@ func ChannelReport(dbName string){
 		 		panic(err2)
 		 	}
 			for res2.Next(){
-				err2 = res2.Scan(&file,&funct)
+				err2 = res2.Scan(&file,&funct,&line)
 				if err2 != nil{
 					panic(err2)
 				}
 			}
 			var row []interface{}
 			row = append(row,ts)
-			tmp = "G"+strconv.Itoa(gid)+": "+file+" >> "+funct+"\n"
+			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+line+"\n"
 			if event == "EvChSend"{
 				row = append(row,tmp)
 				row = append(row,"-")
@@ -914,14 +915,13 @@ func ChannelReport(dbName string){
 	}
 }
 
-
 func MutexReport(dbName string){
 
 	// Variables
 	var q, event             string
-	var report, tmp               string
+	var report, tmp          string
 	var file, funct          string
-	var muid,id, ts, gid     int
+	var muid,id,ts,gid,line  int
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -979,7 +979,7 @@ func MutexReport(dbName string){
 				panic(err1)
 			}
 			// now find stack entry for current row
-			q = `SELECT file,func
+			q = `SELECT file,func,line
 			     FROM StackFrames
 					 WHERE eventID=`+strconv.Itoa(id)+`
 					 ORDER BY id`
@@ -989,14 +989,14 @@ func MutexReport(dbName string){
 		 		panic(err2)
 		 	}
 			for res2.Next(){
-				err2 = res2.Scan(&file,&funct)
+				err2 = res2.Scan(&file,&funct,&line)
 				if err2 != nil{
 					panic(err2)
 				}
 			}
 			var row []interface{}
 			row = append(row,ts)
-			tmp = "G"+strconv.Itoa(gid)+": "+file+" >> "+funct+"\n"
+			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+line+"\n"
 			if event == "EvMuLock"{
 				row = append(row,tmp)
 				row = append(row,"-")
@@ -1025,17 +1025,13 @@ func MutexReport(dbName string){
 	}
 }
 
-
-
-
-
 func WaitingGroupReport(dbName string){
 
 	// Variables
-	var q, event             string
+	var q, event                  string
 	var report, tmp               string
-	var file, funct          string
-	var wid,id, ts, gid, val    int
+	var file, funct               string
+	var wid,id,ts,gid,val,line    int
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -1093,7 +1089,7 @@ func WaitingGroupReport(dbName string){
 				panic(err1)
 			}
 			// now find stack entry for current row
-			q = `SELECT file,func
+			q = `SELECT file,func,line
 			     FROM StackFrames
 					 WHERE eventID=`+strconv.Itoa(id)+`
 					 ORDER BY id`
@@ -1103,14 +1099,14 @@ func WaitingGroupReport(dbName string){
 		 		panic(err2)
 		 	}
 			for res2.Next(){
-				err2 = res2.Scan(&file,&funct)
+				err2 = res2.Scan(&file,&funct,&line)
 				if err2 != nil{
 					panic(err2)
 				}
 			}
 			var row []interface{}
 			row = append(row,ts)
-			tmp = "G"+strconv.Itoa(gid)+": "+file+" >> "+funct+"\n"
+			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+line+"\n"
 			if event == "EvWgAdd"{
 				// find value
 				q =  `SELECT value FROM args WHERE arg="val" and eventID=`+strconv.Itoa(id)+`;`
