@@ -1,6 +1,6 @@
 // by Ivan Daniluk from https://github.com/divan
 
-package instrument
+package gotrace
 
 import (
 	"bytes"

@@ -1,225 +1,4 @@
-package cl
-
-import (
-	"fmt"
-  "os"
-  "path"
-  "github.com/jedib0t/go-pretty/table"
-  "sort"
-  "trace"
-	"strconv"
-)
-
-func DispGTable(m map[uint64][]*trace.Event) (){
-  t := table.NewWriter()
-  var keys []uint64
-  for k,_ := range m{
-    keys = append(keys,k)
-  }
-  sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
-
-  t.SetOutputMirror(os.Stdout)
-  t.AppendHeader(table.Row{"GoRoutine","Seq ID", "Event", "Args","SArgs", "Caller"})
-  //w := new(bytes.Buffer)
-  var w string
-  var prev int
-  prev = -1
-  for _,k := range keys{
-    for _,ev := range m[k]{
-      var row []interface{}
-      if int(k) != prev{
-        row = append(row,k)
-        prev = int(k)
-      } else{
-        row = append(row,"")
-      }
-      row = append(row,ev.Ts)
-      desc := EventDescriptions[ev.Type]
-      row = append(row,desc.Name)
-      w = ""
-      for i, a := range desc.Args {
-    		w = w + fmt.Sprintf(" %v=%v", a, int64(ev.Args[i]))
-    	}
-      row = append(row,w)
-
-      w = ""
-    	for i, a := range desc.SArgs {
-    		w = w + fmt.Sprintf(" %v=%v", a, ev.SArgs[i])
-    	}
-      row = append(row,w)
-
-      w = ""
-      for _,a := range ev.Stk{
-        w = w + fmt.Sprintf(" %v-%v:%v\n", path.Base(a.File),a.Fn, a.Line)
-      }
-      /*if len(ev.Stk) != 0{
-    	   w = w + fmt.Sprintf(" %v-%v:%v", path.Base(ev.Stk[len(ev.Stk)-1].File),ev.Stk[len(ev.Stk)-1].Fn, ev.Stk[len(ev.Stk)-1].Line)
-    	}*/
-      row = append(row,w)
-
-      t.AppendRow(row)
-    }
-    t.AppendSeparator()
-  }
-  t.Render()
-}
-
-func DispPTable(m map[int][]*trace.Event) (){
-  t := table.NewWriter()
-  var keys []int
-  for k,_ := range m{
-    keys = append(keys,k)
-  }
-  sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
-
-  t.SetOutputMirror(os.Stdout)
-  t.AppendHeader(table.Row{"Process", "Event", "Args","SArgs", "Caller"})
-  //w := new(bytes.Buffer)
-  var w string
-  var prev int
-  prev = -1
-  for _,k := range keys{
-    for _,ev := range m[k]{
-      var row []interface{}
-      if k != prev{
-        row = append(row,k)
-        prev = k
-      } else{
-        row = append(row,"")
-      }
-      desc := EventDescriptions[ev.Type]
-      row = append(row,desc.Name)
-      w = ""
-      for i, a := range desc.Args {
-    		w = w + fmt.Sprintf(" %v=%v", a, ev.Args[i])
-    	}
-      row = append(row,w)
-
-      w = ""
-    	for i, a := range desc.SArgs {
-    		w = w + fmt.Sprintf(" %v=%v", a, ev.SArgs[i])
-    	}
-      row = append(row,w)
-
-      w = ""
-      for _,a := range ev.Stk{
-        w = w + fmt.Sprintf(" %v-%v:%v\n", path.Base(a.File),a.Fn, a.Line)
-      }
-      /*if len(ev.Stk) != 0{
-    	   w = w + fmt.Sprintf(" %v-%v:%v", path.Base(ev.Stk[len(ev.Stk)-1].File),ev.Stk[len(ev.Stk)-1].Fn, ev.Stk[len(ev.Stk)-1].Line)
-    	}*/
-      row = append(row,w)
-
-      t.AppendRow(row)
-    }
-    t.AppendSeparator()
-  }
-  t.Render()
-}
-
-func DispGAttribute(m map[uint64][]*trace.Event) (){
-	t := table.NewWriter()
-  var keys []uint64
-  for k,_ := range m{
-    keys = append(keys,k)
-  }
-  sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
-
-  t.SetOutputMirror(os.Stdout)
-  t.AppendHeader(table.Row{"Object(GoRoutine)","Attribute"})
-  //w := new(bytes.Buffer)
-  //var w string
-  var prev int
-  prev = -1
-  for _,k := range keys{
-    for _,ev := range m[k]{
-      var row []interface{}
-      if int(k) != prev{
-        row = append(row,"G"+strconv.Itoa(int(k)))
-        prev = int(k)
-      } else{
-        row = append(row,"")
-      }
-      desc := EventDescriptions[ev.Type]
-      row = append(row,desc.Name)
-      t.AppendRow(row)
-    }
-    t.AppendSeparator()
-  }
-  t.Render()
-}
-
-func DispAtrMap(m map[int][]string, obj string) {
-	t := table.NewWriter()
-	var objPrefix string
-	switch obj{
-	case "grtn":
-		objPrefix = "G"
-	case "proc":
-		objPrefix = "P"
-	case "chan":
-		objPrefix = "C"
-	default:
-		objPrefix = "X"
-	}
-  var keys []int
-  for k,_ := range m{
-    keys = append(keys,k)
-  }
-  sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
-
-  t.SetOutputMirror(os.Stdout)
-  t.AppendHeader(table.Row{fmt.Sprintf("Object(%v)",obj),"Attribute"})
-  //w := new(bytes.Buffer)
-  //var w string
-  var prev int
-  prev = -1
-  for _,k := range keys{
-    for _,s := range m[k]{
-      var row []interface{}
-      if int(k) != prev{
-        row = append(row,objPrefix+strconv.Itoa(int(k)))
-        prev = int(k)
-      } else{
-        row = append(row,"")
-      }
-      row = append(row,s)
-      t.AppendRow(row)
-    }
-    t.AppendSeparator()
-  }
-  t.Render()
-}
-
-func GroupProcs(events []*trace.Event) {
-  m := make(map[int][]*trace.Event)
-  for _,e := range events{
-		m[e.P] = append(m[e.P],e)
-  }
-  DispPTable(m)
-}
-
-func GroupGrtns(events []*trace.Event) {
-  m := make(map[uint64][]*trace.Event)
-  for _,e := range events{
-		m[e.G] = append(m[e.G],e)
-  }
-  DispGTable(m)
-}
-
-func AttributeModesDescription() string {
-	s := "Include stack snapshots\n\t\t"
-	s = s + "0: no stack\n\t\t"
-	s = s + "1: Top element of stack (immediate parent) - File, Function, Line\n\t\t"
-	s = s + "2: Top element of stack (immediate parent) - File, Function\n\t\t"
-	s = s + "3: Top element of stack (immediate parent) - Function, Line\n\t\t"
-	s = s + "4: Top element of stack (immediate parent) - Function\n\t\t"
-	s = s + "5: Bottom element of stack (great ancesstor) - File, Function, Line\n\t\t"
-	s = s + "6: Bottom element of stack (great ancesstor) - File, Function\n\t\t"
-	s = s + "7: Bottom element of stack (great ancesstor) - Function, Line\n\t\t"
-	s = s + "8: Bottom element of stack (great ancesstor) - Function\n\t\t"
-	return s
-}
+package gotrace
 
 // Event types in the trace.
 // Verbatim copy from src/runtime/trace.go with the "trace" prefix removed.
@@ -389,3 +168,29 @@ const (
   AtrMode_StkBotFnLn        = 7 // Bottom element of stack (great ancesstor) - Function, Line
   AtrMode_StkBotFn          = 8 // Bottom element of stack (great ancesstor) - Function
 )
+
+
+const (
+	Q_showDatabases           = 0 // show all databases in the query
+	Q_cntDistGrtns            = 1
+	Q_cntParentGrtns          = 2
+	Q_dispParntGrtns          = 3
+	Q_cntTerminatedGrtns      = 4
+	Q_qcount                  = 5 // query counts
+)
+
+var QueryStruct = [Q_qcount]struct {
+	Query         string
+	Res           []string
+}{
+	Q_showDatabases:           {"SHOW DATABASES;",nil},
+	Q_cntDistGrtns:            {"SELECT COUNT(DISTINCT(g)) FROM %s.Events;",nil},
+	Q_cntParentGrtns:          {"SELECT COUNT(*) FROM %s.Events WHERE type=\"EvGoCreate\";",nil},
+	Q_dispParntGrtns:          {"SELECT * FROM %s.Events WHERE type=\"EvGoCreate\";",nil},
+	Q_cntTerminatedGrtns:      {"SELECT COUNT(*) FROM %s.Events WHERE type=\"EvGoEnd\";",nil},
+}
+
+const HOME = "/Users/saeed/goTrace"
+const HACPATH = HOME + "/scripts/hac"
+const CLPATH = HOME + "/cl"
+const RESPATH = HOME + "/results"

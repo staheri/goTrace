@@ -1,4 +1,4 @@
-package cl
+package gotrace
 
 import (
 	"fmt"
@@ -11,15 +11,15 @@ import (
 	"sort"
 )
 
-func Convert(events []*trace.Event, obj string, bitstr string, atrmode int) (m map[int][]string, err error){
+func CL_convert(events []*trace.Event, obj string, bitstr string, atrmode int) (m map[int][]string, err error){
   m = make(map[int][]string)
   var objkey int // hold object key
 
-  if !validateBitstr(bitstr, obj){
+  if !CL_validateBitstr(bitstr, obj){
     return nil, fmt.Errorf("Conversion Failed: invalid bitsrting: %v\n",bitstr)
   }
 	//fmt.Println("Len(events): ",len(events))
-  processedEvents := filter(events,bitstr)
+  processedEvents := CL_filter(events,bitstr)
 	//fmt.Println("Len(Processed Events): ",len(processedEvents))
 
   for _,e := range processedEvents{
@@ -40,13 +40,13 @@ func Convert(events []*trace.Event, obj string, bitstr string, atrmode int) (m m
     }
 
     // append attributes to keys
-    m[objkey] = append(m[objkey],getAttribute(e,atrmode))
+    m[objkey] = append(m[objkey],CL_getAttribute(e,atrmode))
   }
 
   return m, nil
 }
 
-func filter(events []*trace.Event, bitstr string) []*trace.Event{
+func CL_filter(events []*trace.Event, bitstr string) []*trace.Event{
   ret := []*trace.Event{}
 	//fmt.Printf("** FILTER\n")
   for _,e := range events{
@@ -73,7 +73,7 @@ func filter(events []*trace.Event, bitstr string) []*trace.Event{
   return ret
 }
 
-func getAttribute(e *trace.Event, atrmode int) string{
+func CL_getAttribute(e *trace.Event, atrmode int) string{
   desc := EventDescriptions[e.Type]
   if len(e.Stk) != 0{
     switch atrmode{
@@ -100,7 +100,7 @@ func getAttribute(e *trace.Event, atrmode int) string{
   return desc.Name
 }
 
-func validateBitstr(bitstr, obj string) bool{
+func CL_validateBitstr(bitstr, obj string) bool{
   if len(bitstr) != num_of_ctgs{
     return false
   }
@@ -112,7 +112,7 @@ func validateBitstr(bitstr, obj string) bool{
   return true
 }
 
-func bitstrTranslate(bitstr string) string{
+func CL_bitstrTranslate(bitstr string) string{
 	s := ""
 	for i,b := range bitstr{
 		if string(b) == "1"{
@@ -122,9 +122,9 @@ func bitstrTranslate(bitstr string) string{
 	return s
 }
 
-func WriteContext(path , obj , bitstr  string, m map[int][]string, atrmode int){
+func CL_writeContext(path , obj , bitstr  string, m map[int][]string, atrmode int){
 	// path must include app
-	folderName := path+"/"+obj+"-"+bitstrTranslate(bitstr)+strconv.Itoa(atrmode)+"/"
+	folderName := path+"/"+obj+"-"+CL_bitstrTranslate(bitstr)+strconv.Itoa(atrmode)+"/"
 	cmd := exec.Command("mkdir","-p",folderName)
 	outCmd,err := cmd.Output()
 	if err != nil{

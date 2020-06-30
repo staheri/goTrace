@@ -5,14 +5,10 @@ import (
   "fmt"
   _"os"
   _"log"
-  _"trace"
-  _"util"
-  _"instrument"
-  _"cl"
   _"sort"
   _"bytes"
   _"path"
-  "db"
+  "gotrace"
 )
 
 const dir = "/Users/saeed/goTrace/"
