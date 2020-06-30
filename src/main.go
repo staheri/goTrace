@@ -21,9 +21,9 @@ const inpath = dir+"/CodeBenchmark/"
 const datapath = dir+"DataBenchmark/medium/"
 
 func main(){
-  //appPtr := flag.String("app", "medium/patterns/pingPong.go", "Target application (*.go)")
+  //appPtr := flag.String("app", "medium/boltdb/sample.go", "Target application (*.go)")
   //tout   := flag.Int("to", -1, "Timeout for deadlocks")
-  dbName   := flag.String("dbName", "dl_tripleX2", "Table Name")
+  dbName   := flag.String("dbName", "dl_tripleX3", "Table Name")
   //outName   := flag.String("outName", "medium/test.py", "OutName")
   //filterPtr := flag.String("filter", "GRTN", "FILTERS: CHNL, GCMM, GRTN, MISC, MUTX, PROC, SYSC, WGRP ")
 
@@ -77,20 +77,21 @@ func main(){
 
   //db.ToFile(dbName)
   fmt.Printf("DBNAME: %s\n",*dbName)
-  //db.FormalContext(dbName,outpath,"GRTN")
-  //db.FormalContext(dbName,outpath,"GRTN","CHNL")
-  //db.FormalContext(dbName,outpath,"CHNL")
-  //db.FormalContext(dbName,outpath,"GRTN","MUTX")
-  //db.FormalContext(dbName,outpath,"MUTX")
-  //db.FormalContext(dbName,outpath,"CHNL","MUTX")
-  //db.FormalContext(dbName,outpath,"WGRP")
-  //db.FormalContext(dbName,outpath,"WGRP","CHNL")
-  //db.FormalContext(dbName,outpath,"WGRP","GRTN")
-  //db.FormalContext(dbName,outpath,"SYSC","CHNL")
-  //db.FormalContext(dbName,outpath,"GCMM","GRTN")
-  //db.FormalContext(*dbName,outpath,"CHNL","GRTN","PROC","GCMM")
+  // db.FormalContext(dbName,outpath,"GRTN")
+  // db.FormalContext(dbName,outpath,"GRTN","CHNL")
+  // db.FormalContext(dbName,outpath,"CHNL")
+  // db.FormalContext(dbName,outpath,"GRTN","MUTX")
+  // db.FormalContext(dbName,outpath,"MUTX")
+  // db.FormalContext(dbName,outpath,"CHNL","MUTX")
+  // db.FormalContext(dbName,outpath,"WGRP")
+  // db.FormalContext(dbName,outpath,"WGRP","CHNL")
+  // db.FormalContext(dbName,outpath,"WGRP","GRTN")
+  // db.FormalContext(dbName,outpath,"SYSC","CHNL")
+  // db.FormalContext(dbName,outpath,"GCMM","GRTN")
+  // db.FormalContext(dbName,outpath,"CHNL","GRTN","PROC","GCMM")
 
   db.ChannelReport(*dbName)
   db.MutexReport(*dbName)
+  db.RWMutexReport(*dbName)
   db.WaitingGroupReport(*dbName)
 }

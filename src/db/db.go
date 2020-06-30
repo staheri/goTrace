@@ -827,7 +827,7 @@ func ChannelReport(dbName string){
 				}
 				//report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
 			}
-			report = report + "G"+strconv.Itoa(make_gid)+": "+file+">"+funct+":"+line+"\n"
+			report = report + "G"+strconv.Itoa(make_gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
 		} else{ // global declaration of channel
 			report = report + "N/A (e.g., created globaly)\n"
 		}
@@ -854,7 +854,7 @@ func ChannelReport(dbName string){
 				}
 				//report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
 			}
-			report = report + "Yes, G"+strconv.Itoa(close_gid)+": "+file+">"+funct+":"+line+"\n"
+			report = report + "Yes, G"+strconv.Itoa(close_gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
 		} else{ // global declaration of channel
 			report = report + "No\n"
 		}
@@ -900,7 +900,7 @@ func ChannelReport(dbName string){
 			}
 			var row []interface{}
 			row = append(row,ts)
-			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+line+"\n"
+			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
 			if event == "EvChSend"{
 				row = append(row,tmp)
 				row = append(row,"-")
@@ -912,6 +912,9 @@ func ChannelReport(dbName string){
 		}
 		fmt.Printf("%v\n",report)
 		t.Render()
+
+		fmt.Printf("%v\n",report)
+		t.RenderMarkdown()
 	}
 }
 
@@ -996,7 +999,7 @@ func MutexReport(dbName string){
 			}
 			var row []interface{}
 			row = append(row,ts)
-			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+line+"\n"
+			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
 			if event == "EvMuLock"{
 				row = append(row,tmp)
 				row = append(row,"-")
@@ -1022,8 +1025,126 @@ func MutexReport(dbName string){
 		}
 		fmt.Printf("%v\n",report)
 		t.Render()
+
+		fmt.Printf("%v\n",report)
+		t.RenderMarkdown()
 	}
 }
+
+
+func RWMutexReport(dbName string){
+
+	// Variables
+	var q, event             string
+	var report, tmp          string
+	var file, funct          string
+	var rwid,id,ts,gid,line  int
+
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+
+	// Query events to find mutex IDs
+	q = `SELECT DISTINCT(t3.value)
+ 	     FROM Events t1
+ 			 INNER JOIN global.catMUTX t2 ON t1.type=t2.eventName
+ 			 INNER JOIN args t3 ON t1.id=t3.eventID
+ 			 WHERE t3.arg="rwid";`
+	//fmt.Printf("Executing: %v\n",q)
+
+	res, err := db.Query(q)
+	if err != nil {
+		panic(err)
+	}
+	var lockIDs []int
+	for res.Next(){
+		err = res.Scan(&rwid)
+		if err != nil {
+			panic(err)
+		}
+		lockIDs=append(lockIDs,rwid)
+	}
+
+	for _,rwid := range lockIDs{
+		report = "RWMutex global ID: "+strconv.Itoa(rwid)+"\n"
+
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.AppendHeader(table.Row{"TS","RWMLock", "RWMUnlock","RWMrLock","RWMrUnlock"})
+
+		// query to obtain send/recv for mutexID=muid
+		q = `SELECT t1.id, t1.type, t1.ts, t1.g
+		     FROM Events t1
+				 INNER JOIN global.catMUTX t2 ON t1.type=t2.eventName
+				 INNER JOIN Args t3 ON t1.id=t3.eventID
+				 WHERE t3.arg="rwid" AND t3.value=`+strconv.Itoa(rwid)+`
+				 ORDER BY t1.ts;`
+		//fmt.Printf("Executing: %v\n",q)
+		res1, err1 := db.Query(q)
+		if err1 != nil {
+			panic(err1)
+		}
+
+		for res1.Next(){
+			err1 = res1.Scan(&id,&event,&ts,&gid)
+			if err1 != nil{
+				panic(err1)
+			}
+			// now find stack entry for current row
+			q = `SELECT file,func,line
+			     FROM StackFrames
+					 WHERE eventID=`+strconv.Itoa(id)+`
+					 ORDER BY id`
+			//fmt.Printf("Executing: %v\n",q)
+		 	res2, err2 := db.Query(q)
+		 	if err2 != nil {
+		 		panic(err2)
+		 	}
+			for res2.Next(){
+				err2 = res2.Scan(&file,&funct,&line)
+				if err2 != nil{
+					panic(err2)
+				}
+			}
+			var row []interface{}
+			row = append(row,ts)
+			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
+			if event == "EvRWMLock"{
+				row = append(row,tmp)
+				row = append(row,"-")
+				row = append(row,"-")
+				row = append(row,"-")
+			}else if event == "EvRWMUnlock"{
+				row = append(row,"-")
+				row = append(row,tmp)
+				row = append(row,"-")
+				row = append(row,"-")
+			} else if event == "EvRWMrLock"{
+				row = append(row,"-")
+				row = append(row,"-")
+				row = append(row,tmp)
+				row = append(row,"-")
+			} else{
+				row = append(row,"-")
+				row = append(row,"-")
+				row = append(row,"-")
+				row = append(row,tmp)
+			}
+			t.AppendRow(row)
+		}
+		fmt.Printf("%v\n",report)
+		t.Render()
+
+		fmt.Printf("%v\n",report)
+		t.RenderMarkdown()
+	}
+}
+
 
 func WaitingGroupReport(dbName string){
 
@@ -1106,7 +1227,7 @@ func WaitingGroupReport(dbName string){
 			}
 			var row []interface{}
 			row = append(row,ts)
-			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+line+"\n"
+			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
 			if event == "EvWgAdd"{
 				// find value
 				q =  `SELECT value FROM args WHERE arg="val" and eventID=`+strconv.Itoa(id)+`;`
@@ -1141,5 +1262,8 @@ func WaitingGroupReport(dbName string){
 		}
 		fmt.Printf("%v\n",report)
 		t.Render()
+
+		fmt.Printf("%v\n",report)
+		t.RenderMarkdown()
 	}
 }
