@@ -5,10 +5,14 @@ import (
   "fmt"
   "util"
   "instrument"
+  "strings"
+  "db"
+  "os"
 )
 
 const WORD_CHUNK_LENGTH = 11
-const validCategories =[]string{"CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGRP"}
+var CLOUTPATH = os.Getenv("GOPATH")+"/traces/clx"
+//var validCategories = []string{"CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGRP"}
 
 
 
@@ -21,6 +25,7 @@ var (
   flagApp     string
   flagArgs    []string
   dbName      string
+  validCategories = []string{"CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGRP"}
 )
 
 
@@ -31,9 +36,10 @@ func main(){
   parseFlags()
 
   // Obtain dbName
-  //dbName = dbPointer()
+  dbName = dbPointer()
 
-  /*
+  fmt.Printf("DB Name: %s\n",dbName)
+
   switch flagCmd {
   case "word":
     for _,arg := range(flag.Args()){
@@ -41,7 +47,7 @@ func main(){
       if len(strings.Split(arg,",")) != 1{
         panic("Currently more than one filter is not allowed!")
       }
-      db.WriteData(dbname,flagOut,filt,WORD_CHUNK_LENGTH)
+      db.WordData(dbName,flagOut,arg,WORD_CHUNK_LENGTH)
       //for _,e := range(tl){
         // TODO: Make db.WriteData compatible with combination of filters
       //}
@@ -50,7 +56,7 @@ func main(){
   case "cl":
     for _,arg := range(flag.Args()){
       tl := strings.Split(arg,",")
-      db.FormalContext(dbName,outpath,tl)
+      db.CLOperations(dbName,CLOUTPATH,flagOut,tl...)
     }
 
   case "rr":
@@ -70,15 +76,16 @@ func main(){
         panic("Wrong category for rr!")
       }
     }
-  }*/
+  }
 }
 
 
 // Parse flags, execute app & store traces (if necessary), return app database handler
 func parseFlags() (){
+  srcDescription := "SRC Description"
   // Parse flags
   flag.StringVar(&flagCmd,"cmd","","Commands: word, cl, rr")
-  flag.StringVar(&flagOut,"outdir","","Output directory to write words")
+  flag.StringVar(&flagOut,"outdir","","Output directory to write words and/or reports")
   flag.StringVar(&flagSrc,"src","latest",srcDescription)
   flag.StringVar(&flagX,"x","0","Execution version stored in database")
   flag.StringVar(&flagApp,"app","","Target application (*.go)")
@@ -87,33 +94,34 @@ func parseFlags() (){
   flag.Parse()
 
   // Check cmd
-  if flagCmd != "word" || flagCmd != "cl" || flagCmd != "rr" {
-    printUsage()
+  if flagCmd != "word" && flagCmd != "cl" && flagCmd != "rr" {
+    util.PrintUsage()
+    fmt.Printf("flagCMD: %s\n",flagCmd)
     panic("Wrong command")
   }
 
   // Check Outdir
   if flagOut == "" {
-    printUsage()
+    util.PrintUsage()
     panic("Outdir required")
   }
 
   // Check src
-  if flagSrc != "native" || flagSrc != "latest" || flagSrc != "x"{
-    printUsage()
+  if flagSrc != "native" && flagSrc != "latest" && flagSrc != "x"{
+    util.PrintUsage()
     panic("Wrong source")
   }
 
   // Check app
   if flagApp == "" {
-    printUsage()
+    util.PrintUsage()
     panic("App required")
   }
 
   for _,arg := range(flag.Args()){
     tl := strings.Split(arg,",")
     for _,e := range(tl){
-      if !util.Contains(validCategories,e){
+      if ! util.Contains(validCategories,e){
         panic("Invalid category: "+e)
       }
     }

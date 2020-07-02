@@ -261,3 +261,8 @@ func AttributeModesDescription() string {
 	s = s + "8: Bottom element of stack (great ancesstor) - Function\n\t\t"
 	return s
 }
+
+
+func PrintUsage() {
+	fmt.Println("Usage: ")
+}

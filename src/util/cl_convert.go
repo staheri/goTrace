@@ -3,7 +3,6 @@ package util
 import (
 	"fmt"
   "trace"
-	"util"
 	"path"
 	"strconv"
 	"os"
@@ -61,7 +60,7 @@ func filter(events []*trace.Event, bitstr string) []*trace.Event{
 			//fmt.Printf("bit(type %v): %v - comp(type %v) %v, Cond: %v\n",reflect.TypeOf(bit),bit,reflect.TypeOf(strconv.Itoa(1)),strconv.Itoa(1),bit == strconv.Itoa(1))
 			if string(bit) == "1"{
 				//fmt.Printf("bitstr[%v] is enabled: %v\n",i,strconv.QuoteRune(bit))
-				if util.Contains(ctgDescriptions[i].Members,"Ev"+desc.Name){
+				if Contains(ctgDescriptions[i].Members,"Ev"+desc.Name){
 					ret = append(ret,e)
 				}
 			}
