@@ -1,4 +1,4 @@
-package gotrace
+package db
 
 import (
 	"fmt"
@@ -45,7 +45,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	// Re-establish
 	db, err = sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}else{
 		fmt.Println("Connection Re-Established")
 	}
@@ -421,7 +421,10 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
   }
 }
 
-func Ops(command string){
+func Ops(command, appName, X string) (dbName string){
+	// Vars
+	var dbs,q string
+	var xx    int
 	// Connecting to mysql driver
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/")
 	defer db.Close()
@@ -430,36 +433,64 @@ func Ops(command string){
 	}else{
 		fmt.Println("Connection Established")
 	}
-
-	res,err := db.Query("SHOW DATABASES;")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var dbs,q string
-	for res.Next(){
-		err := res.Scan(&dbs)
+	if command == "clean all"{
+		res,err := db.Query("SHOW DATABASES;")
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("DB: %s \n",dbs)
-		if dbs[len(dbs)-1] >= '0' && dbs[len(dbs)-1] <= '9'{
-			q = "DROP DATABASE "+dbs+";"
-			fmt.Printf(">>> Executing %s...\n",q)
-			_,err2 := db.Exec(q)
-
-			if err2 != nil {
-				log.Fatal(err2)
+		for res.Next(){
+			err := res.Scan(&dbs)
+			if err != nil {
+				log.Fatal(err)
+			}
+			//fmt.Printf("DB: %s \n",dbs)
+			if dbs[len(dbs)-1] >= '0' && dbs[len(dbs)-1] <= '9'{
+				q = "DROP DATABASE "+dbs+";"
+				//fmt.Printf(">>> Executing %s...\n",q)
+				_,err2 := db.Exec(q)
+				if err2 != nil {
+					log.Fatal(err2)
+				}
 			}
 		}
-	}
-
-	if command == "CLEAN"{
-
+		return ""
+	}else if command == "x"{
+		res,err := db.Query("SHOW DATABASES LIKE \""+appName+"X"+X+"\";")
+		if err != nil {
+			log.Fatal(err)
+		}
+		if res.Next(){
+			err := res.Scan(&dbs)
+			if err != nil {
+				log.Fatal(err)
+			}
+			return dbs
+		}else{
+			panic("Database "+appName+"X"+X+" does not exist!")
+		}
+	}else if command == "latest"{
+		xx = 0
+		for {
+			res,err := db.Query("SHOW DATABASES LIKE \""+appName+"X"+strconv.Itoa(xx)+"\";")
+			if err != nil {
+				log.Fatal(err)
+			}
+			if !res.Next(){
+			return appName+"X"+strconv.Itoa(xx-1)
+			} else{
+				xx += 1
+				continue
+			}
+		}
+	}else{
+		panic("Ops command unknown!")
 	}
 }
 
-func WriteData(dbName, datapath, filter string, chunkSize int){
+func WriteData(dbName, outdir, filter string, chunkSize int){
+	// make sure
+	outdir = outdir + "/"
+
 	// Re-establish
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
 	if err != nil {
@@ -479,7 +510,7 @@ func WriteData(dbName, datapath, filter string, chunkSize int){
 	chunk = 0
 	dbs = ""
 	tmps = ""
-	output = datapath + dbName+"_l"+strconv.Itoa(chunkSize)+"_seqALL_"+filter+".py"
+	output = outdir + dbName+"_l"+strconv.Itoa(chunkSize)+"_seqALL_"+filter+".py"
 	f,err := os.Create(output)
 	if err != nil{
 		log.Fatal(err)
@@ -504,7 +535,12 @@ func WriteData(dbName, datapath, filter string, chunkSize int){
 		tmps = tmps + "\""
 		tmps = tmps + dbs
 		//fmt.Printf("DB: %s \n",dbs)
-		tmps = tmps + "\","
+		if (chunk + 1) % chunkSize == 0{
+			tmps = tmps + "\""
+		}else{
+			tmps = tmps + "\","
+		}
+
 		chunk = chunk + 1
 		if chunk % chunkSize == 0{
 			chunk = 0
@@ -521,7 +557,7 @@ func WriteData(dbName, datapath, filter string, chunkSize int){
 	chunk = 0
 	dbs = ""
 	tmps = ""
-	output = datapath + dbName+"_l"+strconv.Itoa(chunkSize)+"_seqAPP_"+filter+".py"
+	output = outdir + dbName+"_l"+strconv.Itoa(chunkSize)+"_seqAPP_"+filter+".py"
 
 	f,err = os.Create(output)
 	if err != nil{
@@ -560,7 +596,11 @@ func WriteData(dbName, datapath, filter string, chunkSize int){
 		tmps = tmps + "\""
 		tmps = tmps + dbs
 		//fmt.Printf("DB: %s \n",dbs)
-		tmps = tmps + "\","
+		if (chunk + 1) % chunkSize == 0{
+			tmps = tmps + "\""
+		}else{
+			tmps = tmps + "\","
+		}
 		chunk = chunk + 1
 		if chunk % chunkSize == 0{
 			chunk = 0
@@ -578,7 +618,7 @@ func WriteData(dbName, datapath, filter string, chunkSize int){
 	chunk = 0
 	dbs = ""
 	tmps = ""
-	output = datapath + dbName+"_l"+strconv.Itoa(chunkSize)+"_grtnAPP_"+filter+".py"
+	output = outdir + dbName+"_l"+strconv.Itoa(chunkSize)+"_grtnAPP_"+filter+".py"
 
 	f,err = os.Create(output)
 	if err != nil{
@@ -608,7 +648,11 @@ func WriteData(dbName, datapath, filter string, chunkSize int){
 			tmps = tmps + "\""
 			tmps = tmps + dbs
 			//fmt.Printf("DB: %s \n",dbs)
-			tmps = tmps + "\","
+			if (chunk + 1) % chunkSize == 0{
+				tmps = tmps + "\""
+			}else{
+				tmps = tmps + "\","
+			}
 			chunk = chunk + 1
 			if chunk % chunkSize == 0{
 				chunk = 0
@@ -1031,7 +1075,6 @@ func MutexReport(dbName string){
 	}
 }
 
-
 func RWMutexReport(dbName string){
 
 	// Variables
@@ -1144,7 +1187,6 @@ func RWMutexReport(dbName string){
 		t.RenderMarkdown()
 	}
 }
-
 
 func WaitingGroupReport(dbName string){
 

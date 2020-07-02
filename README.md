@@ -294,3 +294,13 @@ mysql>
 | EvMuLock    | 76662176 | muid |     9 | github.com/boltdb/bolt.(*DB).removeTx |
 | EvRWMUnlock | 76664280 | rwid |     4 | github.com/boltdb/bolt.(*DB).removeTx |
 | EvMuUnlock  | 76666282 | muid |     9 | github.com/boltdb/bolt.(*DB).removeTx |
+
+
+# New Instruction
+
+Run new program -app=<Path>
+  - instrument the source main
+  - collect traces
+  - store them in DB (dbName)
+
+From DB -dbName=appNameXi -specific appExecution

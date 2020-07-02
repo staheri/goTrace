@@ -3,91 +3,145 @@ package main
 import (
   "flag"
   "fmt"
-  _"os"
-  _"log"
-  _"sort"
-  _"bytes"
-  _"path"
-  "gotrace"
+  "util"
+  "instrument"
 )
 
-const dir = "/Users/saeed/goTrace/"
-const outpath = dir+"traces/clx"
-const inpath = dir+"/CodeBenchmark/"
-const datapath = dir+"DataBenchmark/medium/"
+const WORD_CHUNK_LENGTH = 11
+const validCategories =[]string{"CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGRP"}
+
+
+
+var (
+  flagCmd     string
+  flagOut     string
+  flagSrc     string
+  flagX       string
+  flagTO      int
+  flagApp     string
+  flagArgs    []string
+  dbName      string
+)
+
+
+
 
 func main(){
-  //appPtr := flag.String("app", "medium/boltdb/sample.go", "Target application (*.go)")
-  //tout   := flag.Int("to", -1, "Timeout for deadlocks")
-  dbName   := flag.String("dbName", "dl_tripleX3", "Table Name")
-  //outName   := flag.String("outName", "medium/test.py", "OutName")
-  //filterPtr := flag.String("filter", "GRTN", "FILTERS: CHNL, GCMM, GRTN, MISC, MUTX, PROC, SYSC, WGRP ")
+  // Read flags
+  parseFlags()
 
-  //objPtr := flag.String("obj", "grtn", "Object:[grtn,proc,chan]")
-  //atrPtr := flag.String("atr", "1110000", "Attributes: a bitstring showing 1/0 event groups :\n\t\t\"GoRoutine,Channel,Process,GCmem,Syscall,Other\"")
-  //atrModePtr := flag.Int("atrMode", 0, util.AttributeModesDescription())
+  // Obtain dbName
+  //dbName = dbPointer()
+
+  /*
+  switch flagCmd {
+  case "word":
+    for _,arg := range(flag.Args()){
+      // For now, only one filter is allowed at a time
+      if len(strings.Split(arg,",")) != 1{
+        panic("Currently more than one filter is not allowed!")
+      }
+      db.WriteData(dbname,flagOut,filt,WORD_CHUNK_LENGTH)
+      //for _,e := range(tl){
+        // TODO: Make db.WriteData compatible with combination of filters
+      //}
+    }
+
+  case "cl":
+    for _,arg := range(flag.Args()){
+      tl := strings.Split(arg,",")
+      db.FormalContext(dbName,outpath,tl)
+    }
+
+  case "rr":
+    for _,arg := range(flag.Args()){
+      if len(strings.Split(arg,",")) != 1{
+        panic("For rr, only one category is allowed")
+      }
+      switch arg {
+      case "CHNL":
+        db.ChannelReport(dbName)
+      case "MUTX":
+        db.MutexReport(dbName)
+        db.RWMutexReport(dbName)
+      case "WGRP":
+        db.WaitingGroupReport(dbName)
+      default:
+        panic("Wrong category for rr!")
+      }
+    }
+  }*/
+}
+
+
+// Parse flags, execute app & store traces (if necessary), return app database handler
+func parseFlags() (){
+  // Parse flags
+  flag.StringVar(&flagCmd,"cmd","","Commands: word, cl, rr")
+  flag.StringVar(&flagOut,"outdir","","Output directory to write words")
+  flag.StringVar(&flagSrc,"src","latest",srcDescription)
+  flag.StringVar(&flagX,"x","0","Execution version stored in database")
+  flag.StringVar(&flagApp,"app","","Target application (*.go)")
+  flag.IntVar(&flagTO,"to",-1,"Timeout for deadlocks")
 
   flag.Parse()
 
-  // main block for instrumentation and collecting traces
-  /*
-  fmt.Println("Analyzing ", inpath+(*appPtr), "...")
-  var src instrument.EventSource
-  src = instrument.NewNativeRun(inpath+(*appPtr),(*tout))
-  events, err := src.Events()
-	if err != nil {
-		panic(err)
-	}
-  */
-
-
-
-
-  //trace.Print(events)
-  //Procs(events)
-  //Grtns(events.Events)
-  //Grtns(events)
-  //
-  //context, err := cl.Convert(events,*objPtr,*atrPtr,*atrModePtr)
-  //if err != nil{
-    //panic(err)
-  //}
-  //analyze.TestDB()
-  //cl.DispAtrMap(context,*objPtr)
-  //cl.WriteContext(outpath+util.AppName(*appPtr), *objPtr , *atrPtr , context, *atrModePtr )
-  //cl.GroupGrtns(events)
-
-
-  //dbName := db.Store(events,util.AppName(*appPtr))
-
-  /* word2vec block
-  filters := []string{"all","CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGRP"}
-  for _,filt := range(filters){
-    db.WriteData(dbname,datapath,filt,11)
-    db.WriteData(dbname,datapath,filt,21)
+  // Check cmd
+  if flagCmd != "word" || flagCmd != "cl" || flagCmd != "rr" {
+    printUsage()
+    panic("Wrong command")
   }
-  */
 
-  //db.WriteData(dbname,datapath,(*filterPtr),11)
-  //db.Ops("CLEAN")
+  // Check Outdir
+  if flagOut == "" {
+    printUsage()
+    panic("Outdir required")
+  }
 
-  //db.ToFile(dbName)
-  fmt.Printf("DBNAME: %s\n",*dbName)
-  // db.FormalContext(dbName,outpath,"GRTN")
-  // db.FormalContext(dbName,outpath,"GRTN","CHNL")
-  // db.FormalContext(dbName,outpath,"CHNL")
-  // db.FormalContext(dbName,outpath,"GRTN","MUTX")
-  // db.FormalContext(dbName,outpath,"MUTX")
-  // db.FormalContext(dbName,outpath,"CHNL","MUTX")
-  // db.FormalContext(dbName,outpath,"WGRP")
-  // db.FormalContext(dbName,outpath,"WGRP","CHNL")
-  // db.FormalContext(dbName,outpath,"WGRP","GRTN")
-  // db.FormalContext(dbName,outpath,"SYSC","CHNL")
-  // db.FormalContext(dbName,outpath,"GCMM","GRTN")
-  // db.FormalContext(dbName,outpath,"CHNL","GRTN","PROC","GCMM")
+  // Check src
+  if flagSrc != "native" || flagSrc != "latest" || flagSrc != "x"{
+    printUsage()
+    panic("Wrong source")
+  }
 
-  db.ChannelReport(*dbName)
-  db.MutexReport(*dbName)
-  db.RWMutexReport(*dbName)
-  db.WaitingGroupReport(*dbName)
+  // Check app
+  if flagApp == "" {
+    printUsage()
+    panic("App required")
+  }
+
+  for _,arg := range(flag.Args()){
+    tl := strings.Split(arg,",")
+    for _,e := range(tl){
+      if !util.Contains(validCategories,e){
+        panic("Invalid category: "+e)
+      }
+    }
+  }
+  flagArgs = flag.Args()
+}
+
+// Find appropriate DB handler According to options
+func dbPointer() (dbName string){
+
+  switch flagSrc {
+
+  case "native":
+    fmt.Println("Analyzing ", flagApp, "...")
+    var src instrument.EventSource
+    src = instrument.NewNativeRun(flagApp,flagTO)
+    events, err := src.Events()
+  	if err != nil {
+  		panic(err)
+  	}
+    dbName = db.Store(events,util.AppName(flagApp))
+    return dbName
+
+  case "latest", "x":
+    dbName = db.Ops(flagSrc, util.AppName(flagApp), flagX )
+    return dbName
+
+  default:
+    panic("DbPointer not available!")
+  }
 }

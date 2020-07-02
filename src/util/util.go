@@ -1,4 +1,4 @@
-package gotrace
+package util
 
 import (
 	"strings"
@@ -12,9 +12,9 @@ import (
 )
 
 // If s contains e
-func Util_contains(s []string, e string) bool {
+func Contains(s []string, e string) bool {
     for _, a := range s {
-        if a == "Ev"+e {
+        if a == e {
             return true
         }
     }
@@ -22,7 +22,7 @@ func Util_contains(s []string, e string) bool {
 }
 
 // Returns appName from long paths (omitting forbidden chars for database)
-func Util_appName(app string) string{
+func AppName(app string) string{
 	a := strings.Split(app,"/")
 	b := strings.Split(a[len(a)-1],".")
 	s := ""
@@ -46,7 +46,7 @@ func Util_appName(app string) string{
 
 
 // Display trace.Events grouped by Goroutines
-func util_dispGTable(m map[uint64][]*trace.Event) (){
+func dispGTable(m map[uint64][]*trace.Event) (){
   t := table.NewWriter()
   var keys []uint64
   for k,_ := range m{
@@ -102,7 +102,7 @@ func util_dispGTable(m map[uint64][]*trace.Event) (){
 
 
 // Display trace.Events grouped by Processes
-func util_dispPTable(m map[int][]*trace.Event) (){
+func dispPTable(m map[int][]*trace.Event) (){
   t := table.NewWriter()
   var keys []int
   for k,_ := range m{
@@ -156,7 +156,7 @@ func util_dispPTable(m map[int][]*trace.Event) (){
 }
 
 // Display CL.attributes grouped by Goroutines as objects
-func Util_dispGAttribute(m map[uint64][]*trace.Event) (){
+func DispGAttribute(m map[uint64][]*trace.Event) (){
 	t := table.NewWriter()
   var keys []uint64
   for k,_ := range m{
@@ -189,7 +189,7 @@ func Util_dispGAttribute(m map[uint64][]*trace.Event) (){
 }
 
 // Display CL.attributes map
-func Util_dispAtrMap(m map[int][]string, obj string) {
+func DispAtrMap(m map[int][]string, obj string) {
 	t := table.NewWriter()
 	var objPrefix string
 	switch obj{
@@ -232,23 +232,23 @@ func Util_dispAtrMap(m map[int][]string, obj string) {
 }
 
 
-func Util_dispByProcs(events []*trace.Event) {
+func DispByProcs(events []*trace.Event) {
   m := make(map[int][]*trace.Event)
   for _,e := range events{
 		m[e.P] = append(m[e.P],e)
   }
-  util_dispPTable(m)
+  dispPTable(m)
 }
 
-func Util_dispByGrtns(events []*trace.Event) {
+func DispByGrtns(events []*trace.Event) {
   m := make(map[uint64][]*trace.Event)
   for _,e := range events{
 		m[e.G] = append(m[e.G],e)
   }
-  util_dispGTable(m)
+  dispGTable(m)
 }
 
-func Util_attributeModesDescription() string {
+func AttributeModesDescription() string {
 	s := "Include stack snapshots\n\t\t"
 	s = s + "0: no stack\n\t\t"
 	s = s + "1: Top element of stack (immediate parent) - File, Function, Line\n\t\t"
