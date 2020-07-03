@@ -53,7 +53,7 @@ func main(){
       //}
     }
 
-  case "cl":
+  case "hac":
     for _,arg := range(flag.Args()){
       tl := strings.Split(arg,",")
       db.CLOperations(dbName,CLOUTPATH,flagOut,tl...)
@@ -94,7 +94,7 @@ func parseFlags() (){
   flag.Parse()
 
   // Check cmd
-  if flagCmd != "word" && flagCmd != "cl" && flagCmd != "rr" {
+  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" {
     util.PrintUsage()
     fmt.Printf("flagCMD: %s\n",flagCmd)
     panic("Wrong command")
