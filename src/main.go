@@ -82,7 +82,7 @@ func main(){
 
 // Parse flags, execute app & store traces (if necessary), return app database handler
 func parseFlags() (){
-  srcDescription := "SRC Description"
+  srcDescription := "native: execute the app and collect from scratch, latest: retrieve data from latest execution, x: retrieve data from specific execution (requires -x option)"
   // Parse flags
   flag.StringVar(&flagCmd,"cmd","","Commands: word, cl, rr")
   flag.StringVar(&flagOut,"outdir","","Output directory to write words and/or reports")

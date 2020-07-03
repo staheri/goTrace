@@ -264,5 +264,5 @@ func AttributeModesDescription() string {
 
 
 func PrintUsage() {
-	fmt.Println("Usage: ")
+	fmt.Println("Failed")
 }
