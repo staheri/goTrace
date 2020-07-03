@@ -16,8 +16,10 @@ goTrace helps Go developer understand the dynamic behavior of their application 
 After storing traces in the database, then we can interpret, summarize and retrieve traces in various formats to study Go dynamic behavior.
 
 ## Install
+
 Steps:
 - Patch the runtime
+- Dependencies
 - Build
 - Features
 
@@ -56,10 +58,10 @@ or (assuming your PATH set to use /usr/local/go)
 NOTE: return your previous installation by `sudo ln -nsf /usr/local/go-orig /usr/local/go`
 
 
-## Dependencies
+### Dependencies
 GoTrace uses different libraries and drivers. *[TODO] Use Go Modules/Vendors to automatically detect dependencies and versions*
 
-### Libraries
+#### Libraries
 
 - Fine tables: [github.com/jedib0t/go-pretty/table](https://github.com/jedib0t/go-pretty)
   `go get github.com/jedib0t/go-pretty`
@@ -69,7 +71,7 @@ GoTrace uses different libraries and drivers. *[TODO] Use Go Modules/Vendors to 
   `golang.org/x/tools/go/ast/astutil`
 - There might be more libraries needed indirectly.
 
-### Database
+#### Database
 
 - MySQL: [Install on Mac](https://dev.mysql.com/doc/mysql-osx-excerpt/5.7/en/osx-installation-pkg.html)
 
