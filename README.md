@@ -163,4 +163,4 @@ As we are gaining knowledge about applying machine learning methods into HPC cor
 ./src -cmd=word -app=<path-to-your-app>.go -out=<training-folder>
 ```
 
- For more information please refer to [DataBenchmark](DataBenchmark/README.md)
+ For more information please refer to [DataBenchmark](DataBenchmark/)
