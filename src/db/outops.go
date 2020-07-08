@@ -445,6 +445,7 @@ func ChannelReport(dbName string){
 				 INNER JOIN global.catCHNL t2 ON t1.type=t2.eventName
 				 INNER JOIN Args t3 ON t1.id=t3.eventID
 				 WHERE t3.arg="cid" AND t3.value=`+strconv.Itoa(cid)+`
+				 AND (t1.type="EvChSend" OR t1.type="EvChRecv")
 				 ORDER BY t1.ts;`
 		//fmt.Printf("Executing: %v\n",q)
 		res1, err1 := db.Query(q)
@@ -461,6 +462,7 @@ func ChannelReport(dbName string){
 			if err1 != nil{
 				panic(err1)
 			}
+
 			// now find stack entry for current row
 			q = `SELECT file,func,line
 			     FROM StackFrames
