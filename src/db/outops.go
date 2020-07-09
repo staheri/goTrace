@@ -11,6 +11,7 @@ import (
 	"strings"
 	"bytes"
 	"github.com/jedib0t/go-pretty/table"
+
 )
 
 var(
@@ -244,7 +245,7 @@ func CLOperations(dbName, cloutpath,resultpath string, aspects ...string ){
 	data := make(map[int][]string)
 
 
-	q = `SELECT t1.id, t2.type
+	q = `SELECT (t1.id)-1, t2.type
 	     FROM Goroutines t1
 			 INNER JOIN Events t2 ON t1.gid=t2.g `
 
@@ -851,4 +852,209 @@ func setPaths(){
 	GOPATH = os.Getenv("GOPATH")
 	CLPATH = GOPATH +"/cl"
 	HACPATH = GOPATH + "/scripts/hac"
+}
+
+func check(err error){
+	if err != nil{
+		panic(err)
+	}
+}
+
+//func ResourceGraph(dbName, resultpath string, categories ...string ){
+func ResourceGraph(dbName, resultpath string){
+	// Variables
+	var q, event,arg         string
+	var _arg                 sql.NullString
+	var _value               sql.NullInt32
+	var value                int
+	//var file, fuct,arg       string
+	var sevent               string
+	var id, eid, gid         int
+	//var idx, jdx             int
+	gmap := make(map[int]int)
+	var gmat [][]string
+	var row  []string
+
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+
+	q = `SELECT id,gid FROM Goroutines;`
+	res,err := db.Query(q)
+	check(err)
+	for res.Next(){
+		err = res.Scan(&id,&gid)
+		check(err)
+		gmap[gid]=id-1
+		//fmt.Printf("eventG: %v - tableG: %v\n",gid,id-1)
+	}
+	q = `SELECT t2.id, t2.g, t2.type, t4.arg, t4.value
+			 FROM Events t2
+			 INNER JOIN (
+				 SELECT * FROM global.catGRTN
+				 UNION
+				 SELECT * FROM global.catCHNL
+				 UNION
+				 SELECT * FROM global.catMUTX
+				 UNION
+				 SELECT * FROM global.catWGRP) t3 ON t2.type=t3.eventName
+			 LEFT JOIN Args t4
+			    ON t2.id=t4.eventID AND (t4.arg="g"
+						OR t4.arg="muid"
+						OR t4.arg="cid"
+						OR t4.arg="rwid"
+						OR t4.arg="wid")
+			 ORDER BY t2.ts;`
+	res,err = db.Query(q)
+	check(err)
+	for res.Next(){
+		err = res.Scan(&eid,&gid,&event,&_arg,&_value)
+		check(err)
+		sevent = strings.Split(event,"Ev")[1]
+		if _arg.Valid{
+			arg = _arg.String
+		}else{
+			arg = ""
+		}
+		if _value.Valid{
+			value = int(_value.Int32)
+		}else{
+			value = -1
+		}
+		if arg=="g"{
+			//fmt.Printf("%v-%v\n\tVal:%v gmap[%v]:%v\n",gid,sevent,value,value,gmap[value])
+			value = gmap[value]
+			//fmt.Printf("%v-%v-%v\n",gid,sevent,value)
+		}
+		if value >= 0{
+			sevent = sevent + "-" + strconv.Itoa(value)
+		}
+		if sevent == "WgAdd"{
+			q = `SELECT value FROM Args WHERE eventID=`+strconv.Itoa(eid)+` and arg=\"val\"`
+			res1,err1 := db.Query(q)
+			check(err1)
+			if res1.Next(){
+				err2:=res1.Scan(&value)
+				check(err2)
+				sevent = sevent + "-" + strconv.Itoa(value)
+			}
+		}
+		if sevent == "ChSend" || sevent == "ChRecv"{
+			q = `SELECT value FROM Args WHERE eventID=`+strconv.Itoa(eid)+` and arg=\"eid\"`
+			res1,err1 := db.Query(q)
+			check(err1)
+			if res1.Next(){
+				err2 := res1.Scan(&value)
+				check(err2)
+				sevent = sevent + "-" + strconv.Itoa(value)
+			}
+		}
+
+		//fmt.Println(gmap[gid],"-",sevent)
+
+		row = nil
+		for i:=0;i<gmap[gid];i++{
+			row = append(row,"-")
+		}
+		row = append(row,sevent)
+		for i:=gmap[gid]+1;i<len(gmap);i++{
+			row = append(row,"-")
+		}
+		gmat = append(gmat,row)
+		//fmt.Println(row)
+		//fmt.Println(gmat)
+	}
+	/*fmt.Println(gmat)
+	for _,r := range(gmat){
+		for _,s := range(r){
+			fmt.Printf("%v,",s)
+		}
+		fmt.Printf("\n")
+	}*/
+
+	fmt.Println(mat2dot(gmat))
+}
+
+
+func mat2dot(mat [][]string) string{
+	tmp := ""
+	dot := "digraph G{\n\trankdir=TB"
+
+	//subgraph G labels (-1)
+	tmp = "\n\tsubgraph{"
+	tmp = tmp + "\n\t\tnode [margin=0 fontsize=8 width=0.75 shape=box style=dashed]"
+	tmp = tmp + "\n\t\trank=same;"
+	tmp = tmp + "\n\t\trankdir=LR"
+	for i,_ := range(mat[0]){
+		tmp=tmp+"\n\t\t\"-1,"+strconv.Itoa(i)+"\" [label=\"G"+strconv.Itoa(i)+"\"]"
+	}
+	tmp = tmp + "\n\n\t\tedge [dir=none, style=invis]"
+
+	for i:=0;i<len(mat[0])-1;i++{
+		tmp = tmp + "\n\t\t\"-1,"+strconv.Itoa(i)+"\" -> \"-1,"+strconv.Itoa(i+1)+"\""
+	}
+	tmp = tmp+"\t}"
+	dot = dot + tmp
+	dot = dot + "\n"
+	// For loop for all the subgraphs
+	for i,row := range(mat){
+		tmp = "\n\tsubgraph{"
+		tmp = tmp + "\n\t\tnode [margin=0 fontsize=8 width=0.75 shape=box style=invis]"
+		tmp = tmp + "\n\t\trank=same;"
+		tmp = tmp + "\n\t\trankdir=LR\n"
+		for j,el := range(row){
+			tmp = tmp + "\n\t\t\""+strconv.Itoa(i)+","+strconv.Itoa(j)+"\" "
+			if el != "-"{
+				tmp = tmp + "[label=\""+el+"\",style=filled]"
+			}
+		}
+
+		tmp = tmp + "\n\n\t\tedge [dir=none, style=invis]"
+
+		for j:=0;j<len(row)-1;j++{
+			tmp = tmp + "\n\t\t\""+strconv.Itoa(i)+","+strconv.Itoa(j)+"\" -> \""+strconv.Itoa(i)+","+strconv.Itoa(j+1)+"\""
+		}
+		tmp = tmp+"\t}"
+		dot = dot + tmp
+		dot = dot + "\n"
+	}
+
+
+	//subgraph X
+	tmp = "\n\tsubgraph{"
+	tmp = tmp + "\n\t\tnode [margin=0 fontsize=8 width=0.75 shape=box style=invis]"
+	tmp = tmp + "\n\t\trank=same;"
+	tmp = tmp + "\n\t\trankdir=LR"
+	for i,_ := range(mat[0]){
+		tmp=tmp+"\n\t\t\"x,"+strconv.Itoa(i)+"\""
+	}
+	tmp = tmp + "\n\n\t\tedge [dir=none, style=invis]"
+
+	for i:=0;i<len(mat[0])-1;i++{
+		tmp = tmp + "\n\t\t\"x,"+strconv.Itoa(i)+"\" -> \"x,"+strconv.Itoa(i+1)+"\""
+	}
+	tmp = tmp+"\t}"
+	dot = dot + tmp
+	dot = dot + "\n"
+	// Edges
+	dot = dot + "\n\tedge [dir=none, color=gray88]"
+	for j := 0; j<len(mat[0]) ; j++{
+		for i:= -1; i<len(mat) ; i++{
+			if i == len(mat)-1{
+				dot = dot + "\n\t\""+strconv.Itoa(i)+","+strconv.Itoa(j)+"\" -> \"x,"+strconv.Itoa(j)+"\""
+			}else{
+				dot = dot + "\n\t\""+strconv.Itoa(i)+","+strconv.Itoa(j)+"\" -> \""+strconv.Itoa(i+1)+","+strconv.Itoa(j)+"\""
+			}
+			dot = dot + "\n"
+		}
+	}
+	dot = dot + "\n}"
+
+
+	return dot
 }

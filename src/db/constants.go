@@ -168,24 +168,3 @@ const (
   AtrMode_StkBotFnLn        = 7 // Bottom element of stack (great ancesstor) - Function, Line
   AtrMode_StkBotFn          = 8 // Bottom element of stack (great ancesstor) - Function
 )
-
-
-const (
-	Q_showDatabases           = 0 // show all databases in the query
-	Q_cntDistGrtns            = 1
-	Q_cntParentGrtns          = 2
-	Q_dispParntGrtns          = 3
-	Q_cntTerminatedGrtns      = 4
-	Q_qcount                  = 5 // query counts
-)
-
-var QueryStruct = [Q_qcount]struct {
-	Query         string
-	Res           []string
-}{
-	Q_showDatabases:           {"SHOW DATABASES;",nil},
-	Q_cntDistGrtns:            {"SELECT COUNT(DISTINCT(g)) FROM %s.Events;",nil},
-	Q_cntParentGrtns:          {"SELECT COUNT(*) FROM %s.Events WHERE type=\"EvGoCreate\";",nil},
-	Q_dispParntGrtns:          {"SELECT * FROM %s.Events WHERE type=\"EvGoCreate\";",nil},
-	Q_cntTerminatedGrtns:      {"SELECT COUNT(*) FROM %s.Events WHERE type=\"EvGoEnd\";",nil},
-}

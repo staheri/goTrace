@@ -76,6 +76,9 @@ func main(){
         panic("Wrong category for rr!")
       }
     }
+
+  case "rg":
+    db.ResourceGraph(dbName,flagOut)
   }
 }
 
@@ -84,7 +87,7 @@ func main(){
 func parseFlags() (){
   srcDescription := "native: execute the app and collect from scratch, latest: retrieve data from latest execution, x: retrieve data from specific execution (requires -x option)"
   // Parse flags
-  flag.StringVar(&flagCmd,"cmd","","Commands: word, cl, rr")
+  flag.StringVar(&flagCmd,"cmd","","Commands: word, cl, rr, rg")
   flag.StringVar(&flagOut,"outdir","","Output directory to write words and/or reports")
   flag.StringVar(&flagSrc,"src","latest",srcDescription)
   flag.StringVar(&flagX,"x","0","Execution version stored in database")
@@ -94,7 +97,7 @@ func parseFlags() (){
   flag.Parse()
 
   // Check cmd
-  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" {
+  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" {
     util.PrintUsage()
     fmt.Printf("flagCMD: %s\n",flagCmd)
     panic("Wrong command")
