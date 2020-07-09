@@ -37,7 +37,7 @@ def cluster(m,maxc,out):
 	#plt.show()
 	plt.savefig(out+"-dend.pdf")
 	ret = fcluster(ward(jac2pdist(m)),maxc,criterion='maxclust')
-	f=open(out+"-rep.txt","w")
+	f=open(out+"-C"+`maxc`+"-rep.txt","w")
 	f.write(clusterTable(ret))
 	f.close()
 	return ret

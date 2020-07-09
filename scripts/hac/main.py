@@ -87,6 +87,9 @@ ll.LCA_1partition()
 ll.LCA_2createLists()
 # Compute Jaccard Similarity Matrix
 jacmat=lattice.simmax(lat,ll,ccl)
+hac.cluster(jacmat,2,outname)
+hac.cluster(jacmat,3,outname)
+hac.cluster(jacmat,4,outname)
 hac.cluster(jacmat,5,outname)
 
 #JSM
