@@ -847,7 +847,6 @@ func WaitingGroupReport(dbName string){
 	}
 }
 
-
 func setPaths(){
 	GOPATH = os.Getenv("GOPATH")
 	CLPATH = GOPATH +"/cl"
@@ -934,18 +933,19 @@ func ResourceGraph(dbName, resultpath string){
 		if value >= 0{
 			sevent = sevent + "-" + strconv.Itoa(value)
 		}
-		if sevent == "WgAdd"{
-			q = `SELECT value FROM Args WHERE eventID=`+strconv.Itoa(eid)+` and arg=\"val\"`
+		if strings.Contains(sevent,"WgAdd"){
+			q = `SELECT value FROM Args WHERE eventID=`+strconv.Itoa(eid)+` and arg="val"`
+			fmt.Printf("Executing %v\n",q)
 			res1,err1 := db.Query(q)
 			check(err1)
 			if res1.Next(){
 				err2:=res1.Scan(&value)
 				check(err2)
-				sevent = sevent + "-" + strconv.Itoa(value)
+				sevent = sevent + "-(" + strconv.Itoa(value)+")"
 			}
 		}
-		if sevent == "ChSend" || sevent == "ChRecv"{
-			q = `SELECT value FROM Args WHERE eventID=`+strconv.Itoa(eid)+` and arg=\"eid\"`
+		if strings.Contains(sevent,"ChSend") || strings.Contains(sevent,"ChRecv"){
+			q = `SELECT value FROM Args WHERE eventID=`+strconv.Itoa(eid)+` and arg="eid"`
 			res1,err1 := db.Query(q)
 			check(err1)
 			if res1.Next(){
@@ -977,11 +977,43 @@ func ResourceGraph(dbName, resultpath string){
 		fmt.Printf("\n")
 	}*/
 
-	fmt.Println(mat2dot(gmat))
+	// Write dot
+	outdot := resultpath+"/"+dbName+"_rg.dot"
+	outpdf := resultpath+"/"+dbName+"_rg.pdf"
+	f,err := os.Create(outdot)
+	if err != nil{
+		log.Fatal(err)
+	}
+	f.WriteString(mat2dot(gmat))
+	f.Close()
+
+	// Create pdf
+	_cmd := "dot -Tpdf "+ outdot + " -o " + outpdf
+
+	cmd := exec.Command("dot","-Tpdf",outdot,"-o",outpdf)
+	fmt.Printf(">>> Executing %s...\n",_cmd)
+	//err = cmd.Run()
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+    fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+    return
+	}
+	fmt.Println("Result: " + out.String())
 }
 
 
 func mat2dot(mat [][]string) string{
+	if len(mat) < 1{
+		panic("Mat is empty")
+	}
+	if len(mat[0]) < 1{
+		panic("Mat row is empty")
+	}
+
 	tmp := ""
 	dot := "digraph G{\n\trankdir=TB"
 
@@ -1010,7 +1042,17 @@ func mat2dot(mat [][]string) string{
 		for j,el := range(row){
 			tmp = tmp + "\n\t\t\""+strconv.Itoa(i)+","+strconv.Itoa(j)+"\" "
 			if el != "-"{
-				tmp = tmp + "[label=\""+el+"\",style=filled]"
+				if strings.Contains(el,"Mu") || strings.Contains(el,"RWM"){
+					tmp = tmp + "[label=\""+el+"\",style=\"dotted,filled\", fillcolor=green]"
+				}else if strings.Contains(el,"Wg"){
+					tmp = tmp + "[label=\""+el+"\",style=\"dashed,filled\", fillcolor=gold]"
+				}else if strings.Contains(el,"ChSend"){
+					tmp = tmp + "[label=\""+el+"\",style=\"bold,filled\", fillcolor=cyan]"
+				}else if strings.Contains(el,"ChRecv"){
+					tmp = tmp + "[label=\""+el+"\",style=\"bold,filled\", fillcolor=violet]"
+				}else{
+					tmp = tmp + "[label=\""+el+"\",style=filled]"
+				}
 			}
 		}
 
