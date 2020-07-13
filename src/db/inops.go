@@ -50,6 +50,9 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	createTables(db)
 
 	for _,e := range events{
+		if e.Link != nil{
+			fmt.Printf(" > > > %v (g%v) -> %v (g%v)\n",EventDescriptions[e.Type].Name,e.G,EventDescriptions[e.Link.Type].Name,e.Link.G)
+		}
 		insertEvent(e, db)
 	}
 	return dbName

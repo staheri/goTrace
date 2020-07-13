@@ -6,16 +6,11 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
-	"runtime"
 	"time"
 )
 
 func main() {
-
-	// Capture starting number of goroutines.
-	startingGs := runtime.NumGoroutine()
 
 	if err := process("gophers"); err != nil {
 		log.Print(err)
@@ -24,15 +19,6 @@ func main() {
 	// Hold the program from terminating for 1 second to see
 	// if any goroutines created by process terminate.
 	time.Sleep(time.Second)
-
-	// Capture ending number of goroutines.
-	endingGs := runtime.NumGoroutine()
-
-	// Report the results.
-	fmt.Println("========================================")
-	fmt.Println("Number of goroutines before:", startingGs)
-	fmt.Println("Number of goroutines after :", endingGs)
-	fmt.Println("Number of goroutines leaked:", endingGs-startingGs)
 }
 
 // result wraps the return values from search. It allows us
@@ -69,7 +55,7 @@ func process(term string) error {
 		if result.err != nil {
 			return result.err
 		}
-		fmt.Println("Received:", result.record)
+		//fmt.Println("Received:", result.record)
 		return nil
 	}
 }
