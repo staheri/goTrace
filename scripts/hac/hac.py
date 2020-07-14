@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import *
 from tabulate import tabulate
 
+import readin
 
 
 
@@ -36,10 +37,13 @@ def cluster(m,maxc,out):
 	#dendrogram(ward(jac2pdist(mat1)), truncate_mode='level', p=4)
 	#plt.show()
 	plt.savefig(out+"-dend.pdf")
-	ret = fcluster(ward(jac2pdist(m)),maxc,criterion='maxclust')
-	f=open(out+"-C"+`maxc`+"-rep.txt","w")
-	f.write(clusterTable(ret))
-	f.close()
+	#ret = fcluster(ward(jac2pdist(m)),maxc,criterion='maxclust')
+	ret = fcluster(ward(jac2pdist(m)),0.5,criterion='distance')
+
+	#f=open(out+"-C"+`maxc`+"-rep.txt","w")
+	#f.write(clusterTable(ret))
+	#f.close()
+	print clusterTable(ret)
 	return ret
 
 def clusterTable(c):
@@ -56,7 +60,9 @@ def clusterTable(c):
 		ttab.append(k)
 		s = ""
 		for item in v:
-			s = s + "g"+`item`+", "
+			s = s + readin.objTable[`item+1`].rpartition(".")[0]+", "
+
+			#s = s + "g"+`item`+", "
 		ttab.append(s)
 		tab.append(ttab)
 	#print tabulate(tab,headers=hdrs,tablefmt="fancy_grid")

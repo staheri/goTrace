@@ -859,10 +859,10 @@ func check(err error){
 	}
 }
 
-//func ResourceGraph(dbName, resultpath string, categories ...string ){
-func ResourceGraph(dbName, resultpath string){
+func ResourceGraph(dbName, resultpath string, categories ...string ){
+//func ResourceGraph(dbName, resultpath string){
 	// Variables
-	var q, event,arg         string
+	var subq, q, event,arg   string
 	var _arg                 sql.NullString
 	var _value               sql.NullInt32
 	var value                int
@@ -893,22 +893,25 @@ func ResourceGraph(dbName, resultpath string){
 		//fmt.Printf("eventG: %v - tableG: %v\n",gid,id-1)
 	}
 	q = `SELECT t2.id, t2.g, t2.type, t4.arg, t4.value
-			 FROM Events t2
-			 INNER JOIN (
-				 SELECT * FROM global.catGRTN
-				 UNION
-				 SELECT * FROM global.catCHNL
-				 UNION
-				 SELECT * FROM global.catMUTX
-				 UNION
-				 SELECT * FROM global.catWGRP) t3 ON t2.type=t3.eventName
-			 LEFT JOIN Args t4
-			    ON t2.id=t4.eventID AND (t4.arg="g"
-						OR t4.arg="muid"
-						OR t4.arg="cid"
-						OR t4.arg="rwid"
-						OR t4.arg="wid")
-			 ORDER BY t2.ts;`
+			 FROM Events t2 `
+
+	subq = ""
+ 	if len(categories) != 0{
+ 		for i,cat := range categories{
+ 			 subq = subq + "SELECT * FROM global.cat"+cat
+ 			 if i < len(categories) - 1{
+ 				 subq = subq + " UNION "
+ 			 }
+ 		}
+ 		q = q + "INNER JOIN ("+subq+") t3 ON t3.eventName=t2.type "
+ 	}
+	q = q + `LEFT JOIN Args t4
+		 			 ON t2.id=t4.eventID AND (t4.arg="g"
+			 		 		OR t4.arg="muid"
+			 				OR t4.arg="cid"
+			 				OR t4.arg="rwid"
+			 				OR t4.arg="wid")
+						ORDER BY t2.ts;`
 	res,err = db.Query(q)
 	check(err)
 	for res.Next(){

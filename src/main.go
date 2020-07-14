@@ -21,6 +21,7 @@ var (
   flagOut     string
   flagSrc     string
   flagX       string
+  flagBase    string
   flagTO      int
   flagApp     string
   flagArgs    []string
@@ -79,6 +80,12 @@ func main(){
 
   case "rg":
     db.ResourceGraph(dbName,flagOut)
+  case "diff":
+    baseDBName := db.Ops("latest",util.AppName(flagBase),"0")
+    for _,arg := range(flag.Args()){
+      tl := strings.Split(arg,",")
+      db.DIFF(dbName,baseDBName,CLOUTPATH,flagOut,tl...)
+    }
   }
 }
 
@@ -87,7 +94,8 @@ func main(){
 func parseFlags() (){
   srcDescription := "native: execute the app and collect from scratch, latest: retrieve data from latest execution, x: retrieve data from specific execution (requires -x option)"
   // Parse flags
-  flag.StringVar(&flagCmd,"cmd","","Commands: word, cl, rr, rg")
+  flag.StringVar(&flagCmd,"cmd","","Commands: word, cl, rr, rg, diff")
+  flag.StringVar(&flagBase,"base","","Base for \"diff\" command (latest)")
   flag.StringVar(&flagOut,"outdir","","Output directory to write words and/or reports")
   flag.StringVar(&flagSrc,"src","latest",srcDescription)
   flag.StringVar(&flagX,"x","0","Execution version stored in database")
@@ -97,7 +105,7 @@ func parseFlags() (){
   flag.Parse()
 
   // Check cmd
-  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" {
+  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" && flagCmd != "diff"{
     util.PrintUsage()
     fmt.Printf("flagCMD: %s\n",flagCmd)
     panic("Wrong command")
@@ -128,6 +136,11 @@ func parseFlags() (){
         panic("Invalid category: "+e)
       }
     }
+  }
+
+  if flagCmd == "diff" && flagBase == ""{
+    util.PrintUsage()
+    panic("Undefined base for diff command!")
   }
   flagArgs = flag.Args()
 }

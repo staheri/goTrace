@@ -27,6 +27,9 @@ exp = ccl.rpartition(".")[0]
 fi = open(ccl,"r").read().split("\n")
 f = [x for x in fi if "->" in x]
 readin.readin(exp)
+for k in sorted(readin.objTable.keys()):
+    print k
+    print readin.objTable[k]
 
 fullMatrix = lattice.latmatToFullMat(readin.latmatc)
 lat = lattice.Lattice(exp)
@@ -88,9 +91,9 @@ ll.LCA_2createLists()
 # Compute Jaccard Similarity Matrix
 jacmat=lattice.simmax(lat,ll,ccl)
 hac.cluster(jacmat,2,outname)
-hac.cluster(jacmat,3,outname)
-hac.cluster(jacmat,4,outname)
-hac.cluster(jacmat,5,outname)
+#hac.cluster(jacmat,3,outname)
+#hac.cluster(jacmat,4,outname)
+#hac.cluster(jacmat,5,outname)
 
 #JSM
 #ax = sns.heatmap(jacmat, annot=True)
