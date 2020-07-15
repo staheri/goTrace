@@ -266,3 +266,11 @@ func AttributeModesDescription() string {
 func PrintUsage() {
 	fmt.Println("Failed")
 }
+
+func BoolConv(b bool) int{
+	if b{
+		return 1
+	} else{
+		return 0
+	}
+}
