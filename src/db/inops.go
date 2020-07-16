@@ -105,7 +105,9 @@ func Store(events []*trace.Event, app string) (dbName string) {
 		desc := EventDescriptions[e.Type]
 		fmt.Printf("%v: %v\n",cnt,desc.Name)
 		cnt+=1
-		//res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"\"Ev"+desc.Name + "\"",strconv.Itoa(int(e.Seq)),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),strconv.FormatBool(len(e.Stk) != 0),strconv.FormatBool(len(e.Args) != 0))
+		//if cnt > TOPX{
+		//	break
+		//}
 		res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(e.Seq)),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
 		check(err)
 		eid, err = res.LastInsertId()
