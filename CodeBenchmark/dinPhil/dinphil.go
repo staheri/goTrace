@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	NO           = 0
-	YES          = 1
-	ARE_YOU_FREE = 2
-	RELEASE      = 3
+	NO           = 1
+	YES          = 2
+	ARE_YOU_FREE = 3
+	RELEASE      = 4
 )
 
 func checkVal(val,exp int,){
@@ -99,7 +99,7 @@ func phil(lch, rch chan int, id int) {
 			if rval == YES{
 				fmt.Printf("\t\t\t\t\t\t\t\tPhil %v right fork free\nPhil %v is eating\n",id,id)
 				//panic("SUCCESS")
-				time.Sleep(1*time.Millisecond)
+				time.Sleep(2*time.Nanosecond)
 				//fmt.Printf("Phil %v releasing left fork\n",id)
 				lch <- RELEASE
 				//fmt.Printf("Phil %v releasing right fork\n",id)
@@ -128,8 +128,8 @@ func main() {
 	go phil(ch5, ch0, 0)
 	go phil(ch1, ch2, 1)
 	go phil(ch3, ch4, 2)
-	go Fork(ch1, ch0)
-	go Fork(ch3, ch3)
-	go Fork(ch5, ch4)
-	time.Sleep(5*time.Millisecond)
+	go Fork(ch0, ch1)
+	go Fork(ch2, ch3)
+	go Fork(ch4, ch5)
+	time.Sleep(1*time.Microsecond)
 }
