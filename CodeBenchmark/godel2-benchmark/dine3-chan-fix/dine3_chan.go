@@ -51,5 +51,5 @@ func main() {
 	go Fork(&fork1, ch1)
 	go Fork(&fork2, ch2)
 	go Fork(&fork3, ch3)
-	time.Sleep(10*time.Second)
+	time.Sleep(1*time.Millisecond)
 }
