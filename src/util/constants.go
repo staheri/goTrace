@@ -5,8 +5,6 @@ package util
 // const CLPATH = HOME + "/cl"
 // const RESPATH = HOME + "/results"
 
-const TOPX = 500
-
 // Event types in the trace.
 // Verbatim copy from src/runtime/trace.go with the "trace" prefix removed.
 const (
