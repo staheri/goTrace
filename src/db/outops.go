@@ -350,6 +350,7 @@ func ChannelReport(dbName string){
 	var make_eid, make_gid   int
 	var close_eid, close_gid int
 	var line                 int
+	var val                  int
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -370,6 +371,31 @@ func ChannelReport(dbName string){
 		panic(err)
 	}
 
+
+	// PREPARED STATEMENTS:
+	// Query to find location of channel make
+	chmakeLocStmt,err := db.Prepare("SELECT t2.file,t2.func,t2.line FROM Channels t1 INNER JOIN StackFrames t2 ON t1.make_eid=t2.eventID WHERE t1.cid=?")
+	check(err)
+	defer chmakeLocStmt.Close()
+
+	chcloseLocStmt,err := db.Prepare("SELECT t2.file,t2.func,t2.line FROM Channels t1 INNER JOIN StackFrames t2 ON t1.close_eid=t2.eventID WHERE t1.cid=?")
+	check(err)
+	defer chcloseLocStmt.Close()
+
+	// query to obtain send/recv for channelID=cid
+	chsendrecvStmt,err := db.Prepare(`SELECT t1.id, t1.type, t1.ts, t1.g FROM Events t1 INNER JOIN global.catCHNL t2 ON t1.type=t2.eventName INNER JOIN Args t3 ON t1.id=t3.eventID WHERE t3.arg="cid" AND t3.value=? AND (t1.type="EvChSend" OR t1.type="EvChRecv") ORDER BY t1.ts`)
+	check(err)
+	defer chsendrecvStmt.Close()
+
+	valStmt,err := db.Prepare("SELECT value from args where eventID=? and arg=\"val\"")
+	check(err)
+	defer valStmt.Close()
+
+	// now find stack entry for current row
+	stackEntryStmt,err := db.Prepare("SELECT file,func,line FROM StackFrames WHERE eventID=? ORDER BY id")
+	check(err)
+	defer stackEntryStmt.Close()
+
 	// Generate report for each channel
 	for res.Next(){
 		err = res.Scan(&id,&cid,&make_eid,&make_gid,&close_eid,&close_gid)
@@ -387,25 +413,14 @@ func ChannelReport(dbName string){
 
 
 		if make_eid != -1{
-			// Query to find location of channel make
-			q = `SELECT t2.file,t2.func,t2.line
-			     FROM Channels t1
-					 INNER JOIN StackFrames t2
-					 ON t1.make_eid=t2.eventID
-					 WHERE t1.cid=`+strconv.Itoa(cid)+";"
-
-			//fmt.Printf("Executing: %v\n",q)
-			res1, err1 := db.Query(q)
-			if err1 != nil {
-				panic(err1)
-			}
+			res1, err1 := chmakeLocStmt.Query(cid)
+			check(err1)
 			for res1.Next(){
 				err1 = res1.Scan(&file,&funct,&line)
-				if err1 != nil {
-					panic(err1)
-				}
+				check(err1)
 				//report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
 			}
+			res1.Close()
 			report = report + "G"+strconv.Itoa(make_gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
 		} else{ // global declaration of channel
 			report = report + "N/A (e.g., created globaly)\n"
@@ -414,45 +429,23 @@ func ChannelReport(dbName string){
 		report = report + "Closed? "
 
 		if close_eid != -1{
-			// Query to find location of channel make
-			q = `SELECT t2.file,t2.func,t2.line
-			     FROM Channels t1
-					 INNER JOIN StackFrames t2
-					 ON t1.close_eid=t2.eventID
-					 WHERE t1.cid=`+strconv.Itoa(cid)+";"
-
-			fmt.Printf("Executing: %v\n",q)
-			res1, err1 := db.Query(q)
-			if err1 != nil {
-				panic(err1)
-			}
+			res1, err1 := chcloseLocStmt.Query(cid)
+			check(err1)
 			for res1.Next(){
 				err1 = res1.Scan(&file,&funct,&line)
-				if err1 != nil {
-					panic(err1)
-				}
+				check(err1)
 				//report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
 			}
+			res1.Close()
 			report = report + "Yes, G"+strconv.Itoa(close_gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
 		} else{ // global declaration of channel
 			report = report + "No\n"
 		}
 
 		// now generate table
-
-		// query to obtain send/recv for channelID=cid
-		q = `SELECT t1.id, t1.type, t1.ts, t1.g
-		     FROM Events t1
-				 INNER JOIN global.catCHNL t2 ON t1.type=t2.eventName
-				 INNER JOIN Args t3 ON t1.id=t3.eventID
-				 WHERE t3.arg="cid" AND t3.value=`+strconv.Itoa(cid)+`
-				 AND (t1.type="EvChSend" OR t1.type="EvChRecv")
-				 ORDER BY t1.ts;`
 		//fmt.Printf("Executing: %v\n",q)
-		res1, err1 := db.Query(q)
-		if err1 != nil {
-			panic(err1)
-		}
+		res1, err1 := chsendrecvStmt.Query(cid)
+		check(err1)
 
 		t := table.NewWriter()
 		t.SetOutputMirror(os.Stdout)
@@ -460,28 +453,41 @@ func ChannelReport(dbName string){
 
 		for res1.Next(){
 			err1 = res1.Scan(&id,&event,&ts,&gid)
-			if err1 != nil{
-				panic(err1)
-			}
+			check(err1)
 
 			// now find stack entry for current row
-			q = `SELECT file,func,line
-			     FROM StackFrames
-					 WHERE eventID=`+strconv.Itoa(id)+" ORDER BY id;"
-			//fmt.Printf("Executing: %v\n",q)
-		 	res2, err2 := db.Query(q)
-		 	if err2 != nil {
-		 		panic(err2)
-		 	}
+		 	res2, err2 := stackEntryStmt.Query(id)
+		 	check(err2)
 			for res2.Next(){
 				err2 = res2.Scan(&file,&funct,&line)
 				if err2 != nil{
 					panic(err2)
 				}
 			}
+			res2.Close()
 			var row []interface{}
 			row = append(row,ts)
-			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
+
+			res4,err := valStmt.Query(id)
+			check(err)
+			if res4.Next(){
+				err := res4.Scan(&val)
+				check(err)
+			}
+
+			if val == 1{
+				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-NOPE\n"
+			}else if val == 2{
+				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-FORK\n"
+			/*}else if val == 3{
+				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-FREE?\n"
+			}else if val == 4{
+				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-REL\n"*/
+			}else{
+				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-XX\n"
+			}
+			res4.Close()
+
 			if event == "EvChSend"{
 				row = append(row,tmp)
 				row = append(row,"-")
@@ -493,10 +499,12 @@ func ChannelReport(dbName string){
 		}
 		fmt.Printf("%v\n",report)
 		t.Render()
-
-		fmt.Printf("%v\n",report)
-		t.RenderMarkdown()
+		res1.Close()
+		//fmt.Printf("%v\n",report)
+		//t.RenderMarkdown()
 	}
+	err=res.Close()
+	check(err)
 }
 
 func MutexReport(dbName string){
@@ -1007,7 +1015,6 @@ func ResourceGraph(dbName, resultpath string, categories ...string ){
 	}
 	fmt.Println("Result: " + out.String())
 }
-
 
 func mat2dot(mat [][]string) string{
 	if len(mat) < 1{
