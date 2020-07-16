@@ -350,7 +350,7 @@ func ChannelReport(dbName string){
 	var make_eid, make_gid   int
 	var close_eid, close_gid int
 	var line                 int
-	var val                  int
+	//var val                  int
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -468,6 +468,7 @@ func ChannelReport(dbName string){
 			var row []interface{}
 			row = append(row,ts)
 
+			/*
 			res4,err := valStmt.Query(id)
 			check(err)
 			if res4.Next(){
@@ -479,14 +480,16 @@ func ChannelReport(dbName string){
 				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-NOPE\n"
 			}else if val == 2{
 				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-FORK\n"
-			/*}else if val == 3{
+			}else if val == 3{
 				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-FREE?\n"
 			}else if val == 4{
-				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-REL\n"*/
+				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-REL\n"
 			}else{
 				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-XX\n"
 			}
+
 			res4.Close()
+			*/
 
 			if event == "EvChSend"{
 				row = append(row,tmp)
