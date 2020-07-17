@@ -21,6 +21,7 @@ var (
   flagOut     string
   flagSrc     string
   flagX       string
+  flagN       int
   flagBase    string
   flagTO      int
   flagApp     string
@@ -86,6 +87,11 @@ func main(){
       tl := strings.Split(arg,",")
       db.DIFF(dbName,baseDBName,CLOUTPATH,flagOut,tl...)
     }
+  case "dineData":
+    db.DineData(dbName, flagOut+"/ch-chid", flagN, true,true) // channel events only + channel ID
+    db.DineData(dbName, flagOut+"/ch", flagN, true,false) // channel events only
+    db.DineData(dbName, flagOut+"/all-chid", flagN, false,true) // all events + channel ID (for channel events)
+    db.DineData(dbName, flagOut+"/all", flagN, false,false) // all events
   }
 }
 
@@ -99,13 +105,14 @@ func parseFlags() (){
   flag.StringVar(&flagOut,"outdir","","Output directory to write words and/or reports")
   flag.StringVar(&flagSrc,"src","latest",srcDescription)
   flag.StringVar(&flagX,"x","0","Execution version stored in database")
+  flag.IntVar(&flagN,"n",0,"Number of philosophers for dineData command")
   flag.StringVar(&flagApp,"app","","Target application (*.go)")
   flag.IntVar(&flagTO,"to",-1,"Timeout for deadlocks")
 
   flag.Parse()
 
   // Check cmd
-  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" && flagCmd != "diff"{
+  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" && flagCmd != "diff" && flagCmd != "dineData"{
     util.PrintUsage()
     fmt.Printf("flagCMD: %s\n",flagCmd)
     panic("Wrong command")
@@ -142,6 +149,12 @@ func parseFlags() (){
     util.PrintUsage()
     panic("Undefined base for diff command!")
   }
+
+  if flagCmd == "dineData" && flagN == 0{
+    util.PrintUsage()
+    panic("Wrong N for dineData!")
+  }
+
   flagArgs = flag.Args()
 }
 
