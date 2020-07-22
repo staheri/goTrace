@@ -41,7 +41,7 @@ type Event struct {
 	G     uint64    // G on which the event happened
 	StkID uint64    // unique stack ID
 	Stk   []*Frame  // stack trace (can be empty)
-	Args  [3]uint64 // event-type-specific arguments
+	Args  [4]uint64 // event-type-specific arguments
 	SArgs []string  // event-type-specific string args
 	// linked event (can be nil), depends on event type:
 	// for GCStart: the GCStop
@@ -1081,7 +1081,8 @@ const (
 	EvRWMUnlock         = 59 // goTrace: rw unlock [timestamp, stack, rw id]
 	EvRWMrLock          = 60 // goTrace: rw rlock [timestamp, stack, rw id]
 	EvRWMrUnlock        = 61 // goTrace: rw runlock [timestamp, stack, rw id]
-	EvCount             = 62
+	EvSelect            = 62 // goTrace: select [timestamp, stack, pos]
+	EvCount             = 63
 )
 
 var EventDescriptions = [EvCount]struct {
@@ -1140,8 +1141,8 @@ var EventDescriptions = [EvCount]struct {
 	EvUserTaskEnd:       {"UserTaskEnd", 1011, true, []string{"taskid"}, nil},
 	EvUserRegion:        {"UserRegion", 1011, true, []string{"taskid", "mode", "typeid"}, []string{"name"}},
 	EvUserLog:           {"UserLog", 1011, true, []string{"id", "keyid"}, []string{"category", "message"}},
-	EvChSend:            {"ChSend", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
-	EvChRecv:            {"ChRecv", 1011, true, []string{"eid","cid","val"}, nil}, // goTrace
+	EvChSend:            {"ChSend", 1011, true, []string{"eid","cid","val","pos"}, nil}, // goTrace
+	EvChRecv:            {"ChRecv", 1011, true, []string{"eid","cid","val","pos"}, nil}, // goTrace
 	EvChMake:            {"ChMake", 1011, true, []string{"cid"}, nil}, // goTrace
 	EvChClose:           {"ChClose", 1011, true, []string{"cid"}, nil}, // goTrace
 	EvWgAdd:             {"WgAdd", 1011, true, []string{"wid","val"}, nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
@@ -1153,4 +1154,5 @@ var EventDescriptions = [EvCount]struct {
 	EvRWMUnlock:         {"RWMUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw unlock [timestamp, stack, rw id]
 	EvRWMrLock:          {"RWMrLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw rlock [timestamp, stack, rw id]
 	EvRWMrUnlock:        {"RWMrUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw runlock [timestamp, stack, rw id]
+	EvSelect:            {"Select",1011,true,[]string{"pos"},nil}, // goTrace: select [timestamp, stack, pos]
 }
