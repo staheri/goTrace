@@ -17,8 +17,8 @@ type Philosopher struct {
 
 func Fork(fork *int, ch chan int) {
 	for {
-		*fork = 1
-		ch <- 0
+		*fork = 2
+		ch <- 1
 		<-ch
 	}
 }
@@ -55,7 +55,7 @@ func main() {
 	// Initilizing Forks
 	var forks [N]int
 	for i := range forks {
-  	forks[i] = 0
+  	forks[i] = 1
 	}
 
 	// Initializing Channels
@@ -67,8 +67,8 @@ func main() {
 	// Initilizing Philosophers
 	var phils = [N]Philosopher{
 		0:  {0,1,1},
-	  1:  {1,2,20},
-		2:  {2,20,20},
+	  1:  {1,2,2},
+		2:  {2,3,3},
 	}
 
 	for i:=0 ; i<N ; i++{
@@ -78,5 +78,5 @@ func main() {
 		go Fork(&forks[i],chans[i])
 	}
 
-	time.Sleep(1000*time.Millisecond)
+	time.Sleep(100*time.Millisecond)
 }
