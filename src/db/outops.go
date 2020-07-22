@@ -350,7 +350,7 @@ func ChannelReport(dbName string){
 	var make_eid, make_gid   int
 	var close_eid, close_gid int
 	var line                 int
-	//var val                  int
+	var val, pos             int
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -390,6 +390,10 @@ func ChannelReport(dbName string){
 	valStmt,err := db.Prepare("SELECT value from args where eventID=? and arg=\"val\"")
 	check(err)
 	defer valStmt.Close()
+
+	posStmt,err := db.Prepare("SELECT value from args where eventID=? and arg=\"pos\"")
+	check(err)
+	defer posStmt.Close()
 
 	// now find stack entry for current row
 	stackEntryStmt,err := db.Prepare("SELECT file,func,line FROM StackFrames WHERE eventID=? ORDER BY id")
@@ -468,7 +472,7 @@ func ChannelReport(dbName string){
 			var row []interface{}
 			row = append(row,ts)
 
-			/*
+
 			res4,err := valStmt.Query(id)
 			check(err)
 			if res4.Next(){
@@ -476,6 +480,14 @@ func ChannelReport(dbName string){
 				check(err)
 			}
 
+			res5,err := posStmt.Query(id)
+			check(err)
+			if res5.Next(){
+				err := res5.Scan(&pos)
+				check(err)
+			}
+
+			/*
 			if val == 1{
 				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-NOPE\n"
 			}else if val == 2{
@@ -487,9 +499,10 @@ func ChannelReport(dbName string){
 			}else{
 				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-XX\n"
 			}
-
-			res4.Close()
 			*/
+			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+">"+strconv.Itoa(val)+"@"+strconv.Itoa(pos)+"\n"
+			res4.Close()
+			res5.Close()
 
 			if event == "EvChSend"{
 				row = append(row,tmp)

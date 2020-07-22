@@ -105,9 +105,9 @@ func Store(events []*trace.Event, app string) (dbName string) {
 		desc := EventDescriptions[e.Type]
 		fmt.Printf("%v: %v\n",cnt,desc.Name)
 		cnt+=1
-		//if cnt > TOPX{
-		//	break
-		//}
+		if cnt > TOPX{
+			break
+		}
 		res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(e.Seq)),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
 		check(err)
 		eid, err = res.LastInsertId()
@@ -421,7 +421,7 @@ func insertStackframe(eventID int64, stkIDX uint64, frames []*trace.Frame, db *s
 }
 
 // Insert args
-func insertArgs(eventID int64, args [3]uint64, descArgs []string, db *sql.DB) {
+func insertArgs(eventID int64, args [4]uint64, descArgs []string, db *sql.DB) {
 	var s string
 
 	for i,a := range descArgs{
