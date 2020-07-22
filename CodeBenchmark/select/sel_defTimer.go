@@ -6,7 +6,7 @@ import (
 )
 
 func process(ch chan string) {
-	time.Sleep(15 * time.Millisecond)
+	time.Sleep(3 * time.Millisecond)
 	ch <- "process successful"
 }
 
