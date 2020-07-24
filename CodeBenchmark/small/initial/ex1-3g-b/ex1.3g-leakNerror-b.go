@@ -7,9 +7,13 @@ func main(){
 }
 
 func send(ch chan int){
-  ch <- 42
+  for i:=0;i<10;i++{
+    ch <- 42
+  }
 }
 
 func recv(ch chan int){
-  <-ch
+  for i:=0;i<10;i++{
+    <- ch
+  }
 }

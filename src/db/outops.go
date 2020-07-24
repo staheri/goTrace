@@ -350,7 +350,7 @@ func ChannelReport(dbName string){
 	var make_eid, make_gid   int
 	var close_eid, close_gid int
 	var line                 int
-	var val, pos             int
+	var val, pos, eid        int
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -390,6 +390,11 @@ func ChannelReport(dbName string){
 	valStmt,err := db.Prepare("SELECT value from args where eventID=? and arg=\"val\"")
 	check(err)
 	defer valStmt.Close()
+
+	eidStmt,err := db.Prepare("SELECT value from args where eventID=? and arg=\"eid\"")
+	check(err)
+	defer eidStmt.Close()
+
 
 	posStmt,err := db.Prepare("SELECT value from args where eventID=? and arg=\"pos\"")
 	check(err)
@@ -487,6 +492,13 @@ func ChannelReport(dbName string){
 				check(err)
 			}
 
+			res6,err := eidStmt.Query(id)
+			check(err)
+			if res6.Next(){
+				err := res6.Scan(&eid)
+				check(err)
+			}
+
 			/*
 			if val == 1{
 				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-NOPE\n"
@@ -500,7 +512,7 @@ func ChannelReport(dbName string){
 				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-XX\n"
 			}
 			*/
-			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+">"+strconv.Itoa(val)+"@"+strconv.Itoa(pos)+"\n"
+			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+">"+strconv.Itoa(val)+"#"+strconv.Itoa(eid)+"@"+strconv.Itoa(pos)+"\n"
 			res4.Close()
 			res5.Close()
 
