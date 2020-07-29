@@ -20,6 +20,28 @@ var(
 	HACPATH   string
 )
 
+func Dev(dbName, outdir string){
+	// Variables
+	/*var q, event             string
+	var report, tmp          string
+	var file, funct          string
+	var id, cid, ts, gid     int
+	var make_eid, make_gid   int
+	var close_eid, close_gid int
+	var line                 int
+	var val, pos, eid        int*/
+
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+
+}
+
 func WordData(dbName, outdir, filter string, chunkSize int){
 	// make sure
 	outdir = outdir + "/"

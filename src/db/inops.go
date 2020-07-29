@@ -99,15 +99,27 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	check(err)
 	defer chnlUpdRcountStmt.Close()
 
+	// Init vector clocks
+	
+
+	// for each event:
+	//     update vector clock
+	//     update the events with their vector clocks
+	//
+
 	cnt := 0
 	for _,e := range events{
 		// insert event
 		desc := EventDescriptions[e.Type]
 		fmt.Printf("%v: %v\n",cnt,desc.Name)
-		cnt+=1
-		if cnt > TOPX{
-			break
+		if e.Link != nil{
+			fmt.Printf("Source: %s\n",e)
+			fmt.Printf("LINK: %s\n",e.Link)
 		}
+		cnt+=1
+		//if cnt > TOPX{
+		//	break
+		//}
 		res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(e.Seq)),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
 		check(err)
 		eid, err = res.LastInsertId()

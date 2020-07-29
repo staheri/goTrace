@@ -92,6 +92,10 @@ func main(){
     db.DineData(dbName, flagOut+"/ch", flagN, true,false) // channel events only
     db.DineData(dbName, flagOut+"/all-chid", flagN, false,true) // all events + channel ID (for channel events)
     db.DineData(dbName, flagOut+"/all", flagN, false,false) // all events
+  case "cleanDB":
+    db.Ops("clean all","","0")
+  case "dev":
+    db.Dev(dbName,flagOut)
   }
 }
 
@@ -112,7 +116,7 @@ func parseFlags() (){
   flag.Parse()
 
   // Check cmd
-  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" && flagCmd != "diff" && flagCmd != "dineData"{
+  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" && flagCmd != "diff" && flagCmd != "dineData" && flagCmd != "cleanDB" && flagCmd != "dev"{
     util.PrintUsage()
     fmt.Printf("flagCMD: %s\n",flagCmd)
     panic("Wrong command")
