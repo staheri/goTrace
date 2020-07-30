@@ -173,3 +173,14 @@ const (
   AtrMode_StkBotFnLn        = 7 // Bottom element of stack (great ancesstor) - Function, Line
   AtrMode_StkBotFn          = 8 // Bottom element of stack (great ancesstor) - Function
 )
+
+type msgKey struct{
+	eid    uint64
+	cid    uint64
+	val    uint64
+}
+
+type eventPredecessor struct{
+	g        uint64
+	clock    uint64
+}
