@@ -152,15 +152,28 @@ var ctgDescriptions = [num_of_ctgs]struct {
 	Category      string
 	Members    []string
 }{
-	0:  {"GRTN", []string{"EvGoCreate","EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoWaiting","EvGoInSyscall","EvGoStartLocal","EvGoUnblockLocal","EvGoSysExitLocal","EvGoStartLabel","EvGoBlockGC"}},
-  1:  {"CHNL",[]string{"EvChSend","EvChRecv","EvChMake","EvChClose"}},
-	2:  {"WGRP",[]string{"EvWgAdd","EvWgDone","EvWgWait"}},
-	3:  {"MUTX",[]string{"EvMuLock","EvMuUnlock","EvRWMLock","EvRWMrLock","EvRWMrUnlock","EvRWMUnlock"}},
-  4:  {"PROC",[]string{"EvNone","EvBatch","EvFrequency","EvStack","EvGomaxprocs","EvProcStart","EvProcStop"}},
-  5:  {"GCMM",[]string{"EvGCStart","EvGCDone","EvGCSTWStart","EvGCSTWDone","EvGCSweepStart","EvGCSweepDone","EvHeapAlloc","EvNextGC","EvGCMarkAssistStart","EvGCMarkAssistDone"}},
-  6:  {"SYSC",[]string{"EvGoSysCall","EvGoSysExit","EvGoSysBlock"}},
-  7:  {"MISC",[]string{"EvUserTaskCreate","EvUserTaskEnd","EvUserRegion","EvUserLog","EvTimerGoroutine","EvFutileWakeup","EvString"}},
+	catGRTN :  {"GRTN", []string{"EvGoCreate","EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoWaiting","EvGoInSyscall","EvGoStartLocal","EvGoUnblockLocal","EvGoSysExitLocal","EvGoStartLabel","EvGoBlockGC"}},
+  catCHNL :  {"CHNL",[]string{"EvChSend","EvChRecv","EvChMake","EvChClose"}},
+	catWGRP :  {"WGRP",[]string{"EvWgAdd","EvWgDone","EvWgWait"}},
+	catMUTX :  {"MUTX",[]string{"EvMuLock","EvMuUnlock","EvRWMLock","EvRWMrLock","EvRWMrUnlock","EvRWMUnlock"}},
+  catPROC :  {"PROC",[]string{"EvNone","EvBatch","EvFrequency","EvStack","EvGomaxprocs","EvProcStart","EvProcStop"}},
+  catGCMM :  {"GCMM",[]string{"EvGCStart","EvGCDone","EvGCSTWStart","EvGCSTWDone","EvGCSweepStart","EvGCSweepDone","EvHeapAlloc","EvNextGC","EvGCMarkAssistStart","EvGCMarkAssistDone"}},
+  catSYSC :  {"SYSC",[]string{"EvGoSysCall","EvGoSysExit","EvGoSysBlock"}},
+  catMISC :  {"MISC",[]string{"EvUserTaskCreate","EvUserTaskEnd","EvUserRegion","EvUserLog","EvTimerGoroutine","EvFutileWakeup","EvString"}},
 }
+
+
+const (
+	catGRTN         = 0  // Goroutine events
+	catCHNL         = 1  // Channel events
+	catWGRP         = 2  // WaitingGroup events
+	catMUTX         = 3  // Mutex events
+	catPROC         = 4  // Process events
+	catGCMM         = 5  // Garbage collection/memory events
+	catSYSC         = 6  // Syscall events
+	catMISC         = 7  // Other events
+)
+
 
 const (
   AtrMode_StkNone           = 0 // no stack
