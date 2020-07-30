@@ -56,9 +56,15 @@ func Store(events []*trace.Event, app string) (dbName string) {
 
 	// QUERIES
 	var eid int64
-	insertEventStmt, err := db.Prepare("INSERT INTO Events (offset, type, seq , ts, g, p, stkID, hasStk, hasArgs) values (? ,? ,? ,? ,? ,? ,? ,? ,? );")
+	insertEventStmt, err := db.Prepare("INSERT INTO Events (offset, type, logclock , ts, g, p, stkID, hasStk, hasArgs) values (? ,? ,? ,? ,? ,? ,? ,? ,? );")
 	check(err)
 	defer insertEventStmt.Close()
+
+	// for the events with predecessor
+	insertEventWPredStmt, err := db.Prepare("INSERT INTO Events (offset, type, logclock , ts, g, p, predG, predClk, stkID, hasStk, hasArgs) values (? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? );")
+	check(err)
+	defer insertEventWPredStmt.Close()
+
 	insertStackStmt, err := db.Prepare("INSERT INTO StackFrames (eventID, stkIDX, pc, func, file, line) values (?, ?, ?, ?, ?, ?)")
 	check(err)
 	defer insertStackStmt.Close()
@@ -100,30 +106,103 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	defer chnlUpdRcountStmt.Close()
 
 	// Init vector clocks
-	
+	//vc := make(map[int][]uint64)
+//	gs := make(map[int]int) // gs[real gid]=id
+	vc := make(map[uint64]uint64) // vc[g]= local clock
+
+	msgs := make(map[msgKey]eventPredecessor)
+	//links   := make(map[int64]eventPredecessor)
 
 	// for each event:
 	//     update vector clock
 	//     update the events with their vector clocks
 	//
+	// a slice of pointers to events for potential predecessors
+	// for the current event [id]: what is the link? point to that
+	// for send: what is the potential receiver? [id] = cid, eid, value
 
 	cnt := 0
 	for _,e := range events{
 		// insert event
 		desc := EventDescriptions[e.Type]
 		fmt.Printf("%v: %v\n",cnt,desc.Name)
-		if e.Link != nil{
+
+		cnt+=1
+		if _,ok := vc[e.G];ok{
+			vc[e.G] = vc[e.G] + 1
+		} else{
+			vc[e.G] = 1
+		}
+
+		/*if e.Link != nil{
 			fmt.Printf("Source: %s\n",e)
 			fmt.Printf("LINK: %s\n",e.Link)
+			if _,ok := links[e.Link.Ts] ; !ok{
+				links[e.Link.Ts] = eventPredecessor{e.G, vc[e.G]}
+			} else{ // the link of current event has been linked to another event before
+				panic("Previously linked to another event!")
+			}
+		}*/
+		if desc.Name == "ChSend"{
+			if _,ok := msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] ; !ok{
+				msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] = eventPredecessor{e.G, vc[e.G]}
+			} else{ // the link of current event has been linked to another event before
+				panic("Previously stored as sent!")
+			}
 		}
-		cnt+=1
+
 		//if cnt > TOPX{
 		//	break
 		//}
-		res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(e.Seq)),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
-		check(err)
-		eid, err = res.LastInsertId()
-		check(err)
+		/*if vv,ok := links[e.Ts]; ok{
+			res,err := insertEventWPredStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(vv.g,10),strconv.FormatUint(vv.clock,10),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
+			check(err)
+			eid, err = res.LastInsertId()
+			check(err)
+		} else{
+			if desc.Name == "ChRecv"{
+				if vv,ok := msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] ; ok{
+					res,err := insertEventWPredStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(vv.g,10),strconv.FormatUint(vv.clock,10),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
+					check(err)
+					eid, err = res.LastInsertId()
+					check(err)
+				}else if e.Args[0] == 222 || e.Args[0] == 333{
+					panic("TODOOOOOO")
+				}else{
+					res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
+					check(err)
+					eid, err = res.LastInsertId()
+					check(err)
+				}
+			}else{
+				res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
+				check(err)
+				eid, err = res.LastInsertId()
+				check(err)
+			}
+		}*/
+
+		if desc.Name == "ChRecv"{
+			if vv,ok := msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] ; ok{
+				res,err := insertEventWPredStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(vv.g,10),strconv.FormatUint(vv.clock,10),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
+				check(err)
+				eid, err = res.LastInsertId()
+				check(err)
+			}else if e.Args[0] == 222 || e.Args[0] == 333{
+				panic("TODOOOOOO")
+			}else{
+				res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
+				check(err)
+				eid, err = res.LastInsertId()
+				check(err)
+			}
+		}else{
+			res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
+			check(err)
+			eid, err = res.LastInsertId()
+			check(err)
+		}
+
 
 		//insert stacks
 		//insertStackframe(eid, e.StkID, e.Stk, db)
@@ -294,10 +373,12 @@ func createTables(db *sql.DB){
     									id int NOT NULL AUTO_INCREMENT,
     									offset int NOT NULL,
     									type varchar(255) NOT NULL,
-											seq int NOT NULL,
+											logclock int NOT NULL,
     									ts bigint NOT NULL,
     									g int NOT NULL,
     									p int NOT NULL,
+											predG int,
+											predClk int,
     									stkID int,
 											hasSTK bool,
 											hasArgs bool,

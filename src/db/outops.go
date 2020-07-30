@@ -22,14 +22,15 @@ var(
 
 func Dev(dbName, outdir string){
 	// Variables
-	/*var q, event             string
-	var report, tmp          string
-	var file, funct          string
-	var id, cid, ts, gid     int
-	var make_eid, make_gid   int
-	var close_eid, close_gid int
-	var line                 int
-	var val, pos, eid        int*/
+	var q, event             string
+	//var report, tmp          string
+	//var file, funct          string
+	var g,logclock     int
+	var predG,predClk  sql.NullInt32
+	//var make_eid, make_gid   int
+	//var close_eid, close_gid int
+	//var line                 int
+	//var val, pos, eid        int*/
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -40,6 +41,26 @@ func Dev(dbName, outdir string){
 	}
 	defer db.Close()
 
+
+	q = "SELECT type,g,logclock,predG,predClk FROM Events ORDER BY ts;"
+	res, err := db.Query(q)
+	check(err)
+	for res.Next(){
+		err = res.Scan(&event,&g,&logclock,&predG,&predClk)
+		check(err)
+		//lockIDs=append(lockIDs,muid)
+		if predG.Valid{
+			if g == int(predG.Int32){
+				fmt.Printf("%v\nG%v {\"G%v\": %v}\n",event,g,g,logclock)
+			}else{
+				fmt.Printf("%v\nG%v {\"G%v\": %v, \"G%v\": %v }\n",event,g,g,logclock,predG.Int32,predClk.Int32)
+			}
+
+		} else{
+			fmt.Printf("%v\nG%v {\"G%v\": %v}\n",event,g,g,logclock)
+		}
+
+	}
 }
 
 func WordData(dbName, outdir, filter string, chunkSize int){
