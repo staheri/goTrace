@@ -27,6 +27,7 @@ func HBLog(dbName, outdir string, resourceView bool){
 	fmt.Println("HBLOG")
 	// Variables
 	var q, subq, event, _ev   string
+	var event1                string
 	//var _arg,_val        			string
 	var g,logclock,eid   			int
 	var predG,predClk    			sql.NullInt32
@@ -89,14 +90,15 @@ func HBLog(dbName, outdir string, resourceView bool){
 			check(err)
 
 			event = _ev[2:]
+			event1 = _ev[2:]
 			//fmt.Printf("OUTOPS-EVENT: %v\n",event)
-			if event == "WgAdd"{
+			if event1 == "WgAdd"{
 				if rval.Valid && rval.Int32 > 0{
 					event = event + "[val:"+strconv.Itoa(int(rval.Int32))+"]"
 				}else{
 					event = event + "[val:-]"
 				}
-			}else if event == "ChRecv" || event=="ChSend"{
+			}else if event1 == "ChRecv" || event1 =="ChSend"{
 				if rval.Valid{
 					event = event + "[val:"+strconv.Itoa(int(rval.Int32))+"]"
 				}else{
@@ -137,7 +139,8 @@ func HBLog(dbName, outdir string, resourceView bool){
 			check(err)
 
 			event = _ev[2:]
-			if event == "WgAdd"{
+			event1 = _ev[2:]
+			if event1 == "WgAdd"{
 				if rid.Valid{
 					event = event + "["+rid.String
 				}else{
@@ -148,14 +151,14 @@ func HBLog(dbName, outdir string, resourceView bool){
 				} else{
 					event = event + ",val:-]"
 				}
-			}else if util.Contains(ctgDescriptions[catCHNL].Members, event){
+			}else if util.Contains(ctgDescriptions[catCHNL].Members, "Ev"+event1){
 				if rid.Valid{
 					event = event + "["+rid.String
 				}else{
 					event = event + "[-"
 				}
 
-				if event == "ChRecv" || event=="ChSend"{
+				if event1 == "ChRecv" || event1=="ChSend"{
 					if rval.Valid{
 						event = event + ",val:"+strconv.Itoa(int(rval.Int32))+"]"
 					}else{
@@ -164,7 +167,7 @@ func HBLog(dbName, outdir string, resourceView bool){
 				}else{
 					event = event + "]"
 				}
-			}else if util.Contains(ctgDescriptions[catMUTX].Members, event) || util.Contains(ctgDescriptions[catWGRP].Members, event){
+			}else if util.Contains(ctgDescriptions[catMUTX].Members, "Ev"+event1) || util.Contains(ctgDescriptions[catWGRP].Members, "Ev"+event1){
 				if rid.Valid{
 					event = event + " ["+rid.String+"]"
 				}else{
