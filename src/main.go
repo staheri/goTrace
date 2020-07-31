@@ -95,7 +95,15 @@ func main(){
   case "cleanDB":
     db.Ops("clean all","","0")
   case "dev":
-    db.Dev(dbName,flagOut)
+    /*for _,arg := range(flag.Args()){
+      tl := strings.Split(arg,",")
+      db.HBLog(dbName,flagOut,true,tl...)
+      fmt.Println("****")
+      db.HBLog(dbName,flagOut,false,tl...)
+    }*/
+    db.HBLog(dbName,flagOut,true)
+    fmt.Println("****")
+    db.HBLog(dbName,flagOut,false)
   }
 }
 
@@ -175,7 +183,16 @@ func dbPointer() (dbName string){
   	if err != nil {
   		panic(err)
   	}
-    dbName = db.Store(events,util.AppName(flagApp))
+    if len(flag.Args()) == 0{
+      emptyList := []string{}
+      dbName = db.Store(events,util.AppName(flagApp),emptyList...)
+    }else if len(flag.Args()) == 1{
+      tl := strings.Split(flag.Args()[0],",")
+      dbName = db.Store(events,util.AppName(flagApp),tl...)
+    }else{
+      panic("NOT NOW")
+    }
+
     return dbName
 
   case "latest", "x":

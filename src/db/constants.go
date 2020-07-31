@@ -188,8 +188,8 @@ const (
 )
 
 type msgKey struct{
-	eid    uint64
 	cid    uint64
+	eid    uint64
 	val    uint64
 }
 

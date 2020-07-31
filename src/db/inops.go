@@ -11,9 +11,63 @@ import (
 	"util"
 )
 
+func aspect2string(aspects ...string) (ret string){
+	if len(aspects) != 0{
+		ret = "_"
+		for _,asp := range aspects{
+			 ret = ret +asp+"_"
+		}
+	} else{
+		ret = ""
+	}
+	return ret
+}
+
+func asp2int(asp string) (ret int){
+	if asp == "CHNL"{
+		ret = catCHNL
+	}else if asp == "GRTN"{
+		ret = catGRTN
+	}else if asp == "MUTX"{
+		ret = catMUTX
+	}else if asp == "SYSC"{
+		ret = catSYSC
+	}else if asp == "WGRP"{
+		ret = catWGRP
+	}else if asp == "PROC"{
+		ret = catPROC
+	}else if asp == "MISC"{
+		ret = catMISC
+	}else if asp == "GCMM"{
+		ret = catGCMM
+	}else{
+		panic("Wrong Aspect")
+	}
+	return ret
+}
+
+func isWhite(event string, aspects ...string)(ret bool){
+	fmt.Println(aspects)
+	if len(aspects) != 0{
+		ret = false
+		for _,asp := range aspects{
+			 aspID := asp2int(asp)
+			 fmt.Println("Check if "+event+" is in "+asp+ " (aspID:"+strconv.Itoa(aspID)+")")
+			 if util.Contains(ctgDescriptions[aspID].Members, "Ev"+event){
+				 ret = true
+				 break
+			 }
+		}
+	} else{
+		ret = true
+	}
+	return ret
+}
 
 // Take sequence of events, create a new DB Schema and insert events into tables
-func Store(events []*trace.Event, app string) (dbName string) {
+func Store(events []*trace.Event, app string,aspects ...string) (dbName string) {
+	var err error
+	var res sql.Result
 	// Connecting to mysql driver
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/")
 	if err != nil {
@@ -24,13 +78,14 @@ func Store(events []*trace.Event, app string) (dbName string) {
 
 	// Creating new database for current experiment
 	idx := 0
-	dbName = app + "X" + strconv.Itoa(idx)
+	appAspects := app + aspect2string(aspects...)
+	dbName = appAspects + "X" + strconv.Itoa(idx)
 	fmt.Printf("Attempt to create database: %s\n",dbName)
 	_,err = db.Exec("CREATE DATABASE "+dbName + ";")
 	for err != nil{
 		fmt.Printf("Error: %v\n",err)
 		idx = idx + 1
-		dbName = app + "X" + strconv.Itoa(idx)
+		dbName = appAspects + "X" + strconv.Itoa(idx)
 		fmt.Printf("Attempt to create database: %s\n",dbName)
 		_,err = db.Exec("CREATE DATABASE "+dbName+ ";")
 	}
@@ -64,6 +119,11 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	insertEventWPredStmt, err := db.Prepare("INSERT INTO Events (offset, type, logclock , ts, g, p, predG, predClk, stkID, hasStk, hasArgs) values (? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? );")
 	check(err)
 	defer insertEventWPredStmt.Close()
+
+	// for the events with resources (channels, mutex, WaitingGroup)
+	insertEventResourceStmt, err := db.Prepare("INSERT INTO Events (offset, type, logclock , ts, g, p, predG, predClk, rid, rval, rclock, stkID, hasStk, hasArgs) values (? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? );")
+	check(err)
+	defer insertEventResourceStmt.Close()
 
 	insertStackStmt, err := db.Prepare("INSERT INTO StackFrames (eventID, stkIDX, pc, func, file, line) values (?, ?, ?, ?, ?, ?)")
 	check(err)
@@ -106,103 +166,214 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	defer chnlUpdRcountStmt.Close()
 
 	// Init vector clocks
-	//vc := make(map[int][]uint64)
-//	gs := make(map[int]int) // gs[real gid]=id
-	vc := make(map[uint64]uint64) // vc[g]= local clock
+	msgs          := make(map[msgKey]eventPredecessor) // storing (to be) pred of a recv
+	links         := make(map[int64]eventPredecessor) // storing (to be) pred of an event
+	// Resource clocks
+	localClock    := make(map[uint64]uint64) // vc[g]           = local clock
+	chanClock     := make(map[uint64]uint64) // chansClock[cid] = channel clock
+	wgClock       := make(map[uint64]uint64) // wgsClock[cid]   = wg clock
+	mutexClock    := make(map[uint64]uint64) // mutexClock[cid] = mutex clock
 
-	msgs := make(map[msgKey]eventPredecessor)
-	//links   := make(map[int64]eventPredecessor)
+	var tkey uint64
 
-	// for each event:
-	//     update vector clock
-	//     update the events with their vector clocks
-	//
-	// a slice of pointers to events for potential predecessors
-	// for the current event [id]: what is the link? point to that
-	// for send: what is the potential receiver? [id] = cid, eid, value
+	predG    := sql.NullInt32{}
+	predClk  := sql.NullInt32{}
+	rid      := sql.NullString{}
+	rval     :=  sql.NullInt32{}
+	rclock   :=  sql.NullInt32{}
+
+
+
 
 	cnt := 0
 	for _,e := range events{
-		// insert event
+		// Debug info
+		cnt+=1
 		desc := EventDescriptions[e.Type]
 		fmt.Printf("%v: %v\n",cnt,desc.Name)
-
-		cnt+=1
-		if _,ok := vc[e.G];ok{
-			vc[e.G] = vc[e.G] + 1
-		} else{
-			vc[e.G] = 1
-		}
-
-		/*if e.Link != nil{
-			fmt.Printf("Source: %s\n",e)
-			fmt.Printf("LINK: %s\n",e.Link)
-			if _,ok := links[e.Link.Ts] ; !ok{
-				links[e.Link.Ts] = eventPredecessor{e.G, vc[e.G]}
-			} else{ // the link of current event has been linked to another event before
-				panic("Previously linked to another event!")
-			}
-		}*/
-		if desc.Name == "ChSend"{
-			if _,ok := msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] ; !ok{
-				msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] = eventPredecessor{e.G, vc[e.G]}
-			} else{ // the link of current event has been linked to another event before
-				panic("Previously stored as sent!")
-			}
-		}
-
 		//if cnt > TOPX{
 		//	break
 		//}
-		/*if vv,ok := links[e.Ts]; ok{
-			res,err := insertEventWPredStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(vv.g,10),strconv.FormatUint(vv.clock,10),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
-			check(err)
-			eid, err = res.LastInsertId()
-			check(err)
-		} else{
-			if desc.Name == "ChRecv"{
-				if vv,ok := msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] ; ok{
-					res,err := insertEventWPredStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(vv.g,10),strconv.FormatUint(vv.clock,10),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
-					check(err)
-					eid, err = res.LastInsertId()
-					check(err)
-				}else if e.Args[0] == 222 || e.Args[0] == 333{
-					panic("TODOOOOOO")
-				}else{
-					res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
-					check(err)
-					eid, err = res.LastInsertId()
-					check(err)
-				}
-			}else{
-				res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
-				check(err)
-				eid, err = res.LastInsertId()
-				check(err)
-			}
-		}*/
 
-		if desc.Name == "ChRecv"{
-			if vv,ok := msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] ; ok{
-				res,err := insertEventWPredStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(vv.g,10),strconv.FormatUint(vv.clock,10),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
-				check(err)
-				eid, err = res.LastInsertId()
-				check(err)
-			}else if e.Args[0] == 222 || e.Args[0] == 333{
-				panic("TODOOOOOO")
-			}else{
-				res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
-				check(err)
-				eid, err = res.LastInsertId()
-				check(err)
-			}
-		}else{
-			res,err := insertEventStmt.Exec(strconv.Itoa(e.Off),"Ev"+desc.Name,strconv.Itoa(int(vc[e.G])),strconv.Itoa(int(e.Ts)),strconv.FormatUint(e.G,10),strconv.Itoa(e.P),strconv.FormatUint(e.StkID,10),util.BoolConv(len(e.Stk) != 0),util.BoolConv(len(e.Args) != 0))
-			check(err)
-			eid, err = res.LastInsertId()
-			check(err)
+		// fresh values for each event
+		predG    = sql.NullInt32{}
+		predClk  = sql.NullInt32{}
+		rid      = sql.NullString{}
+		rval     =  sql.NullInt32{}
+		rclock   =  sql.NullInt32{}
+
+		//fmt.Println("Checking:"+desc.Name)
+		if !isWhite(desc.Name,aspects...) || (desc.Name == "WgAdd" && int32(e.Args[1]) < 0){
+			continue
+		}
+		//fmt.Println("Pass")
+
+		// Assign local logical clock
+		if _,ok := localClock[e.G];ok{
+			localClock[e.G] = localClock[e.G] + 1
+		} else{
+			localClock[e.G] = 1
 		}
 
+		// Check category of events\
+		// Assign resource clocks (channels, WaitingGroups, mutexes)
+		// Assign predG, predClk for ChRecv
+		// Assign predG, predClk for Link
+		// Assign rid, rval (if any), rclock for all resources
+
+		if util.Contains(ctgDescriptions[catMUTX].Members, "Ev"+desc.Name){
+			// MUTX event
+			// Assign mutexClock
+			// Assign rid, rval=Null, rclock
+			// predG, predClk: null
+
+			tkey = e.Args[0] // muid - rwid
+			rid =  sql.NullString{Valid:true, String: "M"+strconv.FormatUint(tkey,10)} // muid
+
+			if _,ok := mutexClock[tkey];ok{
+				mutexClock[tkey] = mutexClock[tkey] + 1
+			} else{
+				mutexClock[tkey] = 1
+			}
+
+			predG = sql.NullInt32{}
+			predClk = sql.NullInt32{}
+			rval = sql.NullInt32{}
+			rclock = sql.NullInt32{Valid:true, Int32: int32(mutexClock[tkey])}
+
+
+		} else if util.Contains(ctgDescriptions[catCHNL].Members, "Ev"+desc.Name){
+			// CHNL event
+			// Assign chanClock
+			// Assign rid, rval, rclock
+			// ChSend? set predG , rval = value
+			// ChRecv and MSG[key]? use predG,predClk, else: null,null
+			// ChMake/Close? rval = null
+
+			tkey= e.Args[0] // cid
+			rid =  sql.NullString{Valid:true, String: "C"+strconv.FormatUint(tkey,10)} // cid
+
+			if _,ok := chanClock[tkey];ok{
+				chanClock[tkey] = chanClock[tkey] + 1
+			} else{
+				chanClock[tkey] = 1
+			}
+
+			rclock = sql.NullInt32{Valid:true, Int32: int32(chanClock[tkey])}
+
+			if desc.Name == "ChRecv"{
+				rval = sql.NullInt32{Valid:true, Int32: int32(e.Args[2])} // message val
+				if vv,ok := msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] ; ok{
+					// A matching sent is found for the recv
+					predG    = sql.NullInt32{Valid:true, Int32: int32(vv.g)}
+					predClk  = sql.NullInt32{Valid:true, Int32: int32(vv.clock)}
+				}else{
+					// Receiver without a matching sender
+					predG = sql.NullInt32{}
+					predClk = sql.NullInt32{}
+				}
+			}else{
+				// ChMake, ChSend, ChClose
+				if desc.Name == "ChSend"{
+					rval = sql.NullInt32{Valid:true, Int32: int32(e.Args[2])} // message val
+					// Set Predecessor for a receive (key to the event: {cid, eid, val})
+					if _,ok := msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] ; !ok{
+						msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] = eventPredecessor{e.G, localClock[e.G]}
+					} else{ // a send for this particular message has been stored before
+						panic("Previously stored as sent!")
+					}
+				}else{ // ChMake. ChClose
+					rval = sql.NullInt32{}
+				}
+				predG = sql.NullInt32{}
+				predClk = sql.NullInt32{}
+			}
+		} else if util.Contains(ctgDescriptions[catWGRP].Members, "Ev"+desc.Name){
+			// WGRP event
+			// Assign wgsClock
+			// Assign rid, rval=(add? val, else? Null), rclock
+			// predG, predClk: null
+
+			tkey= e.Args[0] // wgid
+			rid =  sql.NullString{Valid:true, String: "W"+strconv.FormatUint(tkey,10)} // wgid
+			if _,ok := wgClock[tkey];ok{
+				wgClock[tkey] = wgClock[tkey] + 1
+			} else{
+				wgClock[tkey] = 1
+			}
+
+			predG = sql.NullInt32{}
+			predClk = sql.NullInt32{}
+
+			if desc.Name == "WgAdd"{ // it has a val
+				rval = sql.NullInt32{Valid:true, Int32: int32(e.Args[1])} // val
+			}else{
+				rval = sql.NullInt32{}
+			}
+			rclock = sql.NullInt32{Valid:true, Int32: int32(wgClock[tkey])}
+			// All resource events are assigned a logical clock based on their id
+
+		} else if e.Link != nil{
+			// Set Predecessor for an event (key to the event: TS)
+			//fmt.Printf("Source: %s\n",e)
+			//fmt.Printf("LINK: %s\n",e.Link)
+			if _,ok := links[e.Link.Ts] ; !ok{
+				links[e.Link.Ts] = eventPredecessor{e.G, localClock[e.G]}
+			} else{ // the link of current event has been linked to another event before
+				panic("Previously linked to another event!")
+			}
+		} else{ // does not fall into any category
+			predG     = sql.NullInt32{}
+			predClk   = sql.NullInt32{}
+			rid       =  sql.NullString{}
+			rval      = sql.NullInt32{}
+			rclock    = sql.NullInt32{}
+		}
+
+		// So far, all predecessor values are set,
+		// all resource values are set
+		// if a recv has found a sender, it is all set
+		// Now only check if the current event has a predecessor. If so: set predG, set predClk
+		// otherise: everything is null
+		if vv,ok := links[e.Ts]; ok{
+			// Is there a possibility that this event has resource other than G?
+			// No. Events with predecessor links only have G resource
+			predG    = sql.NullInt32{Valid:true, Int32: int32(vv.g)}
+			predClk  = sql.NullInt32{Valid:true, Int32: int32(vv.clock)}
+			rval     = sql.NullInt32{}
+			rclock   = sql.NullInt32{}
+
+			if len(e.Args) > 0{
+				// For events that has link (according to Go spec), they might
+				// have an argument in Args which is the goroutie ID
+				// (e.g GoUnblock has the id of goroutine that it unblocks)
+				// So we want to save that under rid in the Events table
+				tkey= e.Args[0] // g
+				rid =  sql.NullString{Valid:true, String: "G"+strconv.FormatUint(tkey,10)} // g
+
+			} else{
+				// an event with link without arg
+				rid    = sql.NullString{}
+			}
+		}
+		res,err = insertEventResourceStmt.Exec(strconv.Itoa(e.Off),
+																					 "Ev"+desc.Name,
+																					 strconv.Itoa(int(localClock[e.G])),
+																					 strconv.Itoa(int(e.Ts)),
+																					 strconv.FormatUint(e.G,10),
+																					 strconv.Itoa(e.P),
+																					 predG,
+																					 predClk,
+																					 rid,
+																					 rval,
+																					 rclock,
+																					 strconv.FormatUint(e.StkID,10),
+																					 util.BoolConv(len(e.Stk) != 0),
+																					 util.BoolConv(len(e.Args) != 0))
+
+		check(err)
+		eid, err = res.LastInsertId()
+		check(err)
 
 		//insert stacks
 		//insertStackframe(eid, e.StkID, e.Stk, db)
@@ -289,11 +460,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 			//chanEntry(e, eid, db)
 			// search for channel
 			var cid uint64
-		  if desc.Name == "ChMake" || desc.Name == "ChClose"{
-		    cid = e.Args[0]
-		  } else{
-		    cid = e.Args[1]
-		  }
+			cid = e.Args[0]
 
 			res, err := chnlInitStmt.Query(strconv.FormatUint(cid,10))
 			check(err)
@@ -379,6 +546,9 @@ func createTables(db *sql.DB){
     									p int NOT NULL,
 											predG int,
 											predClk int,
+											rid varchar(255),
+											rval int,
+											rclock int,
     									stkID int,
 											hasSTK bool,
 											hasArgs bool,
@@ -420,7 +590,7 @@ func createTables(db *sql.DB){
                       cntRecvs int DEFAULT 0,
     									PRIMARY KEY (id)
 											);`
-  /*msgCreateStmt   :=  `CREATE TABLE Messages (
+	/*msgCreateStmt   :=  `CREATE TABLE Messages (
     									id int NOT NULL AUTO_INCREMENT,
                       message_id int NOT NULL,
                       channel_id int NOT NULL,
