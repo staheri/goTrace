@@ -1141,8 +1141,8 @@ var EventDescriptions = [EvCount]struct {
 	EvUserTaskEnd:       {"UserTaskEnd", 1011, true, []string{"taskid"}, nil},
 	EvUserRegion:        {"UserRegion", 1011, true, []string{"taskid", "mode", "typeid"}, []string{"name"}},
 	EvUserLog:           {"UserLog", 1011, true, []string{"id", "keyid"}, []string{"category", "message"}},
-	EvChSend:            {"ChSend", 1011, true, []string{"eid","cid","val","pos"}, nil}, // goTrace
-	EvChRecv:            {"ChRecv", 1011, true, []string{"eid","cid","val","pos"}, nil}, // goTrace
+	EvChSend:            {"ChSend", 1011, true, []string{"cid","eid","val","pos"}, nil}, // goTrace
+	EvChRecv:            {"ChRecv", 1011, true, []string{"cid","eid","val","pos"}, nil}, // goTrace
 	EvChMake:            {"ChMake", 1011, true, []string{"cid"}, nil}, // goTrace
 	EvChClose:           {"ChClose", 1011, true, []string{"cid"}, nil}, // goTrace
 	EvWgAdd:             {"WgAdd", 1011, true, []string{"wid","val"}, nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
