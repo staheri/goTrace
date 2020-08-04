@@ -13,8 +13,12 @@ import (
 func aspect2string(aspects ...string) (ret string){
 	if len(aspects) != 0{
 		ret = "_"
-		for _,asp := range aspects{
-			 ret = ret +asp+"_"
+		for i,asp := range aspects{
+			if i < len(aspects) - 1{
+				ret = ret +asp+"_"
+			} else{
+				ret = ret +asp
+			}
 		}
 	} else{
 		ret = ""
@@ -91,7 +95,7 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 	}
 	defer db.Close()
 
-	HBTableName = `Events_`+aspect2string(aspects...)
+	HBTableName = `Events`+aspect2string(aspects...)
 
 	res,err := db.Query("SHOW TABLES LIKE \""+HBTableName+"\"")
 	check(err)
