@@ -95,15 +95,16 @@ func main(){
   case "cleanDB":
     db.Ops("clean all","","0")
   case "dev":
-    /*for _,arg := range(flag.Args()){
+    for _,arg := range(flag.Args()){
       tl := strings.Split(arg,",")
-      db.HBLog(dbName,flagOut,true,tl...)
+      hbtable := db.HBTable(dbName,tl...)
+      db.HBLog(dbName,hbtable,flagOut,true)
       fmt.Println("****")
-      db.HBLog(dbName,flagOut,false,tl...)
-    }*/
-    db.HBLog(dbName,flagOut,true)
-    fmt.Println("****")
-    db.HBLog(dbName,flagOut,false)
+      db.HBLog(dbName,hbtable,flagOut,false)
+    }
+    //db.HBLog(dbName,flagOut,true)
+    //fmt.Println("****")
+    //db.HBLog(dbName,flagOut,false)
   }
 }
 

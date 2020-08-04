@@ -11,59 +11,6 @@ import (
 	"util"
 )
 
-func aspect2string(aspects ...string) (ret string){
-	if len(aspects) != 0{
-		ret = "_"
-		for _,asp := range aspects{
-			 ret = ret +asp+"_"
-		}
-	} else{
-		ret = ""
-	}
-	return ret
-}
-
-func asp2int(asp string) (ret int){
-	if asp == "CHNL"{
-		ret = catCHNL
-	}else if asp == "GRTN"{
-		ret = catGRTN
-	}else if asp == "MUTX"{
-		ret = catMUTX
-	}else if asp == "SYSC"{
-		ret = catSYSC
-	}else if asp == "WGRP"{
-		ret = catWGRP
-	}else if asp == "PROC"{
-		ret = catPROC
-	}else if asp == "MISC"{
-		ret = catMISC
-	}else if asp == "GCMM"{
-		ret = catGCMM
-	}else{
-		panic("Wrong Aspect")
-	}
-	return ret
-}
-
-func isWhite(event string, aspects ...string)(ret bool){
-	fmt.Println(aspects)
-	if len(aspects) != 0{
-		ret = false
-		for _,asp := range aspects{
-			 aspID := asp2int(asp)
-			 fmt.Println("Check if "+event+" is in "+asp+ " (aspID:"+strconv.Itoa(aspID)+")")
-			 if util.Contains(ctgDescriptions[aspID].Members, "Ev"+event){
-				 ret = true
-				 break
-			 }
-		}
-	} else{
-		ret = true
-	}
-	return ret
-}
-
 // Take sequence of events, create a new DB Schema and insert events into tables
 func Store(events []*trace.Event, app string,aspects ...string) (dbName string) {
 	var err error
@@ -78,14 +25,14 @@ func Store(events []*trace.Event, app string,aspects ...string) (dbName string) 
 
 	// Creating new database for current experiment
 	idx := 0
-	appAspects := app + aspect2string(aspects...)
-	dbName = appAspects + "X" + strconv.Itoa(idx)
+	//appAspects := app + aspect2string(aspects...)
+	dbName = app + "X" + strconv.Itoa(idx)
 	fmt.Printf("Attempt to create database: %s\n",dbName)
 	_,err = db.Exec("CREATE DATABASE "+dbName + ";")
 	for err != nil{
 		fmt.Printf("Error: %v\n",err)
 		idx = idx + 1
-		dbName = appAspects + "X" + strconv.Itoa(idx)
+		dbName = app + "X" + strconv.Itoa(idx)
 		fmt.Printf("Attempt to create database: %s\n",dbName)
 		_,err = db.Exec("CREATE DATABASE "+dbName+ ";")
 	}
@@ -111,17 +58,8 @@ func Store(events []*trace.Event, app string,aspects ...string) (dbName string) 
 
 	// QUERIES
 	var eid int64
-	insertEventStmt, err := db.Prepare("INSERT INTO Events (offset, type, logclock , ts, g, p, stkID, hasStk, hasArgs) values (? ,? ,? ,? ,? ,? ,? ,? ,? );")
-	check(err)
-	defer insertEventStmt.Close()
-
-	// for the events with predecessor
-	insertEventWPredStmt, err := db.Prepare("INSERT INTO Events (offset, type, logclock , ts, g, p, predG, predClk, stkID, hasStk, hasArgs) values (? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? );")
-	check(err)
-	defer insertEventWPredStmt.Close()
-
 	// for the events with resources (channels, mutex, WaitingGroup)
-	insertEventResourceStmt, err := db.Prepare("INSERT INTO Events (offset, type, logclock , ts, g, p, predG, predClk, rid, rval, rclock, stkID, hasStk, hasArgs) values (? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? );")
+	insertEventResourceStmt, err := db.Prepare("INSERT INTO Events (offset, type, vc , ts, g, p, linkts, predG, predClk, rid, reid, rval, rclock, stkID, src) values (? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? );")
 	check(err)
 	defer insertEventResourceStmt.Close()
 
@@ -176,11 +114,14 @@ func Store(events []*trace.Event, app string,aspects ...string) (dbName string) 
 
 	var tkey uint64
 
-	predG    := sql.NullInt32{}
-	predClk  := sql.NullInt32{}
+	predG    := sql.NullInt64{}
+	predClk  := sql.NullInt64{}
 	rid      := sql.NullString{}
-	rval     :=  sql.NullInt32{}
-	rclock   :=  sql.NullInt32{}
+	rval     := sql.NullInt64{}
+	reid     := sql.NullInt64{}
+	rclock   := sql.NullInt64{}
+	linkts   := sql.NullInt64{}
+	srcLine  := sql.NullString{}
 
 
 
@@ -196,17 +137,18 @@ func Store(events []*trace.Event, app string,aspects ...string) (dbName string) 
 		//}
 
 		// fresh values for each event
-		predG    = sql.NullInt32{}
-		predClk  = sql.NullInt32{}
+		predG    = sql.NullInt64{}
+		predClk  = sql.NullInt64{}
 		rid      = sql.NullString{}
-		rval     =  sql.NullInt32{}
-		rclock   =  sql.NullInt32{}
-
-		//fmt.Println("Checking:"+desc.Name)
-		if !isWhite(desc.Name,aspects...) || (desc.Name == "WgAdd" && int32(e.Args[1]) < 0){
-			continue
+		rval     = sql.NullInt64{}
+		reid     = sql.NullInt64{}
+		rclock   = sql.NullInt64{}
+		linkts   = sql.NullInt64{}
+		if len(e.Stk) != 0{
+			srcLine  = sql.NullString{Valid:true, String: path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)}
+		}else{
+			srcLine  = sql.NullString{}
 		}
-		//fmt.Println("Pass")
 
 		// Assign local logical clock
 		if _,ok := localClock[e.G];ok{
@@ -236,10 +178,11 @@ func Store(events []*trace.Event, app string,aspects ...string) (dbName string) 
 				mutexClock[tkey] = 1
 			}
 
-			predG = sql.NullInt32{}
-			predClk = sql.NullInt32{}
-			rval = sql.NullInt32{}
-			rclock = sql.NullInt32{Valid:true, Int32: int32(mutexClock[tkey])}
+			predG = sql.NullInt64{}
+			predClk = sql.NullInt64{}
+			rval = sql.NullInt64{}
+			reid = sql.NullInt64{}
+			rclock = sql.NullInt64{Valid:true, Int64: int64(mutexClock[tkey])}
 
 
 		} else if util.Contains(ctgDescriptions[catCHNL].Members, "Ev"+desc.Name){
@@ -259,23 +202,25 @@ func Store(events []*trace.Event, app string,aspects ...string) (dbName string) 
 				chanClock[tkey] = 1
 			}
 
-			rclock = sql.NullInt32{Valid:true, Int32: int32(chanClock[tkey])}
+			rclock = sql.NullInt64{Valid:true, Int64: int64(chanClock[tkey])}
 
 			if desc.Name == "ChRecv"{
-				rval = sql.NullInt32{Valid:true, Int32: int32(e.Args[2])} // message val
+				rval = sql.NullInt64{Valid:true, Int64: int64(e.Args[2])} // message val
+				reid = sql.NullInt64{Valid:true, Int64: int64(e.Args[1])} // message eid
 				if vv,ok := msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] ; ok{
 					// A matching sent is found for the recv
-					predG    = sql.NullInt32{Valid:true, Int32: int32(vv.g)}
-					predClk  = sql.NullInt32{Valid:true, Int32: int32(vv.clock)}
+					predG    = sql.NullInt64{Valid:true, Int64: int64(vv.g)}
+					predClk  = sql.NullInt64{Valid:true, Int64: int64(vv.clock)}
 				}else{
 					// Receiver without a matching sender
-					predG = sql.NullInt32{}
-					predClk = sql.NullInt32{}
+					predG = sql.NullInt64{}
+					predClk = sql.NullInt64{}
 				}
 			}else{
 				// ChMake, ChSend, ChClose
 				if desc.Name == "ChSend"{
-					rval = sql.NullInt32{Valid:true, Int32: int32(e.Args[2])} // message val
+					rval = sql.NullInt64{Valid:true, Int64: int64(e.Args[2])} // message val
+					reid = sql.NullInt64{Valid:true, Int64: int64(e.Args[1])} // message eid
 					// Set Predecessor for a receive (key to the event: {cid, eid, val})
 					if _,ok := msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] ; !ok{
 						msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] = eventPredecessor{e.G, localClock[e.G]}
@@ -283,10 +228,12 @@ func Store(events []*trace.Event, app string,aspects ...string) (dbName string) 
 						panic("Previously stored as sent!")
 					}
 				}else{ // ChMake. ChClose
-					rval = sql.NullInt32{}
+					rval = sql.NullInt64{}
+					reid = sql.NullInt64{}
+
 				}
-				predG = sql.NullInt32{}
-				predClk = sql.NullInt32{}
+				predG = sql.NullInt64{}
+				predClk = sql.NullInt64{}
 			}
 		} else if util.Contains(ctgDescriptions[catWGRP].Members, "Ev"+desc.Name){
 			// WGRP event
@@ -302,32 +249,37 @@ func Store(events []*trace.Event, app string,aspects ...string) (dbName string) 
 				wgClock[tkey] = 1
 			}
 
-			predG = sql.NullInt32{}
-			predClk = sql.NullInt32{}
+			predG = sql.NullInt64{}
+			predClk = sql.NullInt64{}
 
 			if desc.Name == "WgAdd"{ // it has a val
-				rval = sql.NullInt32{Valid:true, Int32: int32(e.Args[1])} // val
+				rval = sql.NullInt64{Valid:true, Int64: int64(e.Args[1])} // val
 			}else{
-				rval = sql.NullInt32{}
+				rval = sql.NullInt64{}
 			}
-			rclock = sql.NullInt32{Valid:true, Int32: int32(wgClock[tkey])}
+			rclock = sql.NullInt64{Valid:true, Int64: int64(wgClock[tkey])}
+			reid = sql.NullInt64{}
 			// All resource events are assigned a logical clock based on their id
 
 		} else if e.Link != nil{
 			// Set Predecessor for an event (key to the event: TS)
 			//fmt.Printf("Source: %s\n",e)
 			//fmt.Printf("LINK: %s\n",e.Link)
+			linkts = sql.NullInt64{Valid:true, Int64: int64(e.Link.Ts)}
 			if _,ok := links[e.Link.Ts] ; !ok{
 				links[e.Link.Ts] = eventPredecessor{e.G, localClock[e.G]}
 			} else{ // the link of current event has been linked to another event before
 				panic("Previously linked to another event!")
 			}
 		} else{ // does not fall into any category
-			predG     = sql.NullInt32{}
-			predClk   = sql.NullInt32{}
+			predG     = sql.NullInt64{}
+			predClk   = sql.NullInt64{}
 			rid       =  sql.NullString{}
-			rval      = sql.NullInt32{}
-			rclock    = sql.NullInt32{}
+			rval      = sql.NullInt64{}
+			reid      = sql.NullInt64{}
+			rclock    = sql.NullInt64{}
+			linkts    = sql.NullInt64{}
+
 		}
 
 		// So far, all predecessor values are set,
@@ -338,10 +290,11 @@ func Store(events []*trace.Event, app string,aspects ...string) (dbName string) 
 		if vv,ok := links[e.Ts]; ok{
 			// Is there a possibility that this event has resource other than G?
 			// No. Events with predecessor links only have G resource
-			predG    = sql.NullInt32{Valid:true, Int32: int32(vv.g)}
-			predClk  = sql.NullInt32{Valid:true, Int32: int32(vv.clock)}
-			rval     = sql.NullInt32{}
-			rclock   = sql.NullInt32{}
+			predG    = sql.NullInt64{Valid:true, Int64: int64(vv.g)}
+			predClk  = sql.NullInt64{Valid:true, Int64: int64(vv.clock)}
+			rval     = sql.NullInt64{}
+			reid     = sql.NullInt64{}
+			rclock   = sql.NullInt64{}
 
 			if len(e.Args) > 0{
 				// For events that has link (according to Go spec), they might
@@ -362,14 +315,15 @@ func Store(events []*trace.Event, app string,aspects ...string) (dbName string) 
 																					 strconv.Itoa(int(e.Ts)),
 																					 strconv.FormatUint(e.G,10),
 																					 strconv.Itoa(e.P),
+																					 linkts,
 																					 predG,
 																					 predClk,
 																					 rid,
+																					 reid,
 																					 rval,
 																					 rclock,
 																					 strconv.FormatUint(e.StkID,10),
-																					 util.BoolConv(len(e.Stk) != 0),
-																					 util.BoolConv(len(e.Args) != 0))
+																					 srcLine)
 
 		check(err)
 		eid, err = res.LastInsertId()
@@ -540,19 +494,20 @@ func createTables(db *sql.DB){
     									id int NOT NULL AUTO_INCREMENT,
     									offset int NOT NULL,
     									type varchar(255) NOT NULL,
-											logclock int NOT NULL,
+											vc int NOT NULL,
     									ts bigint NOT NULL,
     									g int NOT NULL,
     									p int NOT NULL,
+											linkts bigint,
 											predG int,
 											predClk int,
 											rid varchar(255),
+											reid int,
 											rval int,
 											rclock int,
     									stkID int,
-											hasSTK bool,
-											hasArgs bool,
-    									PRIMARY KEY (id)
+											src varchar(255),
+											PRIMARY KEY (id)
 											);`
 	stkFrmCreateStmt := `CREATE TABLE StackFrames (
     									id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
