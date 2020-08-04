@@ -184,16 +184,7 @@ func dbPointer() (dbName string){
   	if err != nil {
   		panic(err)
   	}
-    if len(flag.Args()) == 0{
-      emptyList := []string{}
-      dbName = db.Store(events,util.AppName(flagApp),emptyList...)
-    }else if len(flag.Args()) == 1{
-      tl := strings.Split(flag.Args()[0],",")
-      dbName = db.Store(events,util.AppName(flagApp),tl...)
-    }else{
-      panic("NOT NOW")
-    }
-
+    dbName = db.Store(events,util.AppName(flagApp))
     return dbName
 
   case "latest", "x":

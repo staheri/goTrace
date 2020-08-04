@@ -55,7 +55,7 @@ func isWhite(event string, aspects ...string)(ret bool){
 		ret = false
 		for _,asp := range aspects{
 			 aspID := asp2int(asp)
-			 fmt.Println("Check if "+event+" is in "+asp+ " (aspID:"+strconv.Itoa(aspID)+")")
+			 //fmt.Println("Check if "+event+" is in "+asp+ " (aspID:"+strconv.Itoa(aspID)+")")
 			 if util.Contains(ctgDescriptions[aspID].Members, event){
 				 ret = true
 				 break
@@ -288,31 +288,13 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 	// make sure
 	outdir = outdir + "/"
 
-	//(?<event>.*) [(](?<host>\S*)[)] (?<clock>{.*})
-
-	/*
-	q = "SELECT t1.id,type,g,logclock,predG,predClk,rid,rval,rclock FROM Events t1 "
-	if len(aspects) != 0{
-		for i,asp := range aspects{
-			 subq = subq + "SELECT * FROM global.cat"+asp
-			 if i < len(aspects) - 1{
-				 subq = subq + " UNION "
-			 }
-		}
-		q = q + "INNER JOIN ("+subq+") t2 ON t2.eventName=type ORDER BY ts;"
-	} else{
-		q = q + " ORDER BY ts;"
-	}*/
 	q = "SELECT id,type,g,vc,predG,predClk,rid,rval,rclock FROM "+hbtable+" ORDER BY ts;"
-
 	res, err := db.Query(q)
 	check(err)
 	defer res.Close()
 
-
-
 	if resourceView{
-		output = outdir + dbName+"_rlog.txt"
+		output = outdir + dbName+hbtable+"_rlog.txt"
 		f,err := os.Create(output)
 		if err != nil{
 			log.Fatal(err)
@@ -361,7 +343,7 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 		}
 		f.Close()
 	}else{
-		output = outdir + dbName+"_glog.txt"
+		output = outdir + dbName+hbtable+"_glog.txt"
 		f,err := os.Create(output)
 		if err != nil{
 			log.Fatal(err)

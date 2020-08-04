@@ -12,7 +12,7 @@ import (
 )
 
 // Take sequence of events, create a new DB Schema and insert events into tables
-func Store(events []*trace.Event, app string,aspects ...string) (dbName string) {
+func Store(events []*trace.Event, app string) (dbName string) {
 	var err error
 	var res sql.Result
 	// Connecting to mysql driver
@@ -25,7 +25,6 @@ func Store(events []*trace.Event, app string,aspects ...string) (dbName string) 
 
 	// Creating new database for current experiment
 	idx := 0
-	//appAspects := app + aspect2string(aspects...)
 	dbName = app + "X" + strconv.Itoa(idx)
 	fmt.Printf("Attempt to create database: %s\n",dbName)
 	_,err = db.Exec("CREATE DATABASE "+dbName + ";")
