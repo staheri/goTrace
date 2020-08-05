@@ -271,8 +271,8 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 	var g,logclock,eid   			int
 	var predG,predClk    			sql.NullInt32
 	var rclock,rval      			sql.NullInt32
-	var rid              			sql.NullString
-	var buff, output          string
+	var rid, srcl 	     			sql.NullString
+	var buff, output,srcLine  string
 
 
 	// Establish connection to DB
@@ -288,7 +288,7 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 	// make sure
 	outdir = outdir + "/"
 
-	q = "SELECT id,type,g,vc,predG,predClk,rid,rval,rclock FROM "+hbtable+" ORDER BY ts;"
+	q = "SELECT id,type,g,vc,predG,predClk,rid,rval,rclock,src FROM "+hbtable+" ORDER BY ts;"
 	res, err := db.Query(q)
 	check(err)
 	defer res.Close()
@@ -306,7 +306,7 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 		f.WriteString(buff)
 
 		for res.Next(){
-			err = res.Scan(&eid,&_ev,&g,&logclock,&predG,&predClk,&rid,&rval,&rclock)
+			err = res.Scan(&eid,&_ev,&g,&logclock,&predG,&predClk,&rid,&rval,&rclock,&srcl)
 			check(err)
 
 			event = _ev[2:]
@@ -325,18 +325,23 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 					event = event + "[val:-]"
 				}
 			}
+			if srcl.Valid{
+				srcLine = srcl.String
+			}else{
+				srcLine = ""
+			}
 			if rid.Valid && rclock.Valid {
-				fmt.Printf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
-				buff = fmt.Sprintf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
+				fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+				buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 				f.WriteString(buff)
 
-				fmt.Printf("%v (%v) {\"G%v\": %v,\"%v\": %v}\n","_"+event,rid.String,g,logclock,rid.String,rclock.Int32)
-				buff = fmt.Sprintf("%v (%v) {\"G%v\": %v,\"%v\": %v}\n","_"+event,rid.String,g,logclock,rid.String,rclock.Int32)
+				fmt.Printf("%v@%v (%v) {\"G%v\": %v,\"%v\": %v}\n","_"+event,srcLine,rid.String,g,logclock,rid.String,rclock.Int32)
+				buff = fmt.Sprintf("%v@%v (%v) {\"G%v\": %v,\"%v\": %v}\n","_"+event,srcLine,rid.String,g,logclock,rid.String,rclock.Int32)
 				f.WriteString(buff)
 			}else{
 				//panic("KIR")
-				fmt.Printf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
-				buff = fmt.Sprintf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
+				fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+				buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 				f.WriteString(buff)
 			}
 			//fmt.Printf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
@@ -355,7 +360,7 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 		defer f.Close()
 
 		for res.Next(){
-			err = res.Scan(&eid,&_ev,&g,&logclock,&predG,&predClk,&rid,&rval,&rclock)
+			err = res.Scan(&eid,&_ev,&g,&logclock,&predG,&predClk,&rid,&rval,&rclock,&srcl)
 			check(err)
 
 			event = _ev[2:]
@@ -394,22 +399,27 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 					event = event + " [-]"
 				}
 			}
-
+			if srcl.Valid{
+				srcLine = srcl.String
+			}else{
+				srcLine = ""
+			}
+			
 			if predG.Valid {
 				if g == int(predG.Int32){
 					//happening on same goroutine, just GID is enough
-					fmt.Printf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
-					buff = fmt.Sprintf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
+					fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+					buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 					f.WriteString(buff)
 
 				} else{
-					fmt.Printf("%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,g,g,logclock,predG.Int32,predClk.Int32)
-					buff = fmt.Sprintf("%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,g,g,logclock,predG.Int32,predClk.Int32)
+					fmt.Printf("%v@%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,srcLine,g,g,logclock,predG.Int32,predClk.Int32)
+					buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,srcLine,g,g,logclock,predG.Int32,predClk.Int32)
 					f.WriteString(buff)
 				}
 			} else{
-				fmt.Printf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
-				buff = fmt.Sprintf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
+				fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+				buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 				f.WriteString(buff)
 			}
 		}
