@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import *
 from tabulate import tabulate
+#import plotly.graph_objects as gobj
 
 import readin
 
@@ -37,14 +38,56 @@ def cluster(m,maxc,out):
 	#dendrogram(ward(jac2pdist(mat1)), truncate_mode='level', p=4)
 	#plt.show()
 	plt.savefig(out+"-dend.pdf")
+	dt = [0.1,0.2,0.4,0.5,0.8,1,2]
+	mt = [2,3,4,5,6]
 	#ret = fcluster(ward(jac2pdist(m)),maxc,criterion='maxclust')
-	ret = fcluster(ward(jac2pdist(m)),0.5,criterion='distance')
 
-	#f=open(out+"-C"+`maxc`+"-rep.txt","w")
-	#f.write(clusterTable(ret))
-	#f.close()
-	print clusterTable(ret)
-	return ret
+	tab = []
+	# d_criterion = []
+	# d_thresh = []
+	# d_single = []
+	# d_ward = []
+	# d_avg = []
+	# d_comp= []
+	hdrs = ["Criterion","T/Max","Ward","Single","Complete","Average"]
+
+	table = "|Criterion|T/Max|Ward|Single|Complete|Average|\n"
+	table = table + "|---:|---|---|---|---|---|\n"
+
+	criterions = ["distance","inconsistent","maxclust"]
+	for c in criterions:
+		if c == "maxclust":
+			t = mt[:]
+		else:
+			t = dt[:]
+		for tt in t:
+			ttab=[]
+			# d_criterion.append(c)
+			# d_thresh.append(tt)
+			# d_ward.append(clusterText(fcluster(ward(jac2pdist(m)),tt,criterion=c)))
+			# d_single.append(clusterText(fcluster(single(jac2pdist(m)),tt,criterion=c)))
+			# d_comp.append(clusterText(fcluster(complete(jac2pdist(m)),tt,criterion=c)))
+			# d_avg.append(clusterText(fcluster(average(jac2pdist(m)),tt,criterion=c)))
+			table = table + "|" + c
+			table = table + "|" + `tt`
+			table = table + "|" + clusterText(fcluster(ward(jac2pdist(m)),tt,criterion=c))
+			table = table + "|" + clusterText(fcluster(single(jac2pdist(m)),tt,criterion=c))
+			table = table + "|" + clusterText(fcluster(complete(jac2pdist(m)),tt,criterion=c))
+			table = table + "|" + clusterText(fcluster(average(jac2pdist(m)),tt,criterion=c))
+			table = table + "|\n"
+
+			ttab.append(c)
+			ttab.append(tt)
+			ttab.append(clusterText(fcluster(ward(jac2pdist(m)),tt,criterion=c)))
+			ttab.append(clusterText(fcluster(single(jac2pdist(m)),tt,criterion=c)))
+			ttab.append(clusterText(fcluster(complete(jac2pdist(m)),tt,criterion=c)))
+			ttab.append(clusterText(fcluster(average(jac2pdist(m)),tt,criterion=c)))
+			tab.append(ttab)
+	f = open(out+"_hac.md","w")
+	f.write(table)
+	f.close()
+	print tabulate(tab,headers=hdrs,tablefmt="plain")
+
 
 def clusterTable(c):
 	data = {}
@@ -67,3 +110,28 @@ def clusterTable(c):
 		tab.append(ttab)
 	#print tabulate(tab,headers=hdrs,tablefmt="fancy_grid")
 	return tabulate(tab,headers=hdrs)
+
+
+def clusterText(c):
+	data = {}
+	for i in range(0,len(c)):
+		if c[i] in data.keys():
+			data[c[i]].append(i)
+		else:
+			data[c[i]]=[i]
+
+	st = ""
+	tab = []
+	i = 0
+	for k,v in data.items():
+		st = st +  "["+`k` + "]: "
+		s = ""
+		for item in v:
+			s = s + readin.objTable[`item+1`].rpartition(".")[0]+", "
+
+		if i < len(data.keys()) - 1 :
+			st = st + s + "<br>"
+		else:
+			st = st + s
+		i = i + 1
+	return st
