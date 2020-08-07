@@ -21,6 +21,8 @@ var (
   flagOut     string
   flagSrc     string
   flagX       string
+  flagCons    int
+  flagAtrMode int
   flagN       int
   flagBase    string
   flagTO      int
@@ -85,7 +87,7 @@ func main(){
     baseDBName := db.Ops("latest",util.AppName(flagBase),"0")
     for _,arg := range(flag.Args()){
       tl := strings.Split(arg,",")
-      db.DIFF(dbName,baseDBName,CLOUTPATH,flagOut,tl...)
+      db.DIFF(dbName,baseDBName,CLOUTPATH,flagOut,flagCons,flagAtrMode,tl...)
     }
   case "dineData":
     db.DineData(dbName, flagOut+"/ch-chid", flagN, true,true) // channel events only + channel ID
@@ -119,6 +121,8 @@ func parseFlags() (){
   flag.StringVar(&flagSrc,"src","latest",srcDescription)
   flag.StringVar(&flagX,"x","0","Execution version stored in database")
   flag.IntVar(&flagN,"n",0,"Number of philosophers for dineData command")
+  flag.IntVar(&flagCons,"cons",1,"Number of consecutive elements for HAC & DIFF")
+  flag.IntVar(&flagAtrMode,"atrmode",0,"Modes for HAC & DIFF")
   flag.StringVar(&flagApp,"app","","Target application (*.go)")
   flag.IntVar(&flagTO,"to",-1,"Timeout for deadlocks")
 

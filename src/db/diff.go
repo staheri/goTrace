@@ -9,10 +9,14 @@ import (
 	"os"
 	"os/exec"
 	"bytes"
+	"strings"
 
 )
 
-func DIFF(dbName, baseDBName, cloutpath,resultpath string, aspects ...string ){
+func DIFF(dbName, baseDBName, cloutpath,resultpath string, consec, rid int, aspects ...string ){
+	var cnt int
+	var tmp string
+	var _rid sql.NullString
 	// Paths
 	setPaths()
 
@@ -41,7 +45,7 @@ func DIFF(dbName, baseDBName, cloutpath,resultpath string, aspects ...string ){
 	dataBase := make(map[int][]string)
 
 
-	q = `SELECT (t1.id)-1, t2.type
+	q = `SELECT (t1.id)-1, t2.type, t2.rid
 	     FROM Goroutines t1
 			 INNER JOIN Events t2 ON t1.gid=t2.g `
 
@@ -90,23 +94,39 @@ func DIFF(dbName, baseDBName, cloutpath,resultpath string, aspects ...string ){
 
 	// Parse results
  	for res.Next(){
-		err = res.Scan(&id,&event)
+		err = res.Scan(&id,&event,&_rid)
 		if err != nil{
 			panic(err)
 		}
 		//if val,ok := data[id];ok{
-		data[id] = append(data[id],event)
-		//}else{}
+		if rid > 0 && _rid.Valid{
+			if !strings.HasPrefix(_rid.String, "G"){
+				data[id] = append(data[id],_rid.String+":"+event)
+			}else{
+				data[id] = append(data[id],event)
+			}
+		} else{
+			data[id] = append(data[id],event)
+		}
 	}
 
 	// Parse base results
 	for resBase.Next(){
-		errBase = resBase.Scan(&id,&event)
+		errBase = resBase.Scan(&id,&event,&_rid)
 		if errBase != nil{
 			panic(errBase)
 		}
 		//if val,ok := data[id];ok{
-		dataBase[id] = append(dataBase[id],event)
+		//dataBase[id] = append(dataBase[id],event)
+		if rid > 0 && _rid.Valid{
+			if !strings.HasPrefix(_rid.String, "G"){
+				dataBase[id] = append(dataBase[id],_rid.String+":"+event)
+			}else{
+				dataBase[id] = append(dataBase[id],event)
+			}
+		} else{
+			dataBase[id] = append(dataBase[id],event)
+		}
 		//}else{}
 	}
 
@@ -118,9 +138,22 @@ func DIFF(dbName, baseDBName, cloutpath,resultpath string, aspects ...string ){
 			log.Fatal(err)
 		}
 		fmt.Printf("\ndata[%v]:\n\t",k)
+		cnt = 0
+		tmp = ""
 		for _,e := range v{
 			fmt.Printf("%v\n\t",e)
-			f.WriteString(fmt.Sprintf("%v\n",e))
+			tmp = tmp + e + "-"
+			cnt = cnt + 1
+			//f.WriteString(fmt.Sprintf("%v\n",e))
+			if cnt % consec == 0{
+				//fmt.Printf("%v\n\t",tmp)
+				f.WriteString(fmt.Sprintf("%v\n",tmp))
+				cnt = 0
+				tmp = ""
+			}
+		}
+		if tmp != ""{
+			f.WriteString(fmt.Sprintf("%v\n",tmp))
 		}
 		f.Close()
 	}
@@ -133,9 +166,22 @@ func DIFF(dbName, baseDBName, cloutpath,resultpath string, aspects ...string ){
 			log.Fatal(err)
 		}
 		fmt.Printf("\ndata[%v]:\n\t",k)
+		cnt = 0
+		tmp = ""
 		for _,e := range v{
 			fmt.Printf("%v\n\t",e)
-			f.WriteString(fmt.Sprintf("%v\n",e))
+			tmp = tmp + e + "-"
+			cnt = cnt + 1
+			//f.WriteString(fmt.Sprintf("%v\n",e))
+			if cnt % consec == 0{
+				//fmt.Printf("%v\n\t",tmp)
+				f.WriteString(fmt.Sprintf("%v\n",tmp))
+				cnt = 0
+				tmp = ""
+			}
+		}
+		if tmp != ""{
+			f.WriteString(fmt.Sprintf("%v\n",tmp))
 		}
 		f.Close()
 	}
