@@ -87,7 +87,8 @@ func DIFF(dbName, baseDBName, cloutpath,resultpath string, consec, rid int, aspe
 	} else{
 		filts = filts + "all"
 	}
-	cloutdir = cloutdir + filts
+	optionsDirName := "_c"+strconv.Itoa(consec)+"_a"+strconv.Itoa(rid)
+	cloutdir = cloutdir +filts + optionsDirName
 	if _, err := os.Stat(cloutdir); os.IsNotExist(err) {
     os.MkdirAll(cloutdir, 0755)
 	}
@@ -196,9 +197,9 @@ func DIFF(dbName, baseDBName, cloutpath,resultpath string, consec, rid int, aspe
 	}
 
 	// Execute python hac on cloutdir/cl
-	_cmd = "python "+ HACPATH + "/main.py " + cloutdir+"/cl/diff_"+dbName+"_"+filts+".dot "+resultpath+"/"+dbName+"_"+filts
+	_cmd = "python "+ HACPATH + "/main.py " + cloutdir+"/cl/diff_"+dbName+"_"+filts+optionsDirName+".dot "+resultpath+"/"+dbName+"_"+filts
 
-	cmd = exec.Command("python",HACPATH + "/main.py",cloutdir+"/cl/diff_"+dbName+"_"+filts+".dot",resultpath+"/"+dbName+"_"+filts)
+	cmd = exec.Command("python",HACPATH + "/main.py",cloutdir+"/cl/diff_"+dbName+"_"+filts+optionsDirName+".dot",resultpath+"/"+dbName+"_"+filts)
 	fmt.Printf(">>> Executing %s...\n",_cmd)
 	//err = cmd.Run()
 	var out bytes.Buffer
