@@ -262,12 +262,15 @@ func Store(events []*trace.Event, app string) (dbName string) {
 
 		} else if e.Link != nil{
 			// Set Predecessor for an event (key to the event: TS)
-			//fmt.Printf("Source: %s\n",e)
-			//fmt.Printf("LINK: %s\n",e.Link)
-			linkts = sql.NullInt64{Valid:true, Int64: int64(e.Link.Ts)}
-			if _,ok := links[e.Link.Ts] ; !ok{
-				links[e.Link.Ts] = eventPredecessor{e.G, localClock[e.G]}
+			fmt.Printf("Source: %s\n",e)
+			fmt.Printf("LINK: %s\n",e.Link)
+			//linkts = sql.NullInt64{Valid:true, Int64: int64(e.Link.Ts)}
+			linkts = sql.NullInt64{Valid:true, Int64: int64(e.Link.Off)}
+			if _,ok := links[int64(e.Link.Off)] ; !ok{
+				links[int64(e.Link.Off)] = eventPredecessor{e.G, localClock[e.G]}
 			} else{ // the link of current event has been linked to another event before
+				fmt.Println(e.Link.Off)
+				fmt.Println(links[int64(e.Link.Off)])
 				panic("Previously linked to another event!")
 			}
 		} else{ // does not fall into any category
@@ -286,7 +289,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 		// if a recv has found a sender, it is all set
 		// Now only check if the current event has a predecessor. If so: set predG, set predClk
 		// otherise: everything is null
-		if vv,ok := links[e.Ts]; ok{
+		if vv,ok := links[int64(e.Off)]; ok{
 			// Is there a possibility that this event has resource other than G?
 			// No. Events with predecessor links only have G resource
 			predG    = sql.NullInt64{Valid:true, Int64: int64(vv.g)}
