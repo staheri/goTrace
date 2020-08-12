@@ -11,6 +11,7 @@ import (
 	"strings"
 	"bytes"
 	"github.com/jedib0t/go-pretty/table"
+	"util"
 
 )
 
@@ -20,7 +21,7 @@ var(
 	HACPATH   string
 )
 
-func Dev(dbName, outdir string){
+func Dev(dbName,hbtable, outdir string){
 	// Variables
 	//var q, event             string
 	//var report, tmp          string
@@ -31,6 +32,14 @@ func Dev(dbName, outdir string){
 	//var close_eid, close_gid int
 	//var line                 int
 	//var val, pos, eid        int*/
+	var q, event, _ev         string
+	var event1                string
+	//var _arg,_val        			string
+	var g,logclock,eid   			int
+	var predG,predClk    			sql.NullInt32
+	var rclock,rval      			sql.NullInt32
+	var rid, srcl 	     			sql.NullString
+	//var srcLine  string
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -43,6 +52,76 @@ func Dev(dbName, outdir string){
 
 	fmt.Println("DEV")
 
+	q = "SELECT id,type,g,vc,predG,predClk,rid,rval,rclock,src FROM "+hbtable+" ORDER BY ts;"
+	res, err := db.Query(q)
+	check(err)
+	defer res.Close()
+
+	for res.Next(){
+		err = res.Scan(&eid,&_ev,&g,&logclock,&predG,&predClk,&rid,&rval,&rclock,&srcl)
+		check(err)
+
+		event = _ev[2:]
+		event1 = _ev[2:]
+		if event1 == "WgAdd"{
+			if rid.Valid{
+				event = event + "["+rid.String
+			}else{
+				event = event + "[-"
+			}
+			if rval.Valid && rval.Int32 > 0{
+				event = event + ",val:"+strconv.Itoa(int(rval.Int32))+"]"
+			} else{
+				event = event + ",val:-]"
+			}
+		}else if util.Contains(ctgDescriptions[catCHNL].Members, "Ev"+event1){
+			if rid.Valid{
+				event = event + "["+rid.String
+			}else{
+				event = event + "[-"
+			}
+
+			if event1 == "ChRecv" || event1=="ChSend"{
+				if rval.Valid{
+					event = event + ",val:"+strconv.Itoa(int(rval.Int32))+"]"
+				}else{
+					event = event + "]"
+				}
+			}else{
+				event = event + "]"
+			}
+		}else if util.Contains(ctgDescriptions[catMUTX].Members, "Ev"+event1) || util.Contains(ctgDescriptions[catWGRP].Members, "Ev"+event1){
+			if rid.Valid{
+				event = event + " ["+rid.String+"]"
+			}else{
+				event = event + " [-]"
+			}
+		}
+		/*if srcl.Valid{
+			srcLine = srcl.String
+		}else{
+			srcLine = ""
+		}*/
+
+		if predG.Valid {
+			if g == int(predG.Int32){
+				//happening on same goroutine, just GID is enough
+				//fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+				fmt.Printf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
+				//buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+				//f.WriteString(buff)
+
+			} else{
+				fmt.Printf("%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,g,g,logclock,predG.Int32,predClk.Int32)
+				//buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,srcLine,g,g,logclock,predG.Int32,predClk.Int32)
+				//f.WriteString(buff)
+			}
+		} else{
+			fmt.Printf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
+			//buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+			//f.WriteString(buff)
+		}
+	}
 }
 
 func WordData(dbName, outdir, filter string, chunkSize int){
@@ -225,7 +304,7 @@ func WordData(dbName, outdir, filter string, chunkSize int){
 	f.Close()
 }
 
-func CLOperations(dbName, cloutpath,resultpath string, aspects ...string ){
+func CLOperations(dbName, cloutpath,resultpath string, consec, rid int, aspects ...string ){
 	// Paths
 	setPaths()
 	// Establish connection to DB
@@ -237,13 +316,14 @@ func CLOperations(dbName, cloutpath,resultpath string, aspects ...string ){
 	}
 	defer db.Close()
 
-	var q,subq,event string
-	var id int
+	var q,subq,event,tmp string
+	var id,cnt int
+	var _rid    sql.NullString
 
 	data := make(map[int][]string)
 
 
-	q = `SELECT (t1.id)-1, t2.type
+	q = `SELECT (t1.id)-1, t2.type,t2.rid
 	     FROM Goroutines t1
 			 INNER JOIN Events t2 ON t1.gid=t2.g `
 
@@ -280,20 +360,31 @@ func CLOperations(dbName, cloutpath,resultpath string, aspects ...string ){
 	} else{
 		filts = filts + "all"
 	}
-	cloutdir = cloutdir + filts
+
+	optionsDirName := "_c"+strconv.Itoa(consec)+"_a"+strconv.Itoa(rid)
+	cloutdir = cloutdir +filts + optionsDirName
 	if _, err := os.Stat(cloutdir); os.IsNotExist(err) {
     os.MkdirAll(cloutdir, 0755)
 	}
 
 
  	for res.Next(){
-		err = res.Scan(&id,&event)
+		err = res.Scan(&id,&event,&_rid)
 		if err != nil{
 			panic(err)
 		}
 		//if val,ok := data[id];ok{
-		data[id] = append(data[id],event)
+		//data[id] = append(data[id],event)
 		//}else{}
+		if rid > 0 && _rid.Valid{
+			if !strings.HasPrefix(_rid.String, "G"){
+				data[id] = append(data[id],_rid.String+":"+event)
+			}else{
+				data[id] = append(data[id],event)
+			}
+		} else{
+			data[id] = append(data[id],event)
+		}
 	}
 
 	// store files in the outpath folder
@@ -304,9 +395,26 @@ func CLOperations(dbName, cloutpath,resultpath string, aspects ...string ){
 			log.Fatal(err)
 		}
 		fmt.Printf("\ndata[%v]:\n\t",k)
-		for _,e := range v{
+		/*for _,e := range v{
 			fmt.Printf("%v\n\t",e)
 			f.WriteString(fmt.Sprintf("%v\n",e))
+		}*/
+		cnt = 0
+		tmp = ""
+		for _,e := range v{
+			fmt.Printf("%v\n\t",e)
+			tmp = tmp + e + "-"
+			cnt = cnt + 1
+			//f.WriteString(fmt.Sprintf("%v\n",e))
+			if cnt % consec == 0{
+				//fmt.Printf("%v\n\t",tmp)
+				f.WriteString(fmt.Sprintf("%v\n",tmp))
+				cnt = 0
+				tmp = ""
+			}
+		}
+		if tmp != ""{
+			f.WriteString(fmt.Sprintf("%v\n",tmp))
 		}
 		f.Close()
 	}
@@ -321,9 +429,10 @@ func CLOperations(dbName, cloutpath,resultpath string, aspects ...string ){
 	}
 
 	// Execute python hac on cloutdir/cl
-	_cmd = "python "+ HACPATH + "/main.py " + cloutdir+"/cl/"+dbName+"_"+filts+".dot "+resultpath+"/"+dbName+"_"+filts
+	// Execute python hac on cloutdir/cl
+	_cmd = "python "+ HACPATH + "/main.py " + cloutdir+"/cl/"+dbName+"_"+filts+optionsDirName+".dot "+resultpath+"/"+dbName+"_"+filts+optionsDirName
 
-	cmd = exec.Command("python",HACPATH + "/main.py",cloutdir+"/cl/"+dbName+"_"+filts+".dot",resultpath+"/"+dbName+"_"+filts)
+	cmd = exec.Command("python",HACPATH + "/main.py",cloutdir+"/cl/"+dbName+"_"+filts+optionsDirName+".dot",resultpath+"/"+dbName+"_"+filts+optionsDirName)
 	fmt.Printf(">>> Executing %s...\n",_cmd)
 	//err = cmd.Run()
 	var out bytes.Buffer
