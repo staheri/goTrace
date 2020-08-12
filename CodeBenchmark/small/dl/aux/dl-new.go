@@ -1,6 +1,7 @@
 package main
 
 import "fmt"
+import "time"
 
 func test_a(test_channel chan int) {
   test_channel <- 1
@@ -12,6 +13,7 @@ func test() {
   for i := 0; i < 10; i++ {
     go test_a(test_channel)
   }
+  time.Sleep(time.Millisecond)
   for {
     fmt.Println(<-test_channel)
   }
