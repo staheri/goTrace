@@ -60,7 +60,7 @@ func main(){
   case "hac":
     for _,arg := range(flag.Args()){
       tl := strings.Split(arg,",")
-      db.CLOperations(dbName,CLOUTPATH,flagOut,tl...)
+      db.CLOperations(dbName,CLOUTPATH,flagOut,flagCons,flagAtrMode,tl...)
     }
 
   case "rr":
@@ -96,7 +96,7 @@ func main(){
     db.DineData(dbName, flagOut+"/all", flagN, false,false) // all events
   case "cleanDB":
     db.Ops("clean all","","0")
-  case "dev":
+  case "hb":
     for _,arg := range(flag.Args()){
       tl := strings.Split(arg,",")
       hbtable := db.HBTable(dbName,tl...)
@@ -104,6 +104,13 @@ func main(){
       fmt.Println("****")
       db.HBLog(dbName,hbtable,flagOut,false)
     }
+  case "dev":
+    for _,arg := range(flag.Args()){
+      tl := strings.Split(arg,",")
+      hbtable := db.HBTable(dbName,tl...)
+      db.Dev(dbName,hbtable, flagOut)
+    }
+
     //db.HBLog(dbName,flagOut,true)
     //fmt.Println("****")
     //db.HBLog(dbName,flagOut,false)
@@ -129,7 +136,7 @@ func parseFlags() (){
   flag.Parse()
 
   // Check cmd
-  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" && flagCmd != "diff" && flagCmd != "dineData" && flagCmd != "cleanDB" && flagCmd != "dev"{
+  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" && flagCmd != "diff" && flagCmd != "dineData" && flagCmd != "cleanDB" && flagCmd != "dev" && flagCmd != "hb"{
     util.PrintUsage()
     fmt.Printf("flagCMD: %s\n",flagCmd)
     panic("Wrong command")
