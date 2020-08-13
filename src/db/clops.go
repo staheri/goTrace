@@ -10,6 +10,8 @@ import (
 	"os/exec"
 	"strings"
 	"bytes"
+	"math"
+
 )
 
 var(
@@ -187,40 +189,70 @@ func genClContext(dbName, cloutdir,prefix string, consec, atrmode int, aspects .
 	}
 
 	// store files in the outpath folder
+	//2nd pass
 	for k,v := range data{
-
 		output := cloutdir+"/"+prefix+"_"+k+".txt"
 		f,err := os.Create(output)
 		if err != nil{
 			log.Fatal(err)
 		}
-		fmt.Printf("\ndata[%v]:\n\t",k)
-		/*for _,e := range v{
-			fmt.Printf("%v\n\t",e)
-			f.WriteString(fmt.Sprintf("%v\n",e))
-		}*/
+		//fmt.Printf("\ndata[%v]:\n\t",k)
 		cnt = 0
 		tmp = ""
+		data2 := make(map[string]float64)
 		for _,e := range v{
-			fmt.Printf("%v\n\t",e)
+			//fmt.Printf("%v\n\t",e)
 			tmp = tmp + e + "-"
 			cnt = cnt + 1
 			//f.WriteString(fmt.Sprintf("%v\n",e))
 			if cnt % consec == 0{
 				//fmt.Printf("%v\n\t",tmp)
-				f.WriteString(fmt.Sprintf("%v\n",tmp))
+				//f.WriteString(fmt.Sprintf("%v\n",tmp))
+				if val,ok := data2[tmp];ok{
+					data2[tmp] = val + 1
+				}else{
+					data2[tmp] = 1
+				}
 				cnt = 0
 				tmp = ""
 			}
 		}
 		if tmp != ""{
-			f.WriteString(fmt.Sprintf("%v\n",tmp))
+			//f.WriteString(fmt.Sprintf("%v\n",tmp))
+			if val,ok := data2[tmp];ok{
+				data2[tmp] = val + 1
+			}else{
+				data2[tmp] = 1
+			}
+		}
+		fmt.Printf("write > %v\n",output)
+		for kk,vv := range data2{
+			fmt.Printf("data2[%v]:%v\n",kk,freq(vv,atrmode))
+			f.WriteString(fmt.Sprintf("%v:%v\n",kk,int(freq(vv,atrmode))))
 		}
 		f.Close()
 	}
 }
 
-
+func freq(val float64, mode int) (float64){
+	if mode == 2{ // exact freq
+		return float64(val)
+	} else if mode == 3{ // log10
+		if val == 1{
+			return float64(val)
+		}else{
+			return math.Log10(val)
+		}
+	}else if mode == 4{ //log2
+		if val == 1{
+			return float64(val)
+		}else{
+			return math.Log2(val)
+		}
+	}else{
+		return 0
+	}
+}
 
 func DIFF(dbName, baseDBName, cloutpath,resultpath string, consec, rid int, aspects ...string ){
 	var cnt int
