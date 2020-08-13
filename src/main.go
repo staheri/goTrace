@@ -60,7 +60,7 @@ func main(){
   case "hac":
     for _,arg := range(flag.Args()){
       tl := strings.Split(arg,",")
-      db.CLOperations(dbName,CLOUTPATH,flagOut,flagCons,flagAtrMode,tl...)
+      db.HAC(dbName,CLOUTPATH,flagOut,flagCons,flagAtrMode,tl...)
     }
 
   case "rr":
@@ -87,7 +87,7 @@ func main(){
     baseDBName := db.Ops("latest",util.AppName(flagBase),"0")
     for _,arg := range(flag.Args()){
       tl := strings.Split(arg,",")
-      db.DIFF(dbName,baseDBName,CLOUTPATH,flagOut,flagCons,flagAtrMode,tl...)
+      db.JointHAC(dbName,baseDBName,CLOUTPATH,flagOut,flagCons,flagAtrMode,tl...)
     }
   case "dineData":
     db.DineData(dbName, flagOut+"/ch-chid", flagN, true,true) // channel events only + channel ID

@@ -124,10 +124,10 @@ def clusterText(c):
 	tab = []
 	i = 0
 	for k,v in data.items():
-		st = st +  "["+`k` + "]: "
+		st = st +  "["+`k` + "]: <br>"
 		s = ""
 		for item in v:
-			s = s + readin.objTable[`item+1`].rpartition(".")[0]+", "
+			s = s + readin.objTable[`item+1`].rpartition(".")[0]+",<br>"
 
 		if i < len(data.keys()) - 1 :
 			st = st + s + "<br>"

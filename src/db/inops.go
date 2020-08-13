@@ -73,7 +73,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	grtnInitStmt, err       := db.Prepare("SELECT * FROM Goroutines WHERE gid=?")
 	check(err)
 	defer grtnInitStmt.Close()
-	grtnInsertFullStmt, err := db.Prepare("INSERT INTO Goroutines (gid, parent_id, createLoc, create_eid) VALUES (?, ?, ?, ?)")
+	grtnInsertFullStmt, err := db.Prepare("INSERT INTO Goroutines (gid, parent_id, createLoc, create_eid, crlid) VALUES (?, ?, ?, ?, ?)")
 	check(err)
 	defer grtnInsertFullStmt.Close()
 	grtnUpdStartStmt, err   := db.Prepare("UPDATE Goroutines SET startLOC=? , start_eid=? WHERE gid=?")
@@ -111,6 +111,8 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	wgClock       := make(map[uint64]uint64) // wgsClock[cid]   = wg clock
 	mutexClock    := make(map[uint64]uint64) // mutexClock[cid] = mutex clock
 
+	createLocs    := make(map[string]int)
+
 	var tkey uint64
 
 	predG    := sql.NullInt64{}
@@ -126,6 +128,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 
 
 	cnt := 0
+	var crlid int
 	for _,e := range events{
 		// Debug info
 		cnt+=1
@@ -364,9 +367,15 @@ func Store(events []*trace.Event, app string) (dbName string) {
 					gid := strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
 					parent_id := e.G
 					createLoc := path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
+					if val,ok := createLocs[createLoc] ; ok{
+						crlid = val + 1
+					}else{
+						crlid = 1
+					}
+					createLocs[createLoc] = crlid
 					//q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id, createLoc, create_eid) VALUES (%v,%v,\"%s\",%v);",gid,parent_id,createLoc,eid)
 					//fmt.Printf(">>> Executing %s...\n",)
-					_,err := grtnInsertFullStmt.Exec(gid,parent_id,createLoc,eid)
+					_,err := grtnInsertFullStmt.Exec(gid,parent_id,createLoc,eid,crlid)
 					check(err)
 				} else if desc.Name == "GoStart"{
 					// this goroutine has been inserted before (with create) // update its row with startLOC
@@ -401,7 +410,13 @@ func Store(events []*trace.Event, app string) (dbName string) {
 					gid = strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
 					parent_id = int(e.G)
 					createLoc := path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
-					_,err = grtnInsertFullStmt.Exec(gid,parent_id,createLoc,eid)
+					if val,ok := createLocs[createLoc] ; ok{
+						crlid = val + 1
+					}else{
+						crlid = 1
+					}
+					createLocs[createLoc] = crlid
+					_,err = grtnInsertFullStmt.Exec(gid,parent_id,createLoc,eid,crlid)
 					check(err)
 
 				} else{
@@ -532,6 +547,7 @@ func createTables(db *sql.DB){
 											ended int DEFAULT -1,
     									createLoc varchar(255),
 											create_eid int,
+											crlID int,
 											startLoc varchar(255),
 											start_eid int,
     									PRIMARY KEY (id)

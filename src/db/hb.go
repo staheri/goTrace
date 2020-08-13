@@ -12,7 +12,7 @@ import (
 
 func aspect2string(aspects ...string) (ret string){
 	if len(aspects) != 0{
-		ret = "_"
+		ret = ""
 		for i,asp := range aspects{
 			if i < len(aspects) - 1{
 				ret = ret +asp+"_"
@@ -21,7 +21,7 @@ func aspect2string(aspects ...string) (ret string){
 			}
 		}
 	} else{
-		ret = ""
+		ret = "all"
 	}
 	return ret
 }
@@ -95,7 +95,12 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 	}
 	defer db.Close()
 
-	HBTableName = `Events`+aspect2string(aspects...)
+	if aspect2string(aspects...) != "all"{
+		HBTableName = `Events_`+aspect2string(aspects...)
+	} else{
+		HBTableName = `Events`
+	}
+
 
 	res,err := db.Query("SHOW TABLES LIKE \""+HBTableName+"\"")
 	check(err)
@@ -404,7 +409,7 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 			}else{
 				srcLine = ""
 			}
-			
+
 			if predG.Valid {
 				if g == int(predG.Int32){
 					//happening on same goroutine, just GID is enough
