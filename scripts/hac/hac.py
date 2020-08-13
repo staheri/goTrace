@@ -86,7 +86,7 @@ def cluster(m,maxc,out):
 	f = open(out+"_hac.md","w")
 	f.write(table)
 	f.close()
-	print tabulate(tab,headers=hdrs,tablefmt="plain")
+	#print tabulate(tab,headers=hdrs,tablefmt="plain")
 
 
 def clusterTable(c):
