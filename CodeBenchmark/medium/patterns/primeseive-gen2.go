@@ -5,9 +5,10 @@ import "fmt"
 
 // Send the sequence 2, 3, 4, ... to channel 'ch'.
 func Generate(ch chan<- int) {
-    for i := 2; ; i++ {
+    /*for i := 2; ; i++ {
         ch <- i // Send 'i' to channel 'ch'.
-    }
+    }*/
+    ch <- 2
 }
 
 // Copy the values from channel 'in' to channel 'out',
