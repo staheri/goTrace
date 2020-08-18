@@ -58,7 +58,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	// QUERIES
 	var eid int64
 	// for the events with resources (channels, mutex, WaitingGroup)
-	insertEventResourceStmt, err := db.Prepare("INSERT INTO Events (offset, type, vc , ts, g, p, linkts, predG, predClk, rid, reid, rval, rclock, stkID, src) values (? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? );")
+	insertEventResourceStmt, err := db.Prepare("INSERT INTO Events (offset, type, vc , ts, g, p, linkoff, predG, predClk, rid, reid, rval, rclock, stkID, src) values (? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? );")
 	check(err)
 	defer insertEventResourceStmt.Close()
 
@@ -121,7 +121,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	rval     := sql.NullInt64{}
 	reid     := sql.NullInt64{}
 	rclock   := sql.NullInt64{}
-	linkts   := sql.NullInt64{}
+	linkoff   := sql.NullInt64{}
 	srcLine  := sql.NullString{}
 
 
@@ -145,7 +145,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 		rval     = sql.NullInt64{}
 		reid     = sql.NullInt64{}
 		rclock   = sql.NullInt64{}
-		linkts   = sql.NullInt64{}
+		linkoff   = sql.NullInt64{}
 		if len(e.Stk) != 0{
 			srcLine  = sql.NullString{Valid:true, String: path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)}
 		}else{
@@ -267,13 +267,10 @@ func Store(events []*trace.Event, app string) (dbName string) {
 			// Set Predecessor for an event (key to the event: TS)
 			fmt.Printf("Source: %s\n",e)
 			fmt.Printf("LINK: %s\n",e.Link)
-			//linkts = sql.NullInt64{Valid:true, Int64: int64(e.Link.Ts)}
-			linkts = sql.NullInt64{Valid:true, Int64: int64(e.Link.Off)}
+			linkoff = sql.NullInt64{Valid:true, Int64: int64(e.Link.Off)}
 			if _,ok := links[int64(e.Link.Off)] ; !ok{
 				links[int64(e.Link.Off)] = eventPredecessor{e.G, localClock[e.G]}
 			} else{ // the link of current event has been linked to another event before
-				fmt.Println(e.Link.Off)
-				fmt.Println(links[int64(e.Link.Off)])
 				panic("Previously linked to another event!")
 			}
 		} else{ // does not fall into any category
@@ -283,7 +280,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 			rval      = sql.NullInt64{}
 			reid      = sql.NullInt64{}
 			rclock    = sql.NullInt64{}
-			linkts    = sql.NullInt64{}
+			linkoff    = sql.NullInt64{}
 
 		}
 
@@ -320,7 +317,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 																					 strconv.Itoa(int(e.Ts)),
 																					 strconv.FormatUint(e.G,10),
 																					 strconv.Itoa(e.P),
-																					 linkts,
+																					 linkoff,
 																					 predG,
 																					 predClk,
 																					 rid,
@@ -515,7 +512,7 @@ func createTables(db *sql.DB){
     									ts bigint NOT NULL,
     									g int NOT NULL,
     									p int NOT NULL,
-											linkts bigint,
+											linkoff int,
 											predG int,
 											predClk int,
 											rid varchar(255),

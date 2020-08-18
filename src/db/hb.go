@@ -74,15 +74,16 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 		return "Events"
 	}
 
-	var err                   error
+	var err             	      error
 	//var res                   sql.Result
-	var q, event, _ev         string
-	var p,eid       	    		int
-	var g,_rid	          		uint64
-	var ts 										int64
-	var predG,predClk,linkts  sql.NullInt64
-	var rclock,rval,reid      sql.NullInt64
-	var rid,srcLine           sql.NullString
+	var q, event, _ev   	      string
+	var p,eid       		    		int
+	var g,_rid	       		   		uint64
+	var offset 									int64
+	var ts      								int64
+	var predG,predClk,linkoff	  sql.NullInt64
+	var rclock,rval,reid   	    sql.NullInt64
+	var rid,srcLine        	    sql.NullString
 	//var buff, output          string
 
 
@@ -114,9 +115,10 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 					type varchar(255) NOT NULL,
 					vc int NOT NULL,
 					ts bigint NOT NULL,
+					off int NOT NULL,
 					g int NOT NULL,
 					p int NOT NULL,
-					linkts bigint,
+					linkoff bigint,
 					predG int,
 					predClk int,
 					rid varchar(255),
@@ -133,7 +135,7 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 		panic(err)
 	}
 
-	insertStmt, err := db.Prepare("INSERT INTO "+HBTableName+" (type, vc , ts, g, p, linkts, predG, predClk, rid, rval, rclock, src) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);")
+	insertStmt, err := db.Prepare("INSERT INTO "+HBTableName+" (type, vc ,ts, off, g, p, linkoff, predG, predClk, rid, rval, rclock, src) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);")
 	check(err)
 	defer insertStmt.Close()
 
@@ -154,12 +156,12 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 	//rclock   :=  sql.NullInt32{}
 
 
-	q = "SELECT id,type,ts,g,p,linkts,rid,reid,rval,rclock,src FROM Events ORDER BY ts;"
+	q = "SELECT id,type,ts,offset,g,p,linkoff,rid,reid,rval,rclock,src FROM Events ORDER BY ts;"
 	res,err = db.Query(q)
 	check(err)
 	defer res.Close()
 	for res.Next(){
-		err = res.Scan(&eid,&_ev,&ts,&g,&p,&linkts,&rid,&reid,&rval,&rclock,&srcLine)
+		err = res.Scan(&eid,&_ev,&ts,&offset,&g,&p,&linkoff,&rid,&reid,&rval,&rclock,&srcLine)
 		check(err)
 
 		event = _ev[2:] // event is _ev without "Ev*"
@@ -220,12 +222,12 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 				predG = sql.NullInt64{}
 				predClk = sql.NullInt64{}
 			}
-		} else if linkts.Valid{
+		} else if linkoff.Valid{
 			// Set Predecessor for an event (key to the event: TS)
 			//fmt.Printf("Source: %s\n",e)
 			//fmt.Printf("LINK: %s\n",e.Link)
-			if _,ok := links[linkts.Int64] ; !ok{
-				links[linkts.Int64] = eventPredecessor{g, localClock[g]}
+			if _,ok := links[linkoff.Int64] ; !ok{
+				links[linkoff.Int64] = eventPredecessor{g, localClock[g]}
 			} else{ // the link of current event has been linked to another event before
 				panic("Previously linked to another event!")
 			}
@@ -239,7 +241,7 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 		// if a recv has found a sender, it is all set
 		// Now only check if the current event has a predecessor. If so: set predG, set predClk
 		// otherise: everything is null
-		if vv,ok := links[ts]; ok{
+		if vv,ok := links[offset]; ok{
 			// Is there a possibility that this event has resource other than G?
 			// No. Events with predecessor links only have G resource
 			predG    = sql.NullInt64{Valid:true, Int64: int64(vv.g)}
@@ -250,9 +252,10 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 		_,err := insertStmt.Exec(_ev,
 															 strconv.Itoa(int(localClock[g])),
 															 strconv.Itoa(int(ts)),
+															 strconv.Itoa(int(offset)),
 															 strconv.FormatUint(g,10),
 															 strconv.Itoa(p),
-															 linkts,
+															 linkoff,
 															 predG,
 															 predClk,
 															 rid,
@@ -345,9 +348,29 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 				f.WriteString(buff)
 			}else{
 				//panic("KIR")
+
+				if predG.Valid {
+					if g == int(predG.Int32){
+						//happening on same goroutine, just GID is enough
+						fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+						buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+						f.WriteString(buff)
+
+					} else{
+						fmt.Printf("%v@%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,srcLine,g,g,logclock,predG.Int32,predClk.Int32)
+						buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,srcLine,g,g,logclock,predG.Int32,predClk.Int32)
+						f.WriteString(buff)
+					}
+				} else{
+					fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+					buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+					f.WriteString(buff)
+				}
+
+				/*
 				fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 				buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
-				f.WriteString(buff)
+				f.WriteString(buff)*/
 			}
 			//fmt.Printf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
 		}
