@@ -8,7 +8,10 @@ import toml
 import argparse
 import glob
 import sys,subprocess
+import os
 
+def listdirs(folder):
+    return [d for d in os.listdir(folder) if os.path.isdir(os.path.join(folder, d))]
 
 
 if len(sys.argv) != 2:
@@ -18,13 +21,23 @@ if len(sys.argv) != 2:
 path = sys.argv[1]
 # Create directory to stor jobSubmission scripts
 
-for f in glob.glob("/home/saeed/goTrace/traces/trace-patterns*/gtrace/cl/nlr10/sing.orig.w.jacmat.txt"):
-	print f.partition("trace-patterns-")[2].partition("/gtrace")[0]
-	ex = f.partition("trace-patterns-")[2].partition("/gtrace")[0]
-	cmd = "python /home/saeed/diffTrace/scripts/genReport/genSingleJSM.py " + f + " " + ex + ";"
+print listdirs("/Users/saeed/goTrace/CodeBenchmark/godel2-benchmark")
+
+for f in listdirs("/Users/saeed/goTrace/CodeBenchmark/godel2-benchmark"):
+	cmd = "cp /Users/saeed/goTrace/CodeBenchmark/godel2-benchmark/"+f+"/main.go /Users/saeed/goTrace/CodeBenchmark/godel2/"+f+".go"
 	print cmd
 	process = subprocess.Popen([cmd], stdout=subprocess.PIPE,shell=True)
 	si, err = process.communicate()
+
+
+#for f in glob.glob("/home/saeed/goTrace/traces/trace-patterns*/gtrace/cl/nlr10/sing.orig.w.jacmat.txt"):
+#for f in glob.glob("/home/saeed/goTrace/CodeBenchmark/*"):
+#	print f.partition("trace-patterns-")[2].partition("/gtrace")[0]
+#	ex = f.partition("trace-patterns-")[2].partition("/gtrace")[0]
+#	cmd = "python /home/saeed/diffTrace/scripts/genReport/genSingleJSM.py " + f + " " + ex + ";"
+#	print cmd
+#	process = subprocess.Popen([cmd], stdout=subprocess.PIPE,shell=True)
+#	si, err = process.communicate()
 
 	#print "python /home/saeed/diffTrace/scripts/genReport/cl2jacmat.py "+f
 	#process = subprocess.Popen(["python /home/saeed/diffTrace/scripts/genReport/cl2jacmat.py "+f], stdout=subprocess.PIPE,shell=True)
