@@ -58,10 +58,16 @@ func main(){
     }
 
   case "hac":
-    for _,arg := range(flag.Args()){
-      tl := strings.Split(arg,",")
-      db.HAC(dbName,CLOUTPATH,flagOut,flagCons,flagAtrMode,tl...)
+    if len(flag.Args()) > 0{
+      for _,arg := range(flag.Args()){
+        tl := strings.Split(arg,",")
+        db.HAC(dbName,CLOUTPATH,flagOut,flagCons,flagAtrMode,tl...)
+      }
+    } else{
+      var emptyList []string
+      db.HAC(dbName,CLOUTPATH,flagOut,flagCons,flagAtrMode,emptyList...)
     }
+
 
   case "rr":
     for _,arg := range(flag.Args()){
