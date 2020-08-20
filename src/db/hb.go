@@ -123,7 +123,7 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 					predClk int,
 					rid varchar(255),
 					reid int,
-					rval int,
+					rval bigint,
 					rclock int,
 					src varchar(255),
 					PRIMARY KEY (id)
@@ -277,8 +277,8 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 	var event1                string
 	//var _arg,_val        			string
 	var g,logclock,eid   			int
-	var predG,predClk    			sql.NullInt32
-	var rclock,rval      			sql.NullInt32
+	var predG,predClk,rclock  sql.NullInt32
+	var rval 				     			sql.NullInt64
 	var rid, srcl 	     			sql.NullString
 	var buff, output,srcLine  string
 
@@ -321,14 +321,14 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 			event1 = _ev[2:]
 			//fmt.Printf("OUTOPS-EVENT: %v\n",event)
 			if event1 == "WgAdd"{
-				if rval.Valid && rval.Int32 > 0{
-					event = event + "[val:"+strconv.Itoa(int(rval.Int32))+"]"
+				if rval.Valid && rval.Int64 > 0{
+					event = event + "[val:"+strconv.Itoa(int(rval.Int64))+"]"
 				}else{
 					event = event + "[val:-]"
 				}
 			}else if event1 == "ChRecv" || event1 =="ChSend"{
 				if rval.Valid{
-					event = event + "[val:"+strconv.Itoa(int(rval.Int32))+"]"
+					event = event + "[val:"+strconv.Itoa(int(rval.Int64))+"]"
 				}else{
 					event = event + "[val:-]"
 				}
@@ -399,8 +399,8 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 				}else{
 					event = event + "[-"
 				}
-				if rval.Valid && rval.Int32 > 0{
-					event = event + ",val:"+strconv.Itoa(int(rval.Int32))+"]"
+				if rval.Valid && rval.Int64 > 0{
+					event = event + ",val:"+strconv.Itoa(int(rval.Int64))+"]"
 				} else{
 					event = event + ",val:-]"
 				}
@@ -413,7 +413,7 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 
 				if event1 == "ChRecv" || event1=="ChSend"{
 					if rval.Valid{
-						event = event + ",val:"+strconv.Itoa(int(rval.Int32))+"]"
+						event = event + ",val:"+strconv.Itoa(int(rval.Int64))+"]"
 					}else{
 						event = event + "]"
 					}
