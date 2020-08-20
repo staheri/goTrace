@@ -25,7 +25,7 @@ func HAC(dbName, cloutpath,resultpath string, consec, atrmode int, aspects ...st
 	setPaths()
 
 	// create directory
-	cloutdir := cloutpath + "/diff_" +dbName + "/"
+	cloutdir := cloutpath + "/hac_" +dbName + "/"
 	filts := aspect2string(aspects...)
 	optionsDirName := "_c"+strconv.Itoa(consec)+"_a"+strconv.Itoa(atrmode)
 	cloutdir = cloutdir +filts + optionsDirName
@@ -46,7 +46,7 @@ func HAC(dbName, cloutpath,resultpath string, consec, atrmode int, aspects ...st
 		log.Fatal(err)
 	}
 
-	outname := dbName+"_"+filts+optionsDirName
+	outname := "hac_"+dbName+"_"+filts+optionsDirName
 
 	_cmd = "python "+ HACPATH + "/main.py " + cloutdir+"/cl/"+outname+".dot "+resultpath+"/"+outname
 
