@@ -311,6 +311,21 @@ func Store(events []*trace.Event, app string) (dbName string) {
 				rid    = sql.NullString{}
 			}
 		}
+		/*fmt.Printf("INSERT INTO Events (offset=%v, type=%v, vc=%v, ts=%v, g=%v, p=%v, linkoff=%v, predG=%v, predClk=%v, rid=%v, reid=%v, rval=%v, rclock=%v, stkID=%v, src=%v)\n",strconv.Itoa(e.Off),
+																					 "Ev"+desc.Name,
+																					 strconv.Itoa(int(localClock[e.G])),
+																					 strconv.Itoa(int(e.Ts)),
+																					 strconv.FormatUint(e.G,10),
+																					 strconv.Itoa(e.P),
+																					 linkoff,
+																					 predG,
+																					 predClk,
+																					 rid,
+																					 reid,
+																					 rval,
+																					 rclock,
+																					 strconv.FormatUint(e.StkID,10),
+																					 srcLine)*/
 		res,err = insertEventResourceStmt.Exec(strconv.Itoa(e.Off),
 																					 "Ev"+desc.Name,
 																					 strconv.Itoa(int(localClock[e.G])),
@@ -517,7 +532,7 @@ func createTables(db *sql.DB){
 											predClk int,
 											rid varchar(255),
 											reid int,
-											rval int,
+											rval bigint,
 											rclock int,
     									stkID int,
 											src varchar(255),
