@@ -116,7 +116,6 @@ func JointHAC(dbName,baseDBName, cloutpath,resultpath string, consec, atrmode in
 
 }
 
-
 func genClContext(dbName, cloutdir,prefix string, consec, atrmode int, aspects ...string ){
 	// Paths
 	setPaths()
@@ -177,7 +176,7 @@ func genClContext(dbName, cloutdir,prefix string, consec, atrmode int, aspects .
 		}
 
 
-		if atrmode == 1 && _rid.Valid{
+		if atrmode == 1 && _rid.Valid{ // include resrouce id
 			if !strings.HasPrefix(_rid.String, "G"){
 				data[ids] = append(data[ids],_rid.String+":"+event)
 			}else{
