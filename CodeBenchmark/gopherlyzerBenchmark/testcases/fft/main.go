@@ -1,16 +1,13 @@
 package main
 
 import (
-	"../../go-dsp/fft"
-	"../../tracer"
-)
-
-import (
 	"math"
 	"math/cmplx"
 	"runtime"
-
+	"fmt"
 	"../../go-dsp/dsputils"
+	"../../go-dsp/fft"
+	//"../../tracer"
 )
 
 const (
@@ -279,7 +276,7 @@ func ExampleFFTReal() {
 		if dsputils.Float64Equal(r, 0) {
 			θ = 0 // (When the magnitude is close to 0, the angle is meaningless)
 		}
-		//	fmt.Printf("X(%d) = %.1f ∠ %.1f°\n", i, r, θ)
+			fmt.Printf("X(%d) = %.1f ∠ %.1f°\n", i, r, θ)
 	}
 
 	// Output:
@@ -294,8 +291,8 @@ func ExampleFFTReal() {
 }
 
 func main() {
-	tracer.Start()
-	tracer.RegisterThread("main")
+	//tracer.Start()
+	//tracer.RegisterThread("main")
 
 	TestFFT()
 	TestFFT2()
@@ -304,5 +301,5 @@ func main() {
 	//BenchmarkFFT()
 	ExampleFFTReal()
 
-	tracer.Stop()
+	//tracer.Stop()
 }
