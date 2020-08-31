@@ -190,11 +190,11 @@ func createTraceStmts(timeout int) []ast.Stmt {
 									},
 									Args: []ast.Expr{
 										&ast.BinaryExpr{
-											X:  &ast.BasicLit{Kind: token.INT, Value: "50"},
+											X:  &ast.BasicLit{Kind: token.INT, Value: "1"},
 											Op: token.MUL,
 											Y: &ast.SelectorExpr{
 												X:   &ast.Ident{Name: "time"},
-												Sel: &ast.Ident{Name: "Millisecond"},
+												Sel: &ast.Ident{Name: "Second"},
 											},
 										},
 									},
