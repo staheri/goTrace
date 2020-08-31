@@ -12,7 +12,7 @@ import (
 func main() {
 	buf := new(bytes.Buffer)
 
-	f, _ := os.Open("pgzipInput.pdf")
+	f, _ := os.Open("pgzipInput2.pdf")
 	x, _ := ioutil.ReadAll(f)
 
 	w := pgzip.NewWriter(buf)
