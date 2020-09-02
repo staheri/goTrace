@@ -11,7 +11,7 @@ import (
 	"strings"
 	"bytes"
 	"math"
-
+	"util"
 )
 
 var(
@@ -21,7 +21,7 @@ var(
 )
 
 func HAC(dbName, cloutpath,resultpath string, consec, atrmode int, aspects ...string ){
-	// Paths
+	// Paths  
 	setPaths()
 
 	// create directory
@@ -172,7 +172,7 @@ func genClContext(dbName, cloutdir,prefix string, consec, atrmode int, aspects .
 		//}else{}
 		ids := "root"
 		if crl.Valid{
-			ids = crl.String+"("+strconv.Itoa(int(crlid.Int32))+")"
+			ids = util.FilterSlash(crl.String)+"("+strconv.Itoa(int(crlid.Int32))+")"
 		}
 
 

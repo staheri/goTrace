@@ -90,7 +90,7 @@ func main(){
   case "rg":
     db.ResourceGraph(dbName,flagOut)
   case "diff":
-    baseDBName := db.Ops("latest",util.AppName(flagBase),"0")
+    baseDBName := db.Ops("x",util.AppName(flagBase),"13")
     for _,arg := range(flag.Args()){
       tl := strings.Split(arg,",")
       db.JointHAC(dbName,baseDBName,CLOUTPATH,flagOut,flagCons,flagAtrMode,tl...)
@@ -111,11 +111,13 @@ func main(){
       db.HBLog(dbName,hbtable,flagOut,false)
     }
   case "dev":
-    for _,arg := range(flag.Args()){
+    /*for _,arg := range(flag.Args()){
       tl := strings.Split(arg,",")
       hbtable := db.HBTable(dbName,tl...)
       db.Dev(dbName,hbtable, flagOut)
-    }
+    }*/
+    db.Dev()
+
 
     //db.HBLog(dbName,flagOut,true)
     //fmt.Println("****")

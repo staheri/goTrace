@@ -274,3 +274,15 @@ func BoolConv(b bool) int{
 		return 0
 	}
 }
+
+func FilterSlash(s string) string {
+	ret := ""
+	for _,b := range s{
+		if string(b) == "/"{
+			ret = ret + "\\"
+		} else{
+			ret = ret + string(b)
+		}
+	}
+	return ret
+}

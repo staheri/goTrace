@@ -58,7 +58,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	// QUERIES
 	var eid int64
 	// for the events with resources (channels, mutex, WaitingGroup)
-	insertEventResourceStmt, err := db.Prepare("INSERT INTO Events (offset, type, vc , ts, g, p, linkoff, predG, predClk, rid, reid, rval, rclock, stkID, src) values (? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? );")
+	insertEventResourceStmt, err := db.Prepare("INSERT INTO Events (offset, type, vc , ts, g, p, linkoff, predG, predClk, rid, reid, rval, rclock, stkID, src, src0) values (? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? );")
 	check(err)
 	defer insertEventResourceStmt.Close()
 
@@ -73,7 +73,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	grtnInitStmt, err       := db.Prepare("SELECT * FROM Goroutines WHERE gid=?")
 	check(err)
 	defer grtnInitStmt.Close()
-	grtnInsertFullStmt, err := db.Prepare("INSERT INTO Goroutines (gid, parent_id, createLoc, create_eid, crlid) VALUES (?, ?, ?, ?, ?)")
+	grtnInsertFullStmt, err := db.Prepare("INSERT INTO Goroutines (gid, parent_id, createLoc, createLoc0, create_eid, crlid, crlid0) VALUES (?, ?, ?, ?, ?, ?, ?)")
 	check(err)
 	defer grtnInsertFullStmt.Close()
 	grtnUpdStartStmt, err   := db.Prepare("UPDATE Goroutines SET startLOC=? , start_eid=? WHERE gid=?")
@@ -111,7 +111,8 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	wgClock       := make(map[uint64]uint64) // wgsClock[cid]   = wg clock
 	mutexClock    := make(map[uint64]uint64) // mutexClock[cid] = mutex clock
 
-	createLocs    := make(map[string]int)
+	createLocs     := make(map[string]int)
+	createLocs0    := make(map[string]int)
 
 	var tkey uint64
 
@@ -123,12 +124,13 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	rclock   := sql.NullInt64{}
 	linkoff   := sql.NullInt64{}
 	srcLine  := sql.NullString{}
+	srcLine0  := sql.NullString{}
 
 
 
 
 	cnt := 0
-	var crlid int
+	var crlid,crlid0 int
 	for _,e := range events{
 		// Debug info
 		cnt+=1
@@ -147,9 +149,11 @@ func Store(events []*trace.Event, app string) (dbName string) {
 		rclock   = sql.NullInt64{}
 		linkoff   = sql.NullInt64{}
 		if len(e.Stk) != 0{
-			srcLine  = sql.NullString{Valid:true, String: path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)}
+			srcLine   = sql.NullString{Valid:true, String: util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))}
+			srcLine0  = sql.NullString{Valid:true, String: util.FilterSlash(path.Base(e.Stk[0].File)+":"+ e.Stk[0].Fn + ":" + strconv.Itoa(e.Stk[0].Line))}
 		}else{
 			srcLine  = sql.NullString{}
+			srcLine0  = sql.NullString{}
 		}
 
 		// Assign local logical clock
@@ -325,7 +329,8 @@ func Store(events []*trace.Event, app string) (dbName string) {
 																					 rval,
 																					 rclock,
 																					 strconv.FormatUint(e.StkID,10),
-																					 srcLine)*/
+																					 srcLine,
+																					 srcLine0)*/
 		res,err = insertEventResourceStmt.Exec(strconv.Itoa(e.Off),
 																					 "Ev"+desc.Name,
 																					 strconv.Itoa(int(localClock[e.G])),
@@ -340,7 +345,8 @@ func Store(events []*trace.Event, app string) (dbName string) {
 																					 rval,
 																					 rclock,
 																					 strconv.FormatUint(e.StkID,10),
-																					 srcLine)
+																					 srcLine,
+																				 	 srcLine0)
 
 		check(err)
 		eid, err = res.LastInsertId()
@@ -378,22 +384,33 @@ func Store(events []*trace.Event, app string) (dbName string) {
 					// insert child goroutine with (parent_id of current goroutine) (stack createLOC)
 					gid := strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
 					parent_id := e.G
-					createLoc := path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
+
+					createLoc := util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))
 					if val,ok := createLocs[createLoc] ; ok{
 						crlid = val + 1
 					}else{
 						crlid = 1
 					}
 					createLocs[createLoc] = crlid
+
+					createLoc0 := util.FilterSlash(path.Base(e.Stk[0].File)+":"+ e.Stk[0].Fn + ":" + strconv.Itoa(e.Stk[0].Line))
+					if val,ok := createLocs0[createLoc0] ; ok{
+						crlid0 = val + 1
+					}else{
+						crlid0 = 1
+					}
+					createLocs0[createLoc0] = crlid0
+
+
 					//q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id, createLoc, create_eid) VALUES (%v,%v,\"%s\",%v);",gid,parent_id,createLoc,eid)
 					//fmt.Printf(">>> Executing %s...\n",)
-					_,err := grtnInsertFullStmt.Exec(gid,parent_id,createLoc,eid,crlid)
+					_,err := grtnInsertFullStmt.Exec(gid,parent_id,createLoc,createLoc0,eid,crlid,crlid0)
 					check(err)
 				} else if desc.Name == "GoStart"{
 					// this goroutine has been inserted before (with create) // update its row with startLOC
 					gid := e.G
 					if len(e.Stk) > 0{
-						startLoc = path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
+						startLoc = util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))
 					} else {
 						startLoc = "XXX"
 						//return
@@ -421,14 +438,24 @@ func Store(events []*trace.Event, app string) (dbName string) {
 					// insert child goroutine with (parent_id of current goroutine) (stack location of create)
 					gid = strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
 					parent_id = int(e.G)
-					createLoc := path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
+
+					createLoc := util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))
 					if val,ok := createLocs[createLoc] ; ok{
 						crlid = val + 1
 					}else{
 						crlid = 1
 					}
 					createLocs[createLoc] = crlid
-					_,err = grtnInsertFullStmt.Exec(gid,parent_id,createLoc,eid,crlid)
+
+					createLoc0 := util.FilterSlash(path.Base(e.Stk[0].File)+":"+ e.Stk[0].Fn + ":" + strconv.Itoa(e.Stk[0].Line))
+					if val,ok := createLocs0[createLoc0] ; ok{
+						crlid0 = val + 1
+					}else{
+						crlid0 = 1
+					}
+					createLocs0[createLoc0] = crlid0
+
+					_,err = grtnInsertFullStmt.Exec(gid,parent_id,createLoc,createLoc0,eid,crlid,crlid0)
 					check(err)
 
 				} else{
@@ -536,6 +563,7 @@ func createTables(db *sql.DB){
 											rclock int,
     									stkID int,
 											src varchar(255),
+											src0 varchar(255),
 											PRIMARY KEY (id)
 											);`
 	stkFrmCreateStmt := `CREATE TABLE StackFrames (
@@ -558,8 +586,10 @@ func createTables(db *sql.DB){
     									parent_id int NOT NULL,
 											ended int DEFAULT -1,
     									createLoc varchar(255),
+											createLoc0 varchar(255),
 											create_eid int,
 											crlID int,
+											crlID0 int,
 											startLoc varchar(255),
 											start_eid int,
     									PRIMARY KEY (id)
@@ -709,7 +739,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 			// insert child goroutine with (parent_id of current goroutine) (stack createLOC)
 			gid := strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
 			parent_id := e.G
-			createLoc := path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
+			createLoc := util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))
 			q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id, createLoc, create_eid) VALUES (%v,%v,\"%s\",%v);",gid,parent_id,createLoc,eid)
 			fmt.Printf(">>> Executing %s...\n",q)
 			_,err := db.Exec(q)
@@ -723,7 +753,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 			// update its row with startLOC
 			gid := e.G
 			if len(e.Stk) > 0{
-				startLoc = path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
+				startLoc = util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))
 			} else {
 				//startLoc = "NIL"
 				return
@@ -769,7 +799,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 			// insert child goroutine with (parent_id of current goroutine) (stack location of create)
 			gid = strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
 			parent_id = int(e.G)
-			createLoc := path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line)
+			createLoc := util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))
 			q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id, createLoc, create_eid) VALUES (%v,%v,\"%s\",%v);",gid,parent_id,createLoc,eid)
 			fmt.Printf(">>> Executing %s...\n",q)
 			_,err = db.Exec(q)

@@ -11,12 +11,12 @@ import (
 	"strings"
 	"bytes"
 	"github.com/jedib0t/go-pretty/table"
-	"util"
 
 )
 
 
-func Dev(dbName,hbtable, outdir string){
+//func Dev(dbName,hbtable, outdir string){
+func Dev(){
 	// Variables
 	//var q, event             string
 	//var report, tmp          string
@@ -27,95 +27,119 @@ func Dev(dbName,hbtable, outdir string){
 	//var close_eid, close_gid int
 	//var line                 int
 	//var val, pos, eid        int*/
-	var q, event, _ev         string
-	var event1                string
+	var q        string
+	var line                string
 	//var _arg,_val        			string
-	var g,logclock,eid   			int
-	var predG,predClk    			sql.NullInt32
-	var rclock,rval      			sql.NullInt32
-	var rid, srcl 	     			sql.NullString
-	//var srcLine  string
+	var cnt   			int
 
-	// Establish connection to DB
-	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
-	if err != nil {
-		fmt.Println(err)
-	}else{
-		fmt.Println("Connection Established")
-	}
-	defer db.Close()
+	for i:=0 ; i < 24 ; i++{
+		dbName := "fft2X"+strconv.Itoa(i)
+		line = ""
+		db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+		if err != nil {
+			fmt.Println(err)
+		}
 
-	fmt.Println("DEV")
-
-	q = "SELECT id,type,g,vc,predG,predClk,rid,rval,rclock,src FROM "+hbtable+" ORDER BY ts;"
-	res, err := db.Query(q)
-	check(err)
-	defer res.Close()
-
-	for res.Next(){
-		err = res.Scan(&eid,&_ev,&g,&logclock,&predG,&predClk,&rid,&rval,&rclock,&srcl)
+		// Trace size
+		q = "SELECT COUNT(*) FROM events;"
+		res, err := db.Query(q)
 		check(err)
-
-		event = _ev[2:]
-		event1 = _ev[2:]
-		if event1 == "WgAdd"{
-			if rid.Valid{
-				event = event + "["+rid.String
-			}else{
-				event = event + "[-"
-			}
-			if rval.Valid && rval.Int32 > 0{
-				event = event + ",val:"+strconv.Itoa(int(rval.Int32))+"]"
-			} else{
-				event = event + ",val:-]"
-			}
-		}else if util.Contains(ctgDescriptions[catCHNL].Members, "Ev"+event1){
-			if rid.Valid{
-				event = event + "["+rid.String
-			}else{
-				event = event + "[-"
-			}
-
-			if event1 == "ChRecv" || event1=="ChSend"{
-				if rval.Valid{
-					event = event + ",val:"+strconv.Itoa(int(rval.Int32))+"]"
-				}else{
-					event = event + "]"
-				}
-			}else{
-				event = event + "]"
-			}
-		}else if util.Contains(ctgDescriptions[catMUTX].Members, "Ev"+event1) || util.Contains(ctgDescriptions[catWGRP].Members, "Ev"+event1){
-			if rid.Valid{
-				event = event + " ["+rid.String+"]"
-			}else{
-				event = event + " [-]"
-			}
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
 		}
-		/*if srcl.Valid{
-			srcLine = srcl.String
-		}else{
-			srcLine = ""
-		}*/
+		res.Close()
 
-		if predG.Valid {
-			if g == int(predG.Int32){
-				//happening on same goroutine, just GID is enough
-				//fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
-				fmt.Printf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
-				//buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
-				//f.WriteString(buff)
-
-			} else{
-				fmt.Printf("%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,g,g,logclock,predG.Int32,predClk.Int32)
-				//buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,srcLine,g,g,logclock,predG.Int32,predClk.Int32)
-				//f.WriteString(buff)
-			}
-		} else{
-			fmt.Printf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
-			//buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
-			//f.WriteString(buff)
+		// PROC
+		q = "SELECT COUNT(*) FROM events inner join global.catPROC on type=eventName;"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
 		}
+		res.Close()
+
+		// GCMM
+		q = "SELECT COUNT(*) FROM events inner join global.catGCMM on type=eventName;"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// WGRP
+		q = "SELECT COUNT(*) FROM events inner join global.catWGRP on type=eventName;"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// WGRP - wait
+		q = "SELECT COUNT(*) FROM events where type =\"EvWgWait\";"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// WGRP - add
+		q = "SELECT COUNT(*) FROM events where type =\"EvWgAdd\";"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// WGRP - done
+		q = "SELECT COUNT(*) FROM events where type =\"EvWgDone\";"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// CH-send
+		q = "SELECT COUNT(*) FROM events where type =\"EvChSend\";"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// CH-Recv
+		q = "SELECT COUNT(*) FROM events where type =\"EvChRecv\";"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+		fmt.Println(dbName+","+line)
+		db.Close()
 	}
 }
 
