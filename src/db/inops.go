@@ -15,6 +15,7 @@ import (
 func Store(events []*trace.Event, app string) (dbName string) {
 	var err error
 	var res sql.Result
+	var createLoc,createLoc0 string
 	// Connecting to mysql driver
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/")
 	if err != nil {
@@ -384,8 +385,15 @@ func Store(events []*trace.Event, app string) (dbName string) {
 					// insert child goroutine with (parent_id of current goroutine) (stack createLOC)
 					gid := strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
 					parent_id := e.G
+					//fmt.Printf("Len Stack: %v\n",len(e.Stk))
+					if len(e.Stk) != 0{
+						createLoc = util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))
+						createLoc0 = util.FilterSlash(path.Base(e.Stk[0].File)+":"+ e.Stk[0].Fn + ":" + strconv.Itoa(e.Stk[0].Line))
+					}else{
+						createLoc = "Unknown"
+						createLoc0 = "Unknown"
+					}
 
-					createLoc := util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))
 					if val,ok := createLocs[createLoc] ; ok{
 						crlid = val + 1
 					}else{
@@ -393,7 +401,6 @@ func Store(events []*trace.Event, app string) (dbName string) {
 					}
 					createLocs[createLoc] = crlid
 
-					createLoc0 := util.FilterSlash(path.Base(e.Stk[0].File)+":"+ e.Stk[0].Fn + ":" + strconv.Itoa(e.Stk[0].Line))
 					if val,ok := createLocs0[createLoc0] ; ok{
 						crlid0 = val + 1
 					}else{
@@ -439,7 +446,14 @@ func Store(events []*trace.Event, app string) (dbName string) {
 					gid = strconv.FormatInt(int64(e.Args[0]),10) // e.Args[0] for goCreate is "g"
 					parent_id = int(e.G)
 
-					createLoc := util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))
+					if len(e.Stk) != 0{
+						createLoc = util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))
+						createLoc0 = util.FilterSlash(path.Base(e.Stk[0].File)+":"+ e.Stk[0].Fn + ":" + strconv.Itoa(e.Stk[0].Line))
+					}else{
+						createLoc = "Unknown"
+						createLoc0 = "Unknown"
+					}
+
 					if val,ok := createLocs[createLoc] ; ok{
 						crlid = val + 1
 					}else{
@@ -447,7 +461,6 @@ func Store(events []*trace.Event, app string) (dbName string) {
 					}
 					createLocs[createLoc] = crlid
 
-					createLoc0 := util.FilterSlash(path.Base(e.Stk[0].File)+":"+ e.Stk[0].Fn + ":" + strconv.Itoa(e.Stk[0].Line))
 					if val,ok := createLocs0[createLoc0] ; ok{
 						crlid0 = val + 1
 					}else{
