@@ -14,6 +14,132 @@ import (
 
 )
 
+func Dev2(binSize int){
+	// Variables
+	//var q, event             string
+	//var report, tmp          string
+	//var file, funct          string
+	//var g,logclock     int
+	//var predG,predClk  sql.NullInt32
+	//var make_eid, make_gid   int
+	//var close_eid, close_gid int
+	//var line                 int
+	//var val, pos, eid        int*/
+	var q        string
+	var line                string
+	//var _arg,_val        			string
+	var length   			int
+
+	for i:=0 ; i < 24 ; i++{
+		dbName := "fft2X"+strconv.Itoa(i)
+		line = ""
+		db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		// Trace size
+		q = "SELECT COUNT(*) FROM events;"
+		res, err := db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// PROC
+		q = "SELECT COUNT(*) FROM events inner join global.catPROC on type=eventName;"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// GCMM
+		q = "SELECT COUNT(*) FROM events inner join global.catGCMM on type=eventName;"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// WGRP
+		q = "SELECT COUNT(*) FROM events inner join global.catWGRP on type=eventName;"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// WGRP - wait
+		q = "SELECT COUNT(*) FROM events where type =\"EvWgWait\";"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// WGRP - add
+		q = "SELECT COUNT(*) FROM events where type =\"EvWgAdd\";"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// WGRP - done
+		q = "SELECT COUNT(*) FROM events where type =\"EvWgDone\";"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// CH-send
+		q = "SELECT COUNT(*) FROM events where type =\"EvChSend\";"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+
+		// CH-Recv
+		q = "SELECT COUNT(*) FROM events where type =\"EvChRecv\";"
+		res, err = db.Query(q)
+		check(err)
+		if res.Next(){
+			err = res.Scan(&cnt)
+			check(err)
+			line = line + strconv.Itoa(cnt) + ","
+		}
+		res.Close()
+		fmt.Println(dbName+","+line)
+		db.Close()
+	}
+}
 
 //func Dev(dbName,hbtable, outdir string){
 func Dev(){
