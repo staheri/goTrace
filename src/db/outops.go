@@ -14,7 +14,7 @@ import (
 
 )
 
-func Dev2(binSize int){
+func Dev2(binSize int, dbName string){
 	// Variables
 	//var q, event             string
 	//var report, tmp          string
@@ -29,116 +29,28 @@ func Dev2(binSize int){
 	var line                string
 	//var _arg,_val        			string
 	var length   			int
-
-	for i:=0 ; i < 24 ; i++{
-		dbName := "fft2X"+strconv.Itoa(i)
-		line = ""
-		db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		// Trace size
-		q = "SELECT COUNT(*) FROM events;"
-		res, err := db.Query(q)
-		check(err)
-		if res.Next(){
-			err = res.Scan(&cnt)
-			check(err)
-			line = line + strconv.Itoa(cnt) + ","
-		}
-		res.Close()
-
-		// PROC
-		q = "SELECT COUNT(*) FROM events inner join global.catPROC on type=eventName;"
-		res, err = db.Query(q)
-		check(err)
-		if res.Next(){
-			err = res.Scan(&cnt)
-			check(err)
-			line = line + strconv.Itoa(cnt) + ","
-		}
-		res.Close()
-
-		// GCMM
-		q = "SELECT COUNT(*) FROM events inner join global.catGCMM on type=eventName;"
-		res, err = db.Query(q)
-		check(err)
-		if res.Next(){
-			err = res.Scan(&cnt)
-			check(err)
-			line = line + strconv.Itoa(cnt) + ","
-		}
-		res.Close()
-
-		// WGRP
-		q = "SELECT COUNT(*) FROM events inner join global.catWGRP on type=eventName;"
-		res, err = db.Query(q)
-		check(err)
-		if res.Next(){
-			err = res.Scan(&cnt)
-			check(err)
-			line = line + strconv.Itoa(cnt) + ","
-		}
-		res.Close()
-
-		// WGRP - wait
-		q = "SELECT COUNT(*) FROM events where type =\"EvWgWait\";"
-		res, err = db.Query(q)
-		check(err)
-		if res.Next(){
-			err = res.Scan(&cnt)
-			check(err)
-			line = line + strconv.Itoa(cnt) + ","
-		}
-		res.Close()
-
-		// WGRP - add
-		q = "SELECT COUNT(*) FROM events where type =\"EvWgAdd\";"
-		res, err = db.Query(q)
-		check(err)
-		if res.Next(){
-			err = res.Scan(&cnt)
-			check(err)
-			line = line + strconv.Itoa(cnt) + ","
-		}
-		res.Close()
-
-		// WGRP - done
-		q = "SELECT COUNT(*) FROM events where type =\"EvWgDone\";"
-		res, err = db.Query(q)
-		check(err)
-		if res.Next(){
-			err = res.Scan(&cnt)
-			check(err)
-			line = line + strconv.Itoa(cnt) + ","
-		}
-		res.Close()
-
-		// CH-send
-		q = "SELECT COUNT(*) FROM events where type =\"EvChSend\";"
-		res, err = db.Query(q)
-		check(err)
-		if res.Next(){
-			err = res.Scan(&cnt)
-			check(err)
-			line = line + strconv.Itoa(cnt) + ","
-		}
-		res.Close()
-
-		// CH-Recv
-		q = "SELECT COUNT(*) FROM events where type =\"EvChRecv\";"
-		res, err = db.Query(q)
-		check(err)
-		if res.Next(){
-			err = res.Scan(&cnt)
-			check(err)
-			line = line + strconv.Itoa(cnt) + ","
-		}
-		res.Close()
-		fmt.Println(dbName+","+line)
-		db.Close()
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
 	}
+
+	// Trace size
+	q = "SELECT COUNT(*) FROM events;"
+	res, err := db.Query(q)
+	check(err)
+	if res.Next(){
+		err = res.Scan(&length)
+		check(err)
+	}
+	res.Close()
+
+	// for i=0 ... binSize:
+	//		calculate start & end
+	//    initate the freq data structure
+	//    count numbers
+	//    for map[binIDX(start-end)]=[vector of counts per category]
+	//    format for visualization
+	db.Close()
 }
 
 //func Dev(dbName,hbtable, outdir string){
