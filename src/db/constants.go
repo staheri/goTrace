@@ -150,7 +150,7 @@ const num_of_atrmodes = 9
 
 var ctgDescriptions = [num_of_ctgs]struct {
 	Category      string
-	Members    []string
+	Members      []string
 }{
 	catGRTN :  {"GRTN", []string{"EvGoCreate","EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoWaiting","EvGoInSyscall","EvGoStartLocal","EvGoUnblockLocal","EvGoSysExitLocal","EvGoStartLabel","EvGoBlockGC"}},
   catCHNL :  {"CHNL",[]string{"EvChSend","EvChRecv","EvChMake","EvChClose"}},

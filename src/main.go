@@ -116,7 +116,7 @@ func main(){
       hbtable := db.HBTable(dbName,tl...)
       db.Dev(dbName,hbtable, flagOut)
     }*/
-    db.Dev()
+    db.Dev2(2,dbName)
 
 
     //db.HBLog(dbName,flagOut,true)

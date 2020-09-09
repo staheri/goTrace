@@ -11,12 +11,14 @@ import (
 	"strings"
 	"bytes"
 	"github.com/jedib0t/go-pretty/table"
-
+	"util"
 )
+
+
 
 func Dev2(binSize int, dbName string){
 	// Variables
-	//var q, event             string
+	var q, event             string
 	//var report, tmp          string
 	//var file, funct          string
 	//var g,logclock     int
@@ -25,8 +27,8 @@ func Dev2(binSize int, dbName string){
 	//var close_eid, close_gid int
 	//var line                 int
 	//var val, pos, eid        int*/
-	var q        string
-	var line                string
+	//var q        string
+	//var line                string
 	//var _arg,_val        			string
 	var length   			int
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -43,6 +45,37 @@ func Dev2(binSize int, dbName string){
 		check(err)
 	}
 	res.Close()
+
+	data := make(map[int]string) // key: id val: event
+	freq := make(map[int][]int) // key: chunck# val: [catX freqs] len:8
+	q = "SELECT type FROM events;"
+	res, err = db.Query(q)
+	check(err)
+	for res.Next(){
+		err = res.Scan(&event)
+		check(err)
+		data[len(data)+1]=event
+	}
+	res.Close()
+	chunkSize := len(data)/20
+	start := 1
+	end   := start + chunkSize
+	for i:=0 ; i<20 ; i++{
+		freq[i] = make([]int,num_of_ctgs)
+		start = i * chunkSize + 1
+		end   = start + chunkSize
+		for j := start ; j < end ; j++{
+			for k := 0 ; k < num_of_ctgs ; k++{
+				if util.Contains(ctgDescriptions[k].Members, data[j]){
+					freq[i][k]++
+				}
+			}
+		}
+		fmt.Printf("chunk# %v\n",i)
+		for k,item := range freq[i]{
+			fmt.Printf("\t%v:  %v\n",ctgDescriptions[k].Category,item)
+		}
+	}
 
 	// for i=0 ... binSize:
 	//		calculate start & end
