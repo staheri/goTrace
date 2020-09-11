@@ -655,9 +655,9 @@ func checka(U PS, a []rat, str string) {
 
 func main() {
 	Init()
-	check(Ones, one, 5, "Ones")
-	/*
+	//check(Ones, one, 5, "Ones")
 	check(Add(Ones, Ones), itor(2), 0, "Add Ones Ones") // 1 1 1 1 1
+	/*
 	check(Add(Ones, Twos), itor(3), 0, "Add Ones Twos") // 3 3 3 3 3
 	a := make([]rat, N)
 	d := Diff(Ones)

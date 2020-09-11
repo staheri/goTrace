@@ -14,9 +14,71 @@ import (
 	"util"
 )
 
+func Gtree(dbName string){
+	// Variables
+	var q            string
+	//var report, tmp          string
+	//var file, funct          string
+	var g,parent,ended     int
+	var stkn,stk0     sql.NullString
+	//var make_eid, make_gid   int
+	//var close_eid, close_gid int
+	//var line                 int
+	//var val, pos, eid        int*/
+	var label   string
+	//var q        string
+	//var line                string
+	//var _arg,_val        			string
+	nodes := make(map[int]string) //key: id, val: label
+	edges := make(map[int][]int) //key: parent_id, val: child_id
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Trace size
+	q = "SELECT gid,parent_id,ended,createLoc,createLoc0 FROM goroutines;"
+	res, err := db.Query(q)
+	check(err)
+	for res.Next(){
+		err = res.Scan(&g,&parent,&ended,&stkn,&stk0)
+		check(err)
+		label = "[ label = \"{"
+		label = label + strconv.Itoa(g)
+		label = label + " | "
+		if stkn.Valid && stk0.Valid {
+			label = label + "bot_stack: "+stkn.String+" \\l top_stack:"+stk0.String+"\\l"
+		}else{
+			label = label + "bot_stack: - \\l top_stack:-\\l"
+		}
+		label = label + "}\""
+		if ended != -1{
+			label = label + " style=bold ]"
+		} else{
+			label = label + " style=dashed]"
+		}
+		nodes[g] = label
+		edges[parent] = append(edges[parent],g)
+	}
+	res.Close()
+	out := "digraph{\n\tnode[shape=record,style=filled,fillcolor=gray95]\n\n\t"
+	for k,v := range nodes{
+		out = out +strconv.Itoa(k) + " " + v + "\n\t"
+	}
+	out = out + "\n\n\t"
+	for k,v := range edges{
+		if k != -1{
+			for _,vv := range v{
+				out = out + strconv.Itoa(k) + " -> " + strconv.Itoa(vv) + "\n\t"
+			}
+		}
+	}
+	out = out + "}"
+	fmt.Println(out)
+}
 
 
-func Dev2(binSize int, dbName string){
+func Histogram(binSize int, dbName string){
 	// Variables
 	var q, event             string
 	//var report, tmp          string
