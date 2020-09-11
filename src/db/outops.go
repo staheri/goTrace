@@ -16,10 +16,10 @@ import (
 
 func Gtree(dbName string){
 	// Variables
-	var q            string
+	var q,event            string
 	//var report, tmp          string
 	//var file, funct          string
-	var g,parent,ended     int
+	var g,parent,ended,_g     int
 	var stkn,stk0     sql.NullString
 	//var make_eid, make_gid   int
 	//var close_eid, close_gid int
@@ -37,20 +37,49 @@ func Gtree(dbName string){
 	}
 
 	// Trace size
-	q = "SELECT gid,parent_id,ended,createLoc,createLoc0 FROM goroutines;"
+	q = "SELECT id,gid,parent_id,ended,createLoc,createLoc0 FROM goroutines;"
 	res, err := db.Query(q)
 	check(err)
 	for res.Next(){
-		err = res.Scan(&g,&parent,&ended,&stkn,&stk0)
+		err = res.Scan(&_g,&g,&parent,&ended,&stkn,&stk0)
 		check(err)
 		label = "[ label = \"{"
-		label = label + strconv.Itoa(g)
+		label = label + strconv.Itoa(_g-1)
 		label = label + " | "
 		if stkn.Valid && stk0.Valid {
 			label = label + "bot_stack: "+stkn.String+" \\l top_stack:"+stk0.String+"\\l"
 		}else{
 			label = label + "bot_stack: - \\l top_stack:-\\l"
 		}
+
+		label = label + " | "
+		// now add event histogram to the goroutine
+
+		//data := make(map[int]string)  // key: id val: event
+		freq := make([]int,num_of_ctgs) //[catX freqs] len:8
+
+		q = "SELECT type FROM events WHERE g="+strconv.Itoa(g)+";"
+		res1, err1 := db.Query(q)
+		check(err1)
+		for res1.Next(){
+			err = res1.Scan(&event)
+			check(err)
+
+			for k := 0 ; k < num_of_ctgs ; k++{
+				if util.Contains(ctgDescriptions[k].Members,event){
+					freq[k]++
+				}
+			}
+		}
+		res1.Close()
+		fmt.Printf("G %v\n",_g-1)
+		for k,item := range freq{
+			s := fmt.Sprintf("%v:  %v \\l ",ctgDescriptions[k].Category,item)
+			fmt.Println(s)
+			label = label + s
+		}
+
+		// rest
 		label = label + "}\""
 		if ended != -1{
 			label = label + " style=bold ]"
@@ -78,7 +107,7 @@ func Gtree(dbName string){
 }
 
 
-func Histogram(binSize int, dbName string){
+func Histogram(t float64, dbName string){
 	// Variables
 	var q, event             string
 	//var report, tmp          string
