@@ -1,0 +1,22 @@
+digraph{
+	node[shape=record,style=filled,fillcolor=gray95]
+
+	0 [ label = "{0 | bot_stack: - \l top_stack:-\l | GRTN:  6 \l CHNL:  0 \l WGRP:  0 \l MUTX:  0 \l PROC:  27 \l GCMM:  0 \l SYSC:  0 \l MISC:  0 \l }" style=dashed]
+	1 [ label = "{1 | bot_stack: context-withCancel.go:main.main:12 \l top_stack:context-withCancel.go:main.main:12\l | GRTN:  15 \l CHNL:  7 \l WGRP:  0 \l MUTX:  6 \l PROC:  1 \l GCMM:  12 \l SYSC:  5 \l MISC:  0 \l }" style=dashed]
+	2 [ label = "{2 | bot_stack: context-withCancel.go:main.main:12 \l top_stack:context-withCancel.go:main.main:12\l | GRTN:  1 \l CHNL:  0 \l WGRP:  0 \l MUTX:  0 \l PROC:  0 \l GCMM:  0 \l SYSC:  0 \l MISC:  0 \l }" style=dashed]
+	3 [ label = "{3 | bot_stack: context-withCancel.go:main.main:12 \l top_stack:context-withCancel.go:main.main:12\l | GRTN:  1 \l CHNL:  0 \l WGRP:  0 \l MUTX:  0 \l PROC:  0 \l GCMM:  0 \l SYSC:  0 \l MISC:  0 \l }" style=dashed]
+	4 [ label = "{4 | bot_stack: context-withCancel.go:main.main:12 \l top_stack:context-withCancel.go:main.main:12\l | GRTN:  1 \l CHNL:  0 \l WGRP:  0 \l MUTX:  0 \l PROC:  0 \l GCMM:  0 \l SYSC:  0 \l MISC:  0 \l }" style=dashed]
+	17 [ label = "{5 | bot_stack: context-withCancel.go:main.main:12 \l top_stack:context-withCancel.go:main.main:12\l | GRTN:  1 \l CHNL:  0 \l WGRP:  0 \l MUTX:  0 \l PROC:  0 \l GCMM:  0 \l SYSC:  0 \l MISC:  0 \l }" style=dashed]
+	18 [ label = "{6 | bot_stack: context-withCancel.go:main.main:12 \l top_stack:trace.go:runtime\trace.Start:127\l | GRTN:  2 \l CHNL:  0 \l WGRP:  0 \l MUTX:  0 \l PROC:  0 \l GCMM:  0 \l SYSC:  1 \l MISC:  0 \l }" style=dashed]
+	19 [ label = "{7 | bot_stack: context-withCancel.go:main.main:37 \l top_stack:context-withCancel.go:main.main.func2:21\l | GRTN:  11 \l CHNL:  7 \l WGRP:  0 \l MUTX:  12 \l PROC:  0 \l GCMM:  2 \l SYSC:  0 \l MISC:  0 \l }" style=bold ]
+	
+
+	0 -> 1
+	0 -> 2
+	0 -> 3
+	0 -> 4
+	0 -> 17
+	1 -> 18
+	1 -> 19
+	}
+
