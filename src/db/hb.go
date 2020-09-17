@@ -203,6 +203,8 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 					predClk  = sql.NullInt64{Valid:true, Int64: int64(vv.clock)}
 				}else{
 					// Receiver without a matching sender
+					// might be found later
+					msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] = eventPredecessor{g, localClock[g]}
 					predG = sql.NullInt64{}
 					predClk = sql.NullInt64{}
 				}
@@ -211,16 +213,20 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 				if event == "ChSend"{
 					//rval = sql.NullInt32{Valid:true, Int32: int32(e.Args[2])} // message val
 					// Set Predecessor for a receive (key to the event: {cid, eid, val})
-					if _,ok := msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] ; !ok{
-						msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] = eventPredecessor{g, localClock[g]}
+					if vv,ok := msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] ; ok{
+						predG    = sql.NullInt64{Valid:true, Int64: int64(vv.g)}
+						predClk  = sql.NullInt64{Valid:true, Int64: int64(vv.clock)}
 					} else{ // a send for this particular message has been stored before
-						panic("Previously stored as sent!")
+						msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] = eventPredecessor{g, localClock[g]}
+						predG = sql.NullInt64{}
+						predClk = sql.NullInt64{}
+						//panic("Previously stored as sent!")
 					}
-				}//else{ // ChMake. ChClose
+				}else{ // ChMake. ChClose
 				//	rval = sql.NullInt32{}
-				//}
 				predG = sql.NullInt64{}
 				predClk = sql.NullInt64{}
+				}
 			}
 		} else if linkoff.Valid{
 			// Set Predecessor for an event (key to the event: TS)
