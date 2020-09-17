@@ -528,7 +528,7 @@ func ChannelReport(dbName string){
 	defer chcloseLocStmt.Close()
 
 	// query to obtain send/recv for channelID=cid
-	chsendrecvStmt,err := db.Prepare(`SELECT t1.id, t1.type, t1.ts, t1.g FROM Events t1 INNER JOIN global.catCHNL t2 ON t1.type=t2.eventName INNER JOIN Args t3 ON t1.id=t3.eventID WHERE t3.arg="cid" AND t3.value=? AND (t1.type="EvChSend" OR t1.type="EvChRecv") ORDER BY t1.ts`)
+	chsendrecvStmt,err := db.Prepare(`SELECT t1.id, t1.type, t1.ts, t1.g FROM Events t1 WHERE t1.rid=? AND (t1.type="EvChSend" OR t1.type="EvChRecv") ORDER BY t1.ts`)
 	check(err)
 	defer chsendrecvStmt.Close()
 
@@ -598,7 +598,7 @@ func ChannelReport(dbName string){
 
 		// now generate table
 		//fmt.Printf("Executing: %v\n",q)
-		res1, err1 := chsendrecvStmt.Query(cid)
+		res1, err1 := chsendrecvStmt.Query("C"+strconv.Itoa(cid))
 		check(err1)
 
 		t := table.NewWriter()
