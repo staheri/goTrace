@@ -9,7 +9,7 @@ func main(){
 		results := make(chan int,4)
 		go func() {
 			defer close(results)
-			for i := 0; i <= 3; i++ {
+			for i := 0; i <= 4; i++ {
 				results <- i
 			}
 		}()
