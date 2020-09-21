@@ -141,7 +141,7 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 
 
 	// Init vector clocks
-	msgs          := make(map[msgKey]eventPredecessor) // storing (to be) pred of a recv
+	msgs          := make(map[msgKey]eventPredecessor) // storing (to be) pred of a send/recv
 	links         := make(map[int64]eventPredecessor) // storing (to be) pred of an event
 	// Resource clocks
 	localClock    := make(map[uint64]uint64) // vc[g]           = local clock
@@ -196,14 +196,17 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 				panic("_rid")
 			}
 			if event == "ChRecv"{
+				fmt.Printf("Recv\n")
 				//rval = sql.NullInt32{Valid:true, Int32: int32(e.Args[2])} // message val
 				if vv,ok := msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] ; ok{
 					// A matching sent is found for the recv
+					fmt.Printf("\tMatching sent is found\n")
 					predG    = sql.NullInt64{Valid:true, Int64: int64(vv.g)}
 					predClk  = sql.NullInt64{Valid:true, Int64: int64(vv.clock)}
 				}else{
 					// Receiver without a matching sender
 					// might be found later
+					fmt.Printf("\tNo matching (store null for predG,PredCLK)\n\tStore msg[%v,%v,%v] = g:%v localClock:%v",_rid,uint64(reid.Int64),uint64(rval.Int64),g, localClock[g])
 					msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] = eventPredecessor{g, localClock[g]}
 					predG = sql.NullInt64{}
 					predClk = sql.NullInt64{}
@@ -213,19 +216,23 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 				if event == "ChSend"{
 					//rval = sql.NullInt32{Valid:true, Int32: int32(e.Args[2])} // message val
 					// Set Predecessor for a receive (key to the event: {cid, eid, val})
+					fmt.Printf("Send\n")
 					if vv,ok := msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] ; ok{
+						fmt.Printf("\tMatching recv is found\n")
 						predG    = sql.NullInt64{Valid:true, Int64: int64(vv.g)}
 						predClk  = sql.NullInt64{Valid:true, Int64: int64(vv.clock)}
 					} else{ // a send for this particular message has been stored before
 						msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] = eventPredecessor{g, localClock[g]}
+						fmt.Printf("\tNo matching (store null for predG,PredCLK)\n\tStore msg[%v,%v,%v] = g:%v localClock:%v",_rid,uint64(reid.Int64),uint64(rval.Int64),g, localClock[g])
 						predG = sql.NullInt64{}
 						predClk = sql.NullInt64{}
 						//panic("Previously stored as sent!")
 					}
 				}else{ // ChMake. ChClose
 				//	rval = sql.NullInt32{}
-				predG = sql.NullInt64{}
-				predClk = sql.NullInt64{}
+					fmt.Printf("Make/Close (null predG predClk)\n")
+					predG = sql.NullInt64{}
+					predClk = sql.NullInt64{}
 				}
 			}
 		} else if linkoff.Valid{
