@@ -54,8 +54,8 @@ const (
 	EvUserTaskEnd       = 46 // end of task [timestamp, internal task id, stack]
 	EvUserRegion        = 47 // trace.WithRegion [timestamp, internal task id, mode(0:start, 1:end), stack, name string]
 	EvUserLog           = 48 // trace.Log [timestamp, internal id, key string id, stack, value string]
-	EvChSend            = 49 // goTrace: chan send [timestamp, stack, event id, channel id, value]
-	EvChRecv            = 50 // goTrace: chan recv [timestamp, stack, event id, channel id, value]
+	EvChSend            = 49 // goTrace: chan send [timestamp, stack, channel id, ch_event id, value]
+	EvChRecv            = 50 // goTrace: chan recv [timestamp, stack, channel id, ch_event id, value]
 	EvChMake            = 51 // goTrace: chan make [timestamp, stack, channel id]
 	EvChClose           = 52 // goTrace: chan close [timestamp, stack, channel id]
 	EvWgAdd             = 53 // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
@@ -128,8 +128,8 @@ var EventDescriptions = [EvCount]struct {
 	EvUserTaskEnd:       {"UserTaskEnd", 1011, true, []string{"taskid"}, nil},
 	EvUserRegion:        {"UserRegion", 1011, true, []string{"taskid", "mode", "typeid"}, []string{"name"}},
 	EvUserLog:           {"UserLog", 1011, true, []string{"id", "keyid"}, []string{"category", "message"}},
-	EvChSend:            {"ChSend", 1011, true, []string{"eid","cid","val","pos"}, nil}, // goTrace
-	EvChRecv:            {"ChRecv", 1011, true, []string{"eid","cid","val","pos"}, nil}, // goTrace
+	EvChSend:            {"ChSend", 1011, true, []string{"cid","cheid","val","pos"}, nil}, // goTrace
+	EvChRecv:            {"ChRecv", 1011, true, []string{"cid","cheid","val","pos"}, nil}, // goTrace
 	EvChMake:            {"ChMake", 1011, true, []string{"cid"}, nil}, // goTrace
 	EvChClose:           {"ChClose", 1011, true, []string{"cid"}, nil}, // goTrace
 	EvWgAdd:             {"WgAdd", 1011, true, []string{"wid","val"}, nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
