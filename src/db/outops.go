@@ -491,11 +491,13 @@ func ChannelReport(dbName string){
 	var q, event             string
 	var report, tmp          string
 	var file, funct          string
+	var createDesc,closeDesc string
 	var id, cid, ts, gid     int
 	var make_eid, make_gid   int
 	var close_eid, close_gid int
 	var line                 int
 	var val, pos, eid        int
+
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -556,6 +558,8 @@ func ChannelReport(dbName string){
 		if err != nil{
 			panic(err)
 		}
+		commTypes := make(map[int][]int) // commTypes[gid] = []10 categories of messages
+
 		report = "Channel global ID: "+strconv.Itoa(cid)+"\n"
 		report = report + "Owner: "
 		// Now generate reports
@@ -575,6 +579,7 @@ func ChannelReport(dbName string){
 				//report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
 			}
 			res1.Close()
+			createDesc = "G"+strconv.Itoa(make_gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
 			report = report + "G"+strconv.Itoa(make_gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
 		} else{ // global declaration of channel
 			report = report + "N/A (e.g., created globaly)\n"
@@ -588,9 +593,11 @@ func ChannelReport(dbName string){
 			for res1.Next(){
 				err1 = res1.Scan(&file,&funct,&line)
 				check(err1)
+
 				//report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
 			}
 			res1.Close()
+			closeDesc = "G"+strconv.Itoa(close_gid)+": "+file+">"+funct+":"+strconv.Itoa(line)
 			report = report + "Yes, G"+strconv.Itoa(close_gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
 		} else{ // global declaration of channel
 			report = report + "No\n"
@@ -601,15 +608,28 @@ func ChannelReport(dbName string){
 		res1, err1 := chsendrecvStmt.Query("C"+strconv.Itoa(cid))
 		check(err1)
 
+		rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
+
 		t := table.NewWriter()
 		t.SetOutputMirror(os.Stdout)
 		t.AppendHeader(table.Row{"TS","Send", "Recv"})
+
+		detail_table := table.NewWriter()
+		detail_table.SetOutputMirror(os.Stdout)
+
+    detail_table.AppendHeader(table.Row{"Channel\nGoroutine","Creates","Send","Send","Send","Send","TOT Send","Recv","Recv","Recv","Recv","Recv","TOT Recv","Close","Total"}, rowConfigAutoMerge)
+    detail_table.AppendHeader(table.Row{"","","vacant","blocked","recv-ready","select","","onClose","direct","blocked","send-ready","select","","",""})
 
 		for res1.Next(){
 			err1 = res1.Scan(&id,&event,&ts,&gid)
 			check(err1)
 
-			// now find stack entry for current row
+			// add g to commTypes map
+			if _,ok := commTypes[gid]; !ok{
+				commTypes[gid] = []int{0,0,0,0,0,0,0,0,0}
+			}
+
+			// find stack entry for current row
 		 	res2, err2 := stackEntryStmt.Query(id)
 		 	check(err2)
 			for res2.Next(){
@@ -619,8 +639,6 @@ func ChannelReport(dbName string){
 				}
 			}
 			res2.Close()
-			var row []interface{}
-			row = append(row,ts)
 
 
 			res4,err := valStmt.Query(id)
@@ -657,9 +675,16 @@ func ChannelReport(dbName string){
 				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-XX\n"
 			}
 			*/
-			tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+">"+strconv.Itoa(val)+"#"+strconv.Itoa(eid)+"@"+strconv.Itoa(pos)+"\n"
+			tmp = "G"+strconv.Itoa(gid)+": "+file+":"+funct+":"+strconv.Itoa(line)+":"+strconv.Itoa(val)+"#"+strconv.Itoa(eid)+"@"+strconv.Itoa(pos)+"\n"
 			res4.Close()
 			res5.Close()
+			res6.Close()
+
+			fmt.Println(event,pos,indexOf(pos,event))
+			commTypes[gid][indexOf(pos,event)]++
+
+			var row []interface{}
+			row = append(row,ts)
 
 			if event == "EvChSend"{
 				row = append(row,tmp)
@@ -670,8 +695,119 @@ func ChannelReport(dbName string){
 			}
 			t.AppendRow(row)
 		}
+
+
+		rowTotSend := make(map[int]int) // rowtot[g] = total of row g
+		rowTotRecv := make(map[int]int) // rowtot[g] = total of row g
+		colTot := make(map[int]int) // rowtot[g] = total of row g
+
+		for idx := 0 ; idx < 12 ; idx++{
+			colTot[idx]=0
+		}
+		for k,v := range commTypes{
+			// clear row
+			var row []interface{}
+			//row=row[:0] // clear row
+
+			// init rowtot
+			rowTotSend[k] = 0
+			rowTotRecv[k] = 0
+
+			//G
+			row = append(row,"G"+strconv.Itoa(k))
+
+			// Make
+			if k == make_gid {
+				row = append(row,createDesc)
+			} else{
+				row = append(row,"-")
+			}
+
+			// vacant
+			row = append(row,v[0])
+			rowTotSend[k] += v[0]
+			colTot[0] += v[0]
+
+			// s-blocked
+			row = append(row,v[1])
+			rowTotSend[k] += v[1]
+			colTot[1] += v[1]
+
+			// recv-ready
+			row = append(row,v[2])
+			rowTotSend[k] += v[2]
+			colTot[2] += v[2]
+
+			// s-select
+			row = append(row,v[3])
+			rowTotSend[k] += v[3]
+			colTot[3] += v[3]
+
+			// total send
+			row = append(row,rowTotSend[k])
+			colTot[4] += rowTotSend[k]
+
+			// onClose
+			row = append(row,v[4])
+			rowTotRecv[k] += v[4]
+			colTot[5] += v[4]
+
+			// direct
+			row = append(row,v[5])
+			rowTotRecv[k] += v[5]
+			colTot[6] += v[5]
+
+			// r-blocked
+			row = append(row,v[6])
+			rowTotRecv[k] += v[6]
+			colTot[7] += v[6]
+
+			// send-ready
+			row = append(row,v[7])
+			rowTotRecv[k] += v[7]
+			colTot[8] += v[7]
+
+			// select
+			row = append(row,v[8])
+			rowTotRecv[k] += v[8]
+			colTot[9] += v[8]
+
+			// total recv
+			row = append(row,rowTotRecv[k])
+			colTot[10] += rowTotRecv[k]
+
+			// Close
+			if k == close_gid {
+				row = append(row,closeDesc)
+			} else{
+				row = append(row,"-")
+			}
+
+			// total
+			row = append(row,rowTotRecv[k]+rowTotSend[k])
+			colTot[11] += rowTotRecv[k]+rowTotSend[k]
+
+
+			detail_table.AppendRow(row)
+		}
+
+		//row=row[:0] // clear row
+		var row []interface{}
+
+		row = append(row,"Total")
+		row = append(row,"-")
+		for idx := 0 ; idx < 11 ; idx++{
+			row = append(row,colTot[idx])
+		}
+		row = append(row,"-")
+		row = append(row,colTot[11])
+
+		detail_table.AppendRow(row)
+
 		fmt.Printf("%v\n",report)
+
 		t.Render()
+		detail_table.Render()
 		res1.Close()
 		//fmt.Printf("%v\n",report)
 		//t.RenderMarkdown()

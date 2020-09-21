@@ -145,3 +145,20 @@ func appGoroutineFinder(db *sql.DB) (appGss []int){
 	}
 	return appGss
 }
+
+func indexOf(pos int, event string) int {
+	switch event {
+	case "EvChSend":
+		return pos-1
+	case "EvChRecv":
+		if pos == 4 || pos == 5 {
+			return 7
+		}else if  pos == 6 || pos == 7 {
+			return 8
+		}else{
+			return pos+3
+		}
+	default:
+		return 0
+	}
+}
