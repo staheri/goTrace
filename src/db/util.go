@@ -162,3 +162,42 @@ func indexOf(pos int, event string) int {
 		return 0
 	}
 }
+
+func descOf(pos int, event string) string {
+	switch event {
+	case "EvChSend":
+		switch pos {
+		case 1:
+			return "vacant"
+		case 2:
+			return "blocked"
+		case 3:
+			return "recv-ready"
+		case 4:
+			return "select"
+		default:
+			return "unknown"
+		}
+	case "EvChRecv":
+		switch pos {
+		case 1:
+			return "onClose"
+		case 2:
+			return "direct"
+		case 3:
+			return "blocked"
+		case 4:
+			return "send-ready"
+		case 5:
+			return "send-ready"
+		case 6:
+			return "select"
+		case 7:
+			return "select"
+		default:
+			return "unknown"
+		}
+	default:
+		return "unknown"
+	}
+}

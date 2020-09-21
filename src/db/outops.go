@@ -14,7 +14,7 @@ import (
 	"util"
 )
 
-func Gtree(dbName string){
+func Gtree(dbName, outdir string){
 	// Variables
 	var q,event            string
 	//var report, tmp          string
@@ -103,6 +103,28 @@ func Gtree(dbName string){
 		}
 	}
 	out = out + "}"
+	fdot,err := os.Create(outdir+"/"+dbName+"_gtree.dot")
+	check(err)
+	fdot.WriteString(out)
+	fdot.Close()
+
+	// Create pdf
+	_cmd := "dot -Tpdf "+ outdir+"/"+dbName+"_gtree.dot" + " -o " + outdir+"/"+dbName+"_gtree.pdf"
+
+	cmd := exec.Command("dot","-Tpdf",outdir+"/"+dbName+"_gtree.dot","-o",outdir+"/"+dbName+"_gtree.pdf")
+	fmt.Printf(">>> Executing %s...\n",_cmd)
+	//err = cmd.Run()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+    fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+    return
+	}
+	fmt.Println("Result: " + stdout.String())
+
 	fmt.Println(out)
 }
 
@@ -485,11 +507,11 @@ func WordData(dbName, outdir, filter string, chunkSize int){
 	f.Close()
 }
 
-func ChannelReport(dbName string){
+func ChannelReport(dbName, outdir string){
 
 	// Variables
 	var q, event             string
-	var report, tmp          string
+	var tmp          string
 	var file, funct          string
 	var createDesc,closeDesc string
 	var id, cid, ts, gid     int
@@ -538,7 +560,7 @@ func ChannelReport(dbName string){
 	check(err)
 	defer valStmt.Close()
 
-	eidStmt,err := db.Prepare("SELECT value from args where eventID=? and arg=\"eid\"")
+	eidStmt,err := db.Prepare("SELECT value from args where eventID=? and arg=\"cheid\"")
 	check(err)
 	defer eidStmt.Close()
 
@@ -552,6 +574,8 @@ func ChannelReport(dbName string){
 	check(err)
 	defer stackEntryStmt.Close()
 
+	mdtab := ""
+
 	// Generate report for each channel
 	for res.Next(){
 		err = res.Scan(&id,&cid,&make_eid,&make_gid,&close_eid,&close_gid)
@@ -559,16 +583,6 @@ func ChannelReport(dbName string){
 			panic(err)
 		}
 		commTypes := make(map[int][]int) // commTypes[gid] = []10 categories of messages
-
-		report = "Channel global ID: "+strconv.Itoa(cid)+"\n"
-		report = report + "Owner: "
-		// Now generate reports
-		// Channel ID:
-		// Owner: Goroutine ID + file + func
-		// Closed:
-		// Generate the tables of sends/recvs
-
-
 
 		if make_eid != -1{
 			res1, err1 := chmakeLocStmt.Query(cid)
@@ -579,13 +593,8 @@ func ChannelReport(dbName string){
 				//report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
 			}
 			res1.Close()
-			createDesc = "G"+strconv.Itoa(make_gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
-			report = report + "G"+strconv.Itoa(make_gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
-		} else{ // global declaration of channel
-			report = report + "N/A (e.g., created globaly)\n"
+			createDesc = "G"+strconv.Itoa(make_gid)+"<br>"+file+"<br>"+funct+":"+strconv.Itoa(line)
 		}
-
-		report = report + "Closed? "
 
 		if close_eid != -1{
 			res1, err1 := chcloseLocStmt.Query(cid)
@@ -597,10 +606,7 @@ func ChannelReport(dbName string){
 				//report = report + "G"+strconv.Itoa(make_gid)+": "+file+" >> "+funct+"\n"
 			}
 			res1.Close()
-			closeDesc = "G"+strconv.Itoa(close_gid)+": "+file+">"+funct+":"+strconv.Itoa(line)
-			report = report + "Yes, G"+strconv.Itoa(close_gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"\n"
-		} else{ // global declaration of channel
-			report = report + "No\n"
+			closeDesc = "G"+strconv.Itoa(close_gid)+"<br>"+file+"<br>"+funct+":"+strconv.Itoa(line)
 		}
 
 		// now generate table
@@ -617,8 +623,15 @@ func ChannelReport(dbName string){
 		detail_table := table.NewWriter()
 		detail_table.SetOutputMirror(os.Stdout)
 
-    detail_table.AppendHeader(table.Row{"Channel\nGoroutine","Creates","Send","Send","Send","Send","TOT Send","Recv","Recv","Recv","Recv","Recv","TOT Recv","Close","Total"}, rowConfigAutoMerge)
+    detail_table.AppendHeader(table.Row{"Channel "+strconv.Itoa(cid),"Creates","Send","Send","Send","Send","TOT Send","Recv","Recv","Recv","Recv","Recv","TOT Recv","Close","Total"}, rowConfigAutoMerge)
     detail_table.AppendHeader(table.Row{"","","vacant","blocked","recv-ready","select","","onClose","direct","blocked","send-ready","select","","",""})
+
+		mdtab = mdtab + "|Channel "+strconv.Itoa(cid)+"|Creates|Send|Send|Send|Send|TOT Send|Recv|Recv|Recv|Recv|Recv|TOT Recv|Close|Total|\n"
+		mdtab = mdtab + "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|\n"
+		mdtab = mdtab + "|||vacant|blocked|recv-ready|select||onClose|direct|blocked|send-ready|select||||\n"
+
+		mdtab2 := "|TS|Send|Recv|\n"
+		mdtab2 = mdtab2 +  "|---|---|---|\n"
 
 		for res1.Next(){
 			err1 = res1.Scan(&id,&event,&ts,&gid)
@@ -675,13 +688,15 @@ func ChannelReport(dbName string){
 				tmp = "G"+strconv.Itoa(gid)+": "+file+">"+funct+":"+strconv.Itoa(line)+"-XX\n"
 			}
 			*/
-			tmp = "G"+strconv.Itoa(gid)+": "+file+":"+funct+":"+strconv.Itoa(line)+":"+strconv.Itoa(val)+"#"+strconv.Itoa(eid)+"@"+strconv.Itoa(pos)+"\n"
+			//tmp = "G"+strconv.Itoa(gid)+": "+file+":"+funct+":"+strconv.Itoa(line)+":"+strconv.Itoa(val)+"#"+strconv.Itoa(eid)+"("+strconv.Itoa(pos)+")"
+			tmp = "G"+strconv.Itoa(gid)+": "+file+":"+funct+":"+strconv.Itoa(line)+"("+descOf(pos,event)+")"
 			res4.Close()
 			res5.Close()
 			res6.Close()
 
 			fmt.Println(event,pos,indexOf(pos,event))
 			commTypes[gid][indexOf(pos,event)]++
+			mdtab2 = mdtab2 + "|"+strconv.Itoa(ts)+"|"
 
 			var row []interface{}
 			row = append(row,ts)
@@ -689,9 +704,11 @@ func ChannelReport(dbName string){
 			if event == "EvChSend"{
 				row = append(row,tmp)
 				row = append(row,"-")
+				mdtab2 = mdtab2 +tmp+"|-|\n"
 			}else{
 				row = append(row,"-")
 				row = append(row,tmp)
+				mdtab2 = mdtab2 +"-|"+tmp+"|\n"
 			}
 			t.AppendRow(row)
 		}
@@ -715,80 +732,98 @@ func ChannelReport(dbName string){
 
 			//G
 			row = append(row,"G"+strconv.Itoa(k))
+			mdtab = mdtab + "|" + "G"+strconv.Itoa(k)
 
 			// Make
 			if k == make_gid {
 				row = append(row,createDesc)
+				mdtab = mdtab + "|" + createDesc
 			} else{
 				row = append(row,"-")
+				mdtab = mdtab + "|-"
 			}
 
 			// vacant
 			row = append(row,v[0])
+			mdtab = mdtab + "|" + strconv.Itoa(v[0])
 			rowTotSend[k] += v[0]
 			colTot[0] += v[0]
 
 			// s-blocked
 			row = append(row,v[1])
+			mdtab = mdtab + "|" + strconv.Itoa(v[1])
 			rowTotSend[k] += v[1]
 			colTot[1] += v[1]
 
 			// recv-ready
 			row = append(row,v[2])
+			mdtab = mdtab + "|" + strconv.Itoa(v[2])
 			rowTotSend[k] += v[2]
 			colTot[2] += v[2]
 
 			// s-select
 			row = append(row,v[3])
+			mdtab = mdtab + "|" + strconv.Itoa(v[3])
 			rowTotSend[k] += v[3]
 			colTot[3] += v[3]
 
 			// total send
 			row = append(row,rowTotSend[k])
+			mdtab = mdtab + "|" + strconv.Itoa(rowTotSend[k])
 			colTot[4] += rowTotSend[k]
 
 			// onClose
 			row = append(row,v[4])
+			mdtab = mdtab + "|" + strconv.Itoa(v[4])
 			rowTotRecv[k] += v[4]
 			colTot[5] += v[4]
 
 			// direct
 			row = append(row,v[5])
+			mdtab = mdtab + "|" + strconv.Itoa(v[5])
 			rowTotRecv[k] += v[5]
 			colTot[6] += v[5]
 
 			// r-blocked
 			row = append(row,v[6])
+			mdtab = mdtab + "|" + strconv.Itoa(v[6])
 			rowTotRecv[k] += v[6]
 			colTot[7] += v[6]
 
 			// send-ready
 			row = append(row,v[7])
+			mdtab = mdtab + "|" + strconv.Itoa(v[7])
 			rowTotRecv[k] += v[7]
 			colTot[8] += v[7]
 
 			// select
 			row = append(row,v[8])
+			mdtab = mdtab + "|" + strconv.Itoa(v[8])
 			rowTotRecv[k] += v[8]
 			colTot[9] += v[8]
 
 			// total recv
 			row = append(row,rowTotRecv[k])
+			mdtab = mdtab + "|" + strconv.Itoa(rowTotRecv[k])
 			colTot[10] += rowTotRecv[k]
 
 			// Close
 			if k == close_gid {
 				row = append(row,closeDesc)
+				mdtab = mdtab + "|" +  closeDesc
 			} else{
 				row = append(row,"-")
+				mdtab = mdtab + "|-"
 			}
 
 			// total
 			row = append(row,rowTotRecv[k]+rowTotSend[k])
+			mdtab = mdtab + "|" +  strconv.Itoa(rowTotRecv[k]+rowTotSend[k])
 			colTot[11] += rowTotRecv[k]+rowTotSend[k]
 
-
+			mdtab = mdtab + "|\n"
 			detail_table.AppendRow(row)
+			//detail_table.AppendSeparator()
 		}
 
 		//row=row[:0] // clear row
@@ -796,24 +831,33 @@ func ChannelReport(dbName string){
 
 		row = append(row,"Total")
 		row = append(row,"-")
+		mdtab = mdtab + "|Total|-|"
 		for idx := 0 ; idx < 11 ; idx++{
 			row = append(row,colTot[idx])
+			mdtab = mdtab + strconv.Itoa(colTot[idx]) + "|"
 		}
+		mdtab = mdtab + "-|"+strconv.Itoa(colTot[11])+"|\n\n"
 		row = append(row,"-")
 		row = append(row,colTot[11])
 
-		detail_table.AppendRow(row)
+		detail_table.AppendFooter(row)
+		mdtab = mdtab + "\n\n" + mdtab2 + "\n\n"
 
-		fmt.Printf("%v\n",report)
+		fmt.Println(mdtab + "\n\n" + mdtab2 + "\n\n")
 
 		t.Render()
 		detail_table.Render()
 		res1.Close()
-		//fmt.Printf("%v\n",report)
-		//t.RenderMarkdown()
+
 	}
+
 	err=res.Close()
 	check(err)
+
+	f, err := os.Create(outdir+"/"+dbName+"_chans.md")
+	check(err)
+	f.WriteString(mdtab)
+	f.Close()
 }
 
 func MutexReport(dbName string){

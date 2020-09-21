@@ -76,7 +76,7 @@ func main(){
       }
       switch arg {
       case "CHNL":
-        db.ChannelReport(dbName)
+        db.ChannelReport(dbName,flagOut)
       case "MUTX":
         db.MutexReport(dbName)
         db.RWMutexReport(dbName)
@@ -110,13 +110,15 @@ func main(){
       fmt.Println("****")
       db.HBLog(dbName,hbtable,flagOut,false)
     }
+  case "gtree":
+    db.Gtree(dbName,flagOut)
   case "dev":
     /*for _,arg := range(flag.Args()){
       tl := strings.Split(arg,",")
       hbtable := db.HBTable(dbName,tl...)
       db.Dev(dbName,hbtable, flagOut)
     }*/
-    db.Gtree(dbName)
+    db.Gtree(dbName,flagOut)
     //db.Histogram(10,dbName)
 
 
@@ -145,7 +147,7 @@ func parseFlags() (){
   flag.Parse()
 
   // Check cmd
-  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" && flagCmd != "diff" && flagCmd != "dineData" && flagCmd != "cleanDB" && flagCmd != "dev" && flagCmd != "hb"{
+  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" && flagCmd != "diff" && flagCmd != "dineData" && flagCmd != "cleanDB" && flagCmd != "dev" && flagCmd != "hb" && flagCmd != "gtree"{
     util.PrintUsage()
     fmt.Printf("flagCMD: %s\n",flagCmd)
     panic("Wrong command")
