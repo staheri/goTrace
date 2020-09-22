@@ -47,9 +47,9 @@ func Gtree(dbName, outdir string){
 		label = label + strconv.Itoa(_g-1)
 		label = label + " | "
 		if stkn.Valid && stk0.Valid {
-			label = label + "bot_stack: "+stkn.String+" \\l top_stack:"+stk0.String+"\\l"
+			label = label + "STACK.BOT: "+stkn.String+" \\l STACK.TOP:"+stk0.String+"\\l"
 		}else{
-			label = label + "bot_stack: - \\l top_stack:-\\l"
+			label = label + "STACK.BOT: - \\l STACK.TOP:-\\l"
 		}
 
 		label = label + " | "
@@ -616,6 +616,8 @@ func ChannelReport(dbName, outdir string){
 
 		rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
 
+		closedIncluded := false
+
 		t := table.NewWriter()
 		t.SetOutputMirror(os.Stdout)
 		t.AppendHeader(table.Row{"TS","Send", "Recv"})
@@ -825,6 +827,65 @@ func ChannelReport(dbName, outdir string){
 			detail_table.AppendRow(row)
 			//detail_table.AppendSeparator()
 		}
+
+
+		if _,ok := commTypes[make_gid]; !ok && make_eid != -1 {
+			// case 1: close is in different g
+			//         prepare make row (without close)
+			//         add make row
+			//         continue
+			// case 2: close is in similar g
+			//         prepare make row (with close)
+			//         add make/close row
+			//         closeIncluded = true
+			// case 3: close is absent
+			//         prepare make row (without close)
+			//         add make row
+			//         continue
+			// else: make gid either does not exist or already included in commtype
+			var row []interface{}
+
+			row = append(row,"G"+strconv.Itoa(make_gid))
+			mdtab = mdtab + "|" + "G"+strconv.Itoa(make_gid)
+
+			row = append(row,createDesc)
+			mdtab = mdtab + "|" + createDesc
+
+			for idx := 0 ; idx < 11 ; idx++{
+				row = append(row,0)
+				mdtab = mdtab + "|0"
+			}
+			if close_gid == make_gid{ // close_gid is not in commtypes and is similar to make
+				row = append(row,closeDesc)
+				mdtab = mdtab + "|" + closeDesc
+
+				closedIncluded = true
+			} else{ // close_gid is not in commtypes, different from make or absent
+				row = append(row,"-")
+				mdtab = mdtab + "|-"
+			}
+			row = append(row,0)
+			mdtab = mdtab +"|0|\n"
+			detail_table.AppendRow(row)
+		}
+
+		// close_gid is not in commtypes, is not absent, and not included in make
+		if _,ok := commTypes[close_gid]; !ok && close_eid != -1 && !closedIncluded{
+			var row []interface{}
+			row = append(row,"G"+strconv.Itoa(close_gid))
+			row = append(row,"-")
+			mdtab = mdtab + "|" + "G"+strconv.Itoa(close_gid) + "|-"
+
+			for idx := 0 ; idx < 11 ; idx++{
+				row = append(row,0)
+				mdtab = mdtab + "|0"
+			}
+			row = append(row,closeDesc)
+			row = append(row,0)
+			mdtab = mdtab + "|" + closeDesc+"|0|\n"
+			detail_table.AppendRow(row)
+		}
+
 
 		//row=row[:0] // clear row
 		var row []interface{}

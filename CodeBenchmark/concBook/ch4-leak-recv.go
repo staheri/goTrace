@@ -18,7 +18,8 @@ func main(){
     return completed
   }
 
-  doWork(nil)
+  work := make(chan string)
+  doWork(work)
   // Perhaps more work is done here
   fmt.Println("Done.")
 }
