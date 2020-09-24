@@ -691,6 +691,7 @@ func ChannelReport(dbName, outdir string){
 			}
 			*/
 			//tmp = "G"+strconv.Itoa(gid)+": "+file+":"+funct+":"+strconv.Itoa(line)+":"+strconv.Itoa(val)+"#"+strconv.Itoa(eid)+"("+strconv.Itoa(pos)+")"
+			fmt.Println("G"+strconv.Itoa(gid)+": "+file+":"+funct+":"+strconv.Itoa(line)+":"+strconv.Itoa(val)+"#"+strconv.Itoa(eid)+"("+strconv.Itoa(pos)+")")
 			tmp = "G"+strconv.Itoa(gid)+": "+file+":"+funct+":"+strconv.Itoa(line)+"("+descOf(pos,event)+")"
 			res4.Close()
 			res5.Close()

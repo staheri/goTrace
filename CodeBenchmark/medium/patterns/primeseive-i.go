@@ -14,7 +14,7 @@ func Generate(ch chan<- int) {
 // removing those divisible by 'prime'.
 func Filter(in <-chan int, out chan<- int, prime ,j int) {
     for {
-      if j == 15{
+      if j == 5{
         break
       }
         i := <-in // Receive value from 'in'.
@@ -28,7 +28,7 @@ func Filter(in <-chan int, out chan<- int, prime ,j int) {
 func main() {
     ch := make(chan int) // Create a new channel.
     go Generate(ch)      // Launch Generate goroutine.
-    for i := 0; i <20 ; i++ {
+    for i := 0; i <7 ; i++ {
         prime := <-ch
         fmt.Println(prime)
         ch1 := make(chan int)
