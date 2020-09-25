@@ -112,6 +112,8 @@ func main(){
     }
   case "gtree":
     db.Gtree(dbName,flagOut)
+  case "cgraph":
+    db.ChannelGraph(dbName,flagOut)
   case "dev":
     /*for _,arg := range(flag.Args()){
       tl := strings.Split(arg,",")
@@ -147,7 +149,7 @@ func parseFlags() (){
   flag.Parse()
 
   // Check cmd
-  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" && flagCmd != "diff" && flagCmd != "dineData" && flagCmd != "cleanDB" && flagCmd != "dev" && flagCmd != "hb" && flagCmd != "gtree"{
+  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" && flagCmd != "diff" && flagCmd != "dineData" && flagCmd != "cleanDB" && flagCmd != "dev" && flagCmd != "hb" && flagCmd != "gtree" && flagCmd != "cgraph"{
     util.PrintUsage()
     fmt.Printf("flagCMD: %s\n",flagCmd)
     panic("Wrong command")

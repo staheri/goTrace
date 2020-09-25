@@ -40,5 +40,5 @@ func main() {
 	go phil(m3, m4, &f3, &f4, 2)
 	go phil(m4, m5, &f4, &f5, 3)
 	go phil(m1, m5, &f1, &f5, 4)
-	time.Sleep(1*time.Second)
+	time.Sleep(1*time.Millisecond)
 }
