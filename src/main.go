@@ -88,7 +88,7 @@ func main(){
     }
 
   case "rg":
-    db.ResourceGraph(dbName,flagOut)
+    db.SwimLanes(dbName,flagOut)
   case "diff":
     baseDBName := db.Ops("x",util.AppName(flagBase),"13")
     for _,arg := range(flag.Args()){

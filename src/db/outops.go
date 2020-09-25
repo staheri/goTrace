@@ -910,7 +910,6 @@ func ChannelReport(dbName, outdir string){
 		t.Render()
 		detail_table.Render()
 		res1.Close()
-
 	}
 
 	err=res.Close()
@@ -920,6 +919,8 @@ func ChannelReport(dbName, outdir string){
 	check(err)
 	f.WriteString(mdtab)
 	f.Close()
+
+	ChannelGraph(dbName, outdir)
 }
 
 func MutexReport(dbName string){
@@ -1270,7 +1271,7 @@ func WaitingGroupReport(dbName string){
 	}
 }
 
-func ResourceGraph(dbName, resultpath string, categories ...string ){
+func SwimLanes(dbName, resultpath string, categories ...string ){
 //func ResourceGraph(dbName, resultpath string){
 	// Variables
 	var subq, q, event,arg   string
@@ -1417,4 +1418,99 @@ func ResourceGraph(dbName, resultpath string, categories ...string ){
     return
 	}
 	fmt.Println("Result: " + out.String())
+}
+
+func ChannelGraph(dbName, outdir string){
+
+	// Variables
+	var q, event             string
+	var rid          string
+	//var file, funct          string
+	//var createDesc,closeDesc string
+	var  g     int
+
+	edges := make(map[string][]string)
+	//var make_eid, make_gid   int
+	//var close_eid, close_gid int
+	//var line                 int
+	//var val, pos, eid        int
+
+
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+
+	// Query channels
+	q = `SELECT type,g,rid
+	     FROM Events
+			 WHERE type="EvChSend" OR type="EvChRecv";`
+	//fmt.Printf("Executing: %v\n",q)
+
+	res, err := db.Query(q)
+	if err != nil {
+		panic(err)
+	}
+	for res.Next(){
+		err = res.Scan(&event,&g,&rid)
+		if err != nil{
+			panic(err)
+		}
+		if event == "EvChSend"{
+			edges["G"+strconv.Itoa(g)] = append(edges["G"+strconv.Itoa(g)],rid)
+		} else{
+			edges[rid] = append(edges[rid],"G"+strconv.Itoa(g))
+		}
+	}
+	res.Close()
+
+	nodes := ""
+	for k,_ := range edges{
+		if strings.HasPrefix(k,"G"){
+			nodes = nodes + k + " [label = \""+k+"\" shape=circle]\n\t"
+		}else{
+			nodes = nodes + k + " [label = \""+k+"\" shape=diamond style=bold]\n\t"
+		}
+	}
+	edges_st := ""
+	for k,v := range edges{
+		freq := make(map[string]int)
+		for _,d := range v{
+			freq[d]++
+		}
+		for kk,vv := range freq{
+			edges_st = edges_st + k + " -> " + kk + " [label=\""+strconv.Itoa(vv)+"\"]\n\t"
+		}
+	}
+	fmt.Println(nodes)
+	fmt.Println(edges_st)
+
+
+	f, err := os.Create(outdir+"/"+dbName+"_cgraph.dot")
+	check(err)
+	f.WriteString("digraph {\n\t"+nodes+"\n\n\t"+edges_st+"\n}")
+	f.Close()
+
+	// Create pdf
+	_cmd := "dot -Tpdf "+ outdir+"/"+dbName+"_cgraph.dot" + " -o " + outdir+"/"+dbName+"_cgraph.pdf"
+
+	cmd := exec.Command("dot","-Tpdf",outdir+"/"+dbName+"_cgraph.dot","-o",outdir+"/"+dbName+"_cgraph.pdf")
+	fmt.Printf(">>> Executing %s...\n",_cmd)
+	//err = cmd.Run()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+    fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+    return
+	}
+	fmt.Println("Result: " + stdout.String())
+
+	//fmt.Println(out)
 }
