@@ -63,12 +63,15 @@ const (
 	EvWgWait            = 55 // goTrace: wg wait [timestamp, stack, wg id]
 	EvMuLock            = 56 // goTrace: mu lock [timestamp, stack, mu id]
 	EvMuUnlock          = 57 // goTrace: mu unlock [timestamp, stack, mu id]
-	EvRWMLock           = 58 // goTrace: rw lock [timestamp, stack, rw id]
-	EvRWMUnlock         = 59 // goTrace: rw unlock [timestamp, stack, rw id]
-	EvRWMrLock          = 60 // goTrace: rw rlock [timestamp, stack, rw id]
-	EvRWMrUnlock        = 61 // goTrace: rw runlock [timestamp, stack, rw id]
-	EvSelect            = 62 // goTrace: select [timestamp, stack, pos]
-	EvCount             = 63
+	EvSelect            = 58 // goTrace: select [timestamp, stack, pos]
+	EvSched1            = 59 // goTrace: sched_skip1 [timestamp, stack, pos]
+	EvSched2            = 60 // goTrace: sched_skip2 [timestamp, stack, pos]
+	EvCount             = 61
+	//EvRWMLock           = 58 // goTrace: rw lock [timestamp, stack, rw id]
+	//EvRWMUnlock         = 59 // goTrace: rw unlock [timestamp, stack, rw id]
+	//EvRWMrLock          = 60 // goTrace: rw rlock [timestamp, stack, rw id]
+	//EvRWMrUnlock        = 61 // goTrace: rw runlock [timestamp, stack, rw id]
+	//EvSched             = 62 // goTrace: select [timestamp, stack, pos]
 
 )
 
@@ -137,11 +140,14 @@ var EventDescriptions = [EvCount]struct {
 	EvWgWait:            {"WgWait", 1011, true, []string{"wid"}, nil},// goTrace: wg wait [timestamp, stack, wg id]
 	EvMuLock:            {"MuLock",1011,true,[]string{"muid"},nil}, // goTrace: mu lock [timestamp, stack, mu id]
 	EvMuUnlock:          {"MuUnlock",1011,true,[]string{"muid"},nil}, // goTrace: mu unlock [timestamp, stack, mu id]
-	EvRWMLock:           {"RWMLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw lock [timestamp, stack, rw id]
-	EvRWMUnlock:         {"RWMUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw unlock [timestamp, stack, rw id]
-	EvRWMrLock:          {"RWMrLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw rlock [timestamp, stack, rw id]
-	EvRWMrUnlock:        {"RWMrUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw runlock [timestamp, stack, rw id]
 	EvSelect:            {"Select",1011,true,[]string{"pos"},nil}, // goTrace: select [timestamp, stack, pos]
+	EvSched1:            {"Sched1",1011,true,[]string{"pos"},nil}, // goTrace: sched_skip1 [timestamp, stack, pos]
+	EvSched2:            {"Sched2",1011,true,[]string{"pos"},nil}, // goTrace: sched_skip2 [timestamp, stack, pos]
+	//EvRWMLock:           {"RWMLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw lock [timestamp, stack, rw id]
+	//EvRWMUnlock:         {"RWMUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw unlock [timestamp, stack, rw id]
+	//EvRWMrLock:          {"RWMrLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw rlock [timestamp, stack, rw id]
+	//EvRWMrUnlock:        {"RWMrUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw runlock [timestamp, stack, rw id]
+
 }
 
 
