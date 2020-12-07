@@ -3,7 +3,7 @@
 package main
 
 import (
-	"fmt"
+	_"fmt"
 	"sync"
 	"time"
 )
@@ -14,10 +14,10 @@ func phil(m1, m2 *sync.Mutex, f1, f2 *int, id int) {
 	//for i := 0 ; i<bound ; i++{
 	for{
 		m1.Lock()
-		fmt.Printf("Phil %d got left fork\n", id)
+		//fmt.Printf("Phil %d got left fork\n", id)
 		*f1 += 1
 		m2.Lock()
-		fmt.Printf("Phil %d right fork\n", id)
+		//fmt.Printf("Phil %d right fork\n", id)
 		*f2 += 1
 		eats += 1
 		m2.Unlock()

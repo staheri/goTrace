@@ -4,11 +4,11 @@ import "fmt"
 
 func main(){
   ch := make(chan int)
-  go recv(ch)
-  ch <- 42
+  go send(ch)
+  fmt.Println(<-ch)
   close(ch)
 }
 
-func recv(ch chan int){
-  fmt.Println(<- ch)
+func send(ch chan int){
+  ch <- 42
 }

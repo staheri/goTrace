@@ -1,7 +1,7 @@
 package main
 
 import (
-  //"runtime"
+  "runtime"
   "time"
   "sync"
   //"fmt"
@@ -13,7 +13,7 @@ func main() {
 
   // goroutine 1
   go func() {
-    time.Sleep(time.Millisecond)
+    //time.Sleep(time.Millisecond)
     m.Lock()
     //runtime.Gosched()
     ch1 <- 1 // block here
@@ -24,6 +24,7 @@ func main() {
 
   // goroutine 2
   go func() {
+    runtime.Gosched()
     m.Lock() // block here
     m.Unlock()
     //runtime.Gosched()
