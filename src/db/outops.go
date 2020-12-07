@@ -1428,8 +1428,10 @@ func ChannelGraph(dbName, outdir string){
 	//var file, funct          string
 	//var createDesc,closeDesc string
 	var  g     int
+	var pos int
 
 	edges := make(map[string][]string)
+	waitingEdges := make(map[string][]string)
 	//var make_eid, make_gid   int
 	//var close_eid, close_gid int
 	//var line                 int
@@ -1446,9 +1448,10 @@ func ChannelGraph(dbName, outdir string){
 	defer db.Close()
 
 	// Query channels
-	q = `SELECT type,g,rid
-	     FROM Events
-			 WHERE type="EvChSend" OR type="EvChRecv";`
+	q = `SELECT t1.type,t1.g,t1.rid,t2.value
+	     FROM Events t1
+			 INNER JOIN Args t2 ON t1.id=t2.eventId
+			 WHERE (type="EvChSend" OR type="EvChRecv") and t2.arg="pos";`
 	//fmt.Printf("Executing: %v\n",q)
 
 	res, err := db.Query(q)
@@ -1456,20 +1459,35 @@ func ChannelGraph(dbName, outdir string){
 		panic(err)
 	}
 	for res.Next(){
-		err = res.Scan(&event,&g,&rid)
+		err = res.Scan(&event,&g,&rid,&pos)
 		if err != nil{
 			panic(err)
 		}
 		if event == "EvChSend"{
-			edges["G"+strconv.Itoa(g)] = append(edges["G"+strconv.Itoa(g)],rid)
+			if pos != 5{
+				edges["G"+strconv.Itoa(g)] = append(edges["G"+strconv.Itoa(g)],rid)
+			}else{
+				waitingEdges["G"+strconv.Itoa(g)] = append(waitingEdges["G"+strconv.Itoa(g)],rid)
+			}
 		} else{
-			edges[rid] = append(edges[rid],"G"+strconv.Itoa(g))
+			if pos != 7{
+				edges[rid] = append(edges[rid],"G"+strconv.Itoa(g))
+			}else{
+				waitingEdges[rid] = append(waitingEdges[rid],"G"+strconv.Itoa(g))
+			}
 		}
 	}
 	res.Close()
 
 	nodes := ""
 	for k,_ := range edges{
+		if strings.HasPrefix(k,"G"){
+			nodes = nodes + k + " [label = \""+k+"\" shape=circle]\n\t"
+		}else{
+			nodes = nodes + k + " [label = \""+k+"\" shape=diamond style=bold]\n\t"
+		}
+	}
+	for k,_ := range waitingEdges{
 		if strings.HasPrefix(k,"G"){
 			nodes = nodes + k + " [label = \""+k+"\" shape=circle]\n\t"
 		}else{
@@ -1486,6 +1504,18 @@ func ChannelGraph(dbName, outdir string){
 			edges_st = edges_st + k + " -> " + kk + " [label=\""+strconv.Itoa(vv)+"\"]\n\t"
 		}
 	}
+
+	edges_st = edges_st + "\n\n"
+	for k,v := range waitingEdges{
+		freq := make(map[string]int)
+		for _,d := range v{
+			freq[d]++
+		}
+		for kk,vv := range freq{
+			edges_st = edges_st + k + " -> " + kk + " [label=\""+strconv.Itoa(vv)+"\" style=dashed]\n\t"
+		}
+	}
+
 	fmt.Println(nodes)
 	fmt.Println(edges_st)
 
@@ -1512,5 +1542,175 @@ func ChannelGraph(dbName, outdir string){
 	}
 	fmt.Println("Result: " + stdout.String())
 
+	//fmt.Println(out)
+}
+
+func ResourceGraph(dbName, outdir string){
+
+	// Variables
+	var q1,q2, event             string
+	var rid          string
+	var  g     int
+	var pos int
+
+	edges := make(map[string][]string)
+	waitingEdges := make(map[string][]string)
+	nodes := make(map[string]int)
+
+
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+
+	// Query mutexes
+	q1 = `SELECT type,g,rid
+	     FROM Events
+			 WHERE type="EvMuUnlock" OR type="EvMuLock"`
+ q2 = `SELECT t1.type,t1.g,t1.rid,t2.value
+			 FROM Events t1
+			 INNER JOIN Args t2 ON t1.id=t2.eventId
+			 WHERE (type="EvChSend" OR type="EvChRecv") and t2.arg="pos";`
+
+	//fmt.Printf("Executing: %v\n",q)
+
+	res, err := db.Query(q1)
+	if err != nil {
+		panic(err)
+	}
+	for res.Next(){
+		err = res.Scan(&event,&g,&rid)
+		if err != nil{
+			panic(err)
+		}
+		if rid != "M3"{ // trace lock, ignore it
+			if event == "EvMuLock"{
+				edges["G"+strconv.Itoa(g)] = append(edges["G"+strconv.Itoa(g)],rid)
+			} else{
+				edges[rid] = append(edges[rid],"G"+strconv.Itoa(g))
+			}
+
+			if _,ok := nodes["G"+strconv.Itoa(g)] ; !ok{
+				nodes["G"+strconv.Itoa(g)] = 1
+			}
+			if _,ok := nodes[rid] ; !ok{
+				nodes[rid] = 1
+			}
+		}
+	}
+	res.Close()
+
+	res, err = db.Query(q2)
+	if err != nil {
+		panic(err)
+	}
+	for res.Next(){
+		err = res.Scan(&event,&g,&rid,&pos)
+		if err != nil{
+			panic(err)
+		}
+		if rid != "M3"{ // trace lock, ignore it
+			if event == "EvChSend"{
+				if pos != 5{
+					edges["G"+strconv.Itoa(g)] = append(edges["G"+strconv.Itoa(g)],rid)
+				}else{
+					waitingEdges["G"+strconv.Itoa(g)] = append(waitingEdges["G"+strconv.Itoa(g)],rid)
+				}
+			} else{
+				if pos != 7{
+					edges[rid] = append(edges[rid],"G"+strconv.Itoa(g))
+				}else{
+					waitingEdges[rid] = append(waitingEdges[rid],"G"+strconv.Itoa(g))
+				}
+			}
+			if _,ok := nodes["G"+strconv.Itoa(g)] ; !ok{
+				nodes["G"+strconv.Itoa(g)] = 1
+			}
+			if _,ok := nodes[rid] ; !ok{
+				nodes[rid] = 1
+			}
+		}
+
+	}
+	res.Close()
+
+
+	nodes_st := ""
+	for k,_ := range nodes{
+		if strings.HasPrefix(k,"G"){
+			nodes_st = nodes_st + k + " [label = \""+k+"\" shape=circle]\n\t"
+		}else if strings.HasPrefix(k,"C"){
+			nodes_st = nodes_st + k + " [label = \""+k+"\" shape=diamond style=bold]\n\t"
+		} else{
+			nodes_st = nodes_st + k + " [label = \""+k+"\" shape=invtriangle style=bold]\n\t"
+		}
+	}
+
+	edges_st := ""
+	for k,v := range edges{
+		freq := make(map[string]int)
+		for _,d := range v{
+			freq[d]++
+		}
+		for kk,vv := range freq{
+			edges_st = edges_st + k + " -> " + kk + " [label=\""+strconv.Itoa(vv)+"\"]\n\t"
+		}
+	}
+
+	edges_st = edges_st + "\n\n"
+
+	for k,v := range waitingEdges{
+		freq := make(map[string]int)
+		for _,d := range v{
+			freq[d]++
+		}
+		for kk,vv := range freq{
+			edges_st = edges_st + k + " -> " + kk + " [label=\""+strconv.Itoa(vv)+"\" style=dashed]\n\t"
+		}
+	}
+
+	fmt.Println(nodes_st)
+	fmt.Println(edges_st)
+
+
+	f, err := os.Create(outdir+"/"+dbName+"_resg.dot")
+	check(err)
+	f.WriteString("digraph {\n\t"+nodes_st+"\n\n\t"+edges_st+"\n}")
+	f.Close()
+
+	// Create pdf
+	_cmd := "dot -Tpdf "+ outdir+"/"+dbName+"_resg.dot" + " -o " + outdir+"/"+dbName+"_resg.pdf"
+
+	cmd := exec.Command("dot","-Tpdf",outdir+"/"+dbName+"_resg.dot","-o",outdir+"/"+dbName+"_resg.pdf")
+	fmt.Printf(">>> Executing %s...\n",_cmd)
+	//err = cmd.Run()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+    fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+    return
+	}
+	fmt.Println("Result: " + stdout.String())
+
+
+	_cmd = "open" + outdir+"/"+dbName+"_resg.pdf"
+
+	cmd = exec.Command("open",outdir+"/"+dbName+"_resg.pdf")
+	fmt.Printf(">>> Executing %s...\n",_cmd)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+    fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+    return
+	}
+	fmt.Println("Result: " + stdout.String())
 	//fmt.Println(out)
 }

@@ -231,9 +231,9 @@ func Store(events []*trace.Event, app string) (dbName string) {
 					// Set Predecessor for a receive (key to the event: {cid, eid, val})
 					if _,ok := msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] ; !ok{
 						msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] = eventPredecessor{e.G, localClock[e.G]}
-					} else{ // a send for this particular message has been stored before
+					} /*else{ // a send for this particular message has been stored before
 						panic("Previously stored as sent!")
-					}
+					}*/
 				}else{ // ChMake. ChClose
 					rval = sql.NullInt64{}
 					reid = sql.NullInt64{}
