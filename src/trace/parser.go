@@ -1068,25 +1068,17 @@ const (
 	EvUserTaskEnd       = 46 // end of task [timestamp, internal task id, stack]
 	EvUserRegion        = 47 // trace.WithRegion [timestamp, internal task id, mode(0:start, 1:end), stack, name string]
 	EvUserLog           = 48 // trace.Log [timestamp, internal id, key string id, stack, value string]
-	EvChSend            = 49 // goTrace: chan send [timestamp, stack, channel id, ch_event id, value]
-	EvChRecv            = 50 // goTrace: chan recv [timestamp, stack, channel id, ch_event id, value]
+	EvChSend            = 49 // goTrace: chan send [timestamp, stack, channel id, ch_event id, value, pos]
+	EvChRecv            = 50 // goTrace: chan recv [timestamp, stack, channel id, ch_event id, value, pos]
 	EvChMake            = 51 // goTrace: chan make [timestamp, stack, channel id]
 	EvChClose           = 52 // goTrace: chan close [timestamp, stack, channel id]
 	EvWgAdd             = 53 // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
-	EvWgDone            = 54 // goTrace: wg done (add -1) [timestamp, stack, wg id]
-	EvWgWait            = 55 // goTrace: wg wait [timestamp, stack, wg id]
-	EvMuLock            = 56 // goTrace: mu lock [timestamp, stack, mu id]
-	EvMuUnlock          = 57 // goTrace: mu unlock [timestamp, stack, mu id]
-	EvSelect            = 58 // goTrace: select [timestamp, stack, pos]
-	EvSched1            = 59 // goTrace: sched_skip1 [timestamp, stack, pos]
-	EvSched2            = 60 // goTrace: sched_skip2 [timestamp, stack, pos]
-	EvCount             = 61
-	//EvRWMLock           = 58 // goTrace: rw lock [timestamp, stack, rw id]
-	//EvRWMUnlock         = 59 // goTrace: rw unlock [timestamp, stack, rw id]
-	//EvRWMrLock          = 60 // goTrace: rw rlock [timestamp, stack, rw id]
-	//EvRWMrUnlock        = 61 // goTrace: rw runlock [timestamp, stack, rw id]
-	//EvSched             = 62 // goTrace: select [timestamp, stack, pos]
-
+	EvWgWait            = 54 // goTrace: wg wait [timestamp, stack, wg id, pos]
+	EvMuLock            = 55 // goTrace: mu lock [timestamp, stack, mu id, pos]
+	EvMuUnlock          = 56 // goTrace: mu unlock [timestamp, stack, mu id]
+	EvSelect            = 57 // goTrace: select [timestamp, stack, pos]
+	EvSched             = 58 // goTrace: sched [timestamp, stack, pos, curg, aux]
+	EvCount             = 59
 )
 
 var EventDescriptions = [EvCount]struct {
@@ -1145,21 +1137,14 @@ var EventDescriptions = [EvCount]struct {
 	EvUserTaskEnd:       {"UserTaskEnd", 1011, true, []string{"taskid"}, nil},
 	EvUserRegion:        {"UserRegion", 1011, true, []string{"taskid", "mode", "typeid"}, []string{"name"}},
 	EvUserLog:           {"UserLog", 1011, true, []string{"id", "keyid"}, []string{"category", "message"}},
-	EvChSend:            {"ChSend", 1011, true, []string{"cid","cheid","val","pos"}, nil}, // goTrace
-	EvChRecv:            {"ChRecv", 1011, true, []string{"cid","cheid","val","pos"}, nil}, // goTrace
-	EvChMake:            {"ChMake", 1011, true, []string{"cid"}, nil}, // goTrace
-	EvChClose:           {"ChClose", 1011, true, []string{"cid"}, nil}, // goTrace
-	EvWgAdd:             {"WgAdd", 1011, true, []string{"wid","val"}, nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
-	EvWgDone:            {"WgDone", 1011, true, []string{"wid"}, nil},// goTrace: wg done (add -1) [timestamp, stack, wg id]
-	EvWgWait:            {"WgWait", 1011, true, []string{"wid"}, nil},// goTrace: wg wait [timestamp, stack, wg id]
-	EvMuLock:            {"MuLock",1011,true,[]string{"muid"},nil}, // goTrace: mu lock [timestamp, stack, mu id]
-	EvMuUnlock:          {"MuUnlock",1011,true,[]string{"muid"},nil}, // goTrace: mu unlock [timestamp, stack, mu id]
-	EvSelect:            {"Select",1011,true,[]string{"pos"},nil}, // goTrace: select [timestamp, stack, pos]
-	EvSched1:            {"Sched1",1011,true,[]string{"pos","curg","mg"},nil}, // goTrace: sched_skip1 [timestamp, stack, pos]
-	EvSched2:            {"Sched2",1011,true,[]string{"pos","curg","mg"},nil}, // goTrace: sched_skip2 [timestamp, stack, pos]
-	//EvRWMLock:           {"RWMLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw lock [timestamp, stack, rw id]
-	//EvRWMUnlock:         {"RWMUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw unlock [timestamp, stack, rw id]
-	//EvRWMrLock:          {"RWMrLock",1011,true,[]string{"rwid"},nil}, // goTrace: rw rlock [timestamp, stack, rw id]
-	//EvRWMrUnlock:        {"RWMrUnlock",1011,true,[]string{"rwid"},nil}, // goTrace: rw runlock [timestamp, stack, rw id]
-
+	EvChSend:            {"ChSend", 1011, true, []string{"cid","chid","val","pos"},nil}, // goTrace: chan send [timestamp, stack, channel id, ch_event id, value, pos]
+	EvChRecv:            {"ChRecv", 1011, true, []string{"cid","chid","val","pos"},nil}, // goTrace: chan send [timestamp, stack, channel id, ch_event id, value, pos]
+	EvChMake:            {"ChMake", 1011, true, []string{"cid"},nil},// goTrace: chan make [timestamp, stack, channel id]
+	EvChClose:           {"ChClose", 1011, true, []string{"cid"},nil},// goTrace: chan close [timestamp, stack, channel id]
+	EvWgAdd:             {"WgAdd", 1011, true, []string{"wid","val"},nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
+	EvWgWait:            {"WgWait", 1011, true, []string{"wid","pos"},nil}, // goTrace: wg wait [timestamp, stack, wg id]
+	EvMuLock:            {"MuLock", 1011, true, []string{"muid","pos"},nil},// goTrace: mu lock [timestamp, stack, mu id]
+	EvMuUnlock:          {"MuUnlock", 1011, true, []string{"muid"},nil},// goTrace: mu unlock [timestamp, stack, mu id]
+	EvSelect:            {"Select", 1011, true, []string{"pos"},nil},// goTrace: select [timestamp, stack, pos]
+	EvSched:             {"Sched", 1011, true, []string{"pos","curg","aux"},nil}, // goTrace: sched [timestamp, stack, pos, curg, aux]
 }
