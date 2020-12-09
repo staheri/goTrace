@@ -1,0 +1,87 @@
+cat /usr/local/go-new/go/src/internal/trace/parser.go | grep goTrace ;
+	EvChSend            = 49 // goTrace: chan send [timestamp, stack, channel id, ch_event id, value, pos]
+    EvChRecv            = 50 // goTrace: chan recv [timestamp, stack, channel id, ch_event id, value, pos]
+    EvChMake            = 51 // goTrace: chan make [timestamp, stack, channel id]
+	EvChClose           = 52 // goTrace: chan close [timestamp, stack, channel id]
+    EvWgAdd             = 53 // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
+    EvWgWait            = 54 // goTrace: wg wait [timestamp, stack, wg id, pos]
+    EvMuLock            = 55 // goTrace: mu lock [timestamp, stack, mu id, pos]
+    EvMuUnlock          = 56 // goTrace: mu unlock [timestamp, stack, mu id]
+    EvSelect            = 57 // goTrace: select [timestamp, stack, pos]
+    EvSched             = 58 // goTrace: sched [timestamp, stack, pos, curg, aux]
+
+    EvChSend:            {"ChSend", 1011, true, []string{"cid","chid","val","pos"},nil}, // goTrace: chan send [timestamp, stack, channel id, ch_event id, value, pos]
+    EvChRecv:            {"ChRecv", 1011, true, []string{"cid","chid","val","pos"},nil}, // goTrace: chan send [timestamp, stack, channel id, ch_event id, value, pos]
+    EvChMake:            {"ChOp", 1011, true, []string{"cid"},nil},// goTrace: chan make [timestamp, stack, channel id]
+	EvChClose:           {"ChOp", 1011, true, []string{"cid"},nil},// goTrace: chan close [timestamp, stack, channel id]
+    EvWgAdd:             {"WgAdd", 1011, true, []string{"wid","val"},nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
+    EvWgWait:            {"WgWait", 1011, true, []string{"wid","pos"},nil}, // goTrace: wg wait [timestamp, stack, wg id]
+    EvMuLock:            {"MuLock", 1011, true, []string{"muid","pos"},nil},// goTrace: mu lock [timestamp, stack, mu id]
+    EvMuUnlock:          {"MuUnlock", 1011, true, []string{"muid"},nil},// goTrace: mu unlock [timestamp, stack, mu id]
+    EvSelect:            {"Select", 1011, true, []string{"pos"},nil},// goTrace: select [timestamp, stack, pos]
+    EvSched:             {"Sched", 1011, true, []string{"pos","curg","aux"},nil}, // goTrace: sched [timestamp, stack, pos, curg, aux]
+
+cat /usr/local/go-new/go/src/runtime/select.go | grep goTrace ;
+    sg.cid = c.id //goTrace
+
+    traceChSend(c.id,sg.eventid, sg.value,4) //goTrace: trace send event, pos=4 --> SELECT: a recv is waiting (send selected)
+    traceChRecv(c.id, sg.eventid, sg.value,5) //goTrace: trace recv event. pos=5 --> SELECT: a sender is waiting (recv selected)
+	traceChRecv(c.id,0,elem2int(cas.elem),6) //goTrace: trace recv event. pos=6 --> SELECT: recv on close (ch_eid=0 --> no matching send)
+
+cat /usr/local/go-new/go/src/runtime/runtime2.go | grep goTrace ;
+
+    eventid     uint64 // goTrace: used for correlating send/recv
+    value       uint64 // goTrace: used for representing value to tracer
+    cid         uint64 // goTrace: channel id
+
+cat /usr/local/go-new/go/src/runtime/chan.go | grep goTrace ;
+   traceChMake(chID) // goTrace: make channel
+	 traceChClose(c.id) // goTrace: close channel
+
+    traceChSend(c.id, evID, elem2int(ep),1)  //goTrace: trace send event, pos:1 --> non-blocking, buffer is vacant
+    traceChSend(c.id, mysg.eventid, mysg.value, 0)  //goTrace: trace send event. pos=0 --> blocked
+    traceChSend(c.id, mysg.eventid, mysg.value, 2)  //goTrace: trace send event. pos=2 --> blockin send (unblocked by an arriving recver)
+    traceChSend(c.id, evID, elem2int(ep),3)  //goTrace: trace send event. pos=3 --> non-blocking (recv ready)
+
+    traceChRecv(c.id,0,0,1) // goTrace: trace recv event. pos=1 --> recv on closed (ch_eid:0 --> no matching send)
+    traceChRecv(c.id, sg.eventid , sg.value,4) // goTrace: trace recv event. pos=4 --> non-blocking recv (directly from waiting sender(unbuf) or from sender's buffer that is blocked on full queue)
+    traceChRecv(c.id,0,0,2) // goTrace: trace recv event. pos=2 --> buffered channel directly from queue (ch_eid:0 & val=0 --> no matching send)
+    traceChRecv(c.id,0,0,0) // goTrace: trace recv event. pos=0 --> blocked recv (ch_eid=0 & val=0 --> no matching send)
+    traceChRecv(c.id,mysg.eventid,mysg.value,3) // goTrace: trace recv event. pos=1 --> blocking recv (unblocked by an arriving sender)
+
+cat /usr/local/go-new/go/src/sync/mutex.go | grep goTrace ;
+    runtime.TraceMuLock(m.id,1) // goTrace: trace m.Lock event. pos=1 --> mutex is free (unlocked)
+    runtime.TraceMuLock(m.id,0) // goTrace: trace m.Lock event. pos=0 --> mutex is locked so BLOCKED
+    runtime.TraceMuLock(m.id,2) // goTrace: trace m.Lock event. pos=2 --> mutex is woken up(unlocked/UNBLOCKED) now lock
+    runtime.TraceMuUnlock(m.id) // goTrace: trace m.Unlock event
+
+root@attenborough:/usr/local/go-new/go/src# cat /usr/local/go-new/go/src/sync/waitgroup.go | grep goTrace ;
+    runtime.TraceWgAdd(wg.id, uint64(delta)) // goTrace: trace wg.Add event
+    runtime.TraceWgWait(wg.id,1)  // goTrace: trace wg.Wait event. pos=1 -> unblocking wait
+    runtime.TraceWgWait(wg.id,0)  // goTrace: trace wg.Wait event. pos=0 -> blocked
+    runtime.TraceWgWait(wg.id,2)  // goTrace: trace wg.Wait event. pos=2 -> woken up (unblocked)
+
+root@attenborough:/usr/local/go-new/go/src# cat /usr/local/go-new/go/src/runtime/trace.go | grep goTrace ;
+
+	traceEvChSend            = 49 // goTrace: chan send [timestamp, stack, channel id, ch_event id, value, pos]
+    traceEvChRecv            = 50 // goTrace: chan recv [timestamp, stack, channel id, ch_event id, value, pos]
+    traceEvChMake            = 51 // goTrace: chan make [timestamp, stack, channel id]
+	traceEvChClose           = 52 // goTrace: chan close [timestamp, stack, channel id]
+    traceEvWgAdd             = 53 // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
+    traceEvWgWait            = 54 // goTrace: wg wait [timestamp, stack, wg id, pos]
+    traceEvMuLock            = 55 // goTrace: mu lock [timestamp, stack, mu id, pos]
+    traceEvMuUnlock          = 56 // goTrace: mu unlock [timestamp, stack, mu id]
+    traceEvSelect            = 57 // goTrace: select [timestamp, stack, pos]
+    traceEvSched             = 58 // goTrace: sched [timestamp, stack, pos, curg, aux]
+
+root@attenborough:/usr/local/go-new/go/src# cat /usr/local/go-new/go/src/runtime/proc.go | grep goTrace ;
+    traceSched(1,uint64(gp.goid),0) // goTrace: sched event. pos=1 --> goReady, aux:N/A
+    traceSched(2, uint64(_g_.goid),0) // goTrace: sched event. pos=2 --> schedule_g.m.lockedg != 0, aux: N/A
+	traceSched(3,uint64(gp.goid),aux) // goTrace: sched event. pos=3 --> schedule with g obtained from {aux}
+		aux = 101 // goTrace: set sched aux. aux=101 --> schedule_goUnpark_traceReader
+		aux = 102 // goTrace: set sched aux. aux=102 --> findRunnableGCWorker
+		aux = 103 // goTrace: set sched aux. aux=103 --> fairness global runq
+		aux = 104 // goTrace: set sched aux. aux=104 --> runqget
+		aux = 105 // goTrace: set sched aux. aux=105 --> find
+
+    traceSched(4,uint64(gp.goid),203) // goTrace: sched event. pos=4 --> runqget, aux=203 --> return g from head of q

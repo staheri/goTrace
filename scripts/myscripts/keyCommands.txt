@@ -1,0 +1,7 @@
+To get difference between original Go and modified one:
+git diff --no-index --no-prefix go/src go-new/src > goTrace_runtime_v1_15_6.patch
+
+To patch:
+
+sud patch -p1 -d /usr/local/go-new/go < patch.patch
+

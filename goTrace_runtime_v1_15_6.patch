@@ -1,32 +1,34 @@
-diff --git go/src/internal/trace/parser.go go-new/src/internal/trace/parser.go
-index c371ff3..acc1ef2 100644
---- go/src/internal/trace/parser.go
-+++ go-new/src/internal/trace/parser.go
-@@ -1058,7 +1058,16 @@ const (
+diff --git go.1.15.6/src/internal/trace/parser.go myGo.1.15.6/src/internal/trace/parser.go
+index c371ff3..af2fed2 100644
+--- go.1.15.6/src/internal/trace/parser.go
++++ myGo.1.15.6/src/internal/trace/parser.go
+@@ -1058,7 +1058,17 @@ const (
  	EvUserTaskEnd       = 46 // end of task [timestamp, internal task id, stack]
  	EvUserRegion        = 47 // trace.WithRegion [timestamp, internal task id, mode(0:start, 1:end), stack, name string]
  	EvUserLog           = 48 // trace.Log [timestamp, internal id, key string id, stack, value string]
 -	EvCount             = 49
 +	EvChSend            = 49 // goTrace: chan send [timestamp, stack, channel id, ch_event id, value, pos]
 +	EvChRecv            = 50 // goTrace: chan recv [timestamp, stack, channel id, ch_event id, value, pos]
-+	EvChOp              = 51 // goTrace: chan make/close [timestamp, stack, channel id, value{0:close,1:make}]
-+	EvWgAdd             = 52 // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
-+	EvWgWait            = 53 // goTrace: wg wait [timestamp, stack, wg id, pos]
-+	EvMuLock            = 54 // goTrace: mu lock [timestamp, stack, mu id, pos]
-+	EvMuUnlock          = 55 // goTrace: mu unlock [timestamp, stack, mu id]
-+	EvSelect            = 56 // goTrace: select [timestamp, stack, pos]
-+	EvSched             = 57 // goTrace: sched [timestamp, stack, pos, curg, aux]
-+	EvCount             = 58
++	EvChMake            = 51 // goTrace: chan make [timestamp, stack, channel id]
++	EvChClose           = 52 // goTrace: chan close [timestamp, stack, channel id]
++	EvWgAdd             = 53 // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
++	EvWgWait            = 54 // goTrace: wg wait [timestamp, stack, wg id, pos]
++	EvMuLock            = 55 // goTrace: mu lock [timestamp, stack, mu id, pos]
++	EvMuUnlock          = 56 // goTrace: mu unlock [timestamp, stack, mu id]
++	EvSelect            = 57 // goTrace: select [timestamp, stack, pos]
++	EvSched             = 58 // goTrace: sched [timestamp, stack, pos, curg, aux]
++	EvCount             = 59
  )
  
  var EventDescriptions = [EvCount]struct {
-@@ -1117,4 +1126,13 @@ var EventDescriptions = [EvCount]struct {
+@@ -1117,4 +1127,14 @@ var EventDescriptions = [EvCount]struct {
  	EvUserTaskEnd:       {"UserTaskEnd", 1011, true, []string{"taskid"}, nil},
  	EvUserRegion:        {"UserRegion", 1011, true, []string{"taskid", "mode", "typeid"}, []string{"name"}},
  	EvUserLog:           {"UserLog", 1011, true, []string{"id", "keyid"}, []string{"category", "message"}},
 +	EvChSend:            {"ChSend", 1011, true, []string{"cid","chid","val","pos"},nil}, // goTrace: chan send [timestamp, stack, channel id, ch_event id, value, pos]
 +	EvChRecv:            {"ChRecv", 1011, true, []string{"cid","chid","val","pos"},nil}, // goTrace: chan send [timestamp, stack, channel id, ch_event id, value, pos]
-+	EvChOp:              {"ChOp", 1011, true, []string{"cid","val"},nil},// goTrace: chan make/close [timestamp, stack, channel id, value{0:close,1:make}]
++	EvChMake:            {"ChMake", 1011, true, []string{"cid"},nil},// goTrace: chan make [timestamp, stack, channel id]
++	EvChClose:           {"ChClose", 1011, true, []string{"cid"},nil},// goTrace: chan close [timestamp, stack, channel id]
 +	EvWgAdd:             {"WgAdd", 1011, true, []string{"wid","val"},nil}, // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
 +	EvWgWait:            {"WgWait", 1011, true, []string{"wid","pos"},nil}, // goTrace: wg wait [timestamp, stack, wg id]
 +	EvMuLock:            {"MuLock", 1011, true, []string{"muid","pos"},nil},// goTrace: mu lock [timestamp, stack, mu id]
@@ -34,10 +36,10 @@ index c371ff3..acc1ef2 100644
 +	EvSelect:            {"Select", 1011, true, []string{"pos"},nil},// goTrace: select [timestamp, stack, pos]
 +	EvSched:             {"Sched", 1011, true, []string{"pos","curg","aux"},nil}, // goTrace: sched [timestamp, stack, pos, curg, aux]
  }
-diff --git go/src/runtime/chan.go go-new/src/runtime/chan.go
-index d5daa4b..0054801 100644
---- go/src/runtime/chan.go
-+++ go-new/src/runtime/chan.go
+diff --git go.1.15.6/src/runtime/chan.go myGo.1.15.6/src/runtime/chan.go
+index d5daa4b..9b95b09 100644
+--- go.1.15.6/src/runtime/chan.go
++++ myGo.1.15.6/src/runtime/chan.go
 @@ -30,6 +30,7 @@ const (
  )
  
@@ -66,7 +68,7 @@ index d5daa4b..0054801 100644
 +	// goTrace
 +	chID = atomic.Xadd64(&chID,1) //goTrace: increment channel id
 +	c.id = chID                   //goTrace: assign
-+	traceChOp(c.id,1)             //goTrace: ChOp. val=1 --> make channel
++	traceChMake(c.id)             //goTrace: Channel Make
 +
  	if debugChan {
  		print("makechan: chan=", c, "; elemsize=", elem.size, "; dataqsiz=", size, "\n")
@@ -134,7 +136,7 @@ index d5daa4b..0054801 100644
  	}
  
  	c.closed = 1
-+	traceChOp(c.id,0) // goTrace: ChOp. val=0 --> close channel
++	traceChClose(c.id) // goTrace: Channel Close
  
  	var glist gList
  
@@ -190,10 +192,10 @@ index d5daa4b..0054801 100644
 +	}
 +	return uint64(*((*int)(elem)))
 +}
-diff --git go/src/runtime/proc.go go-new/src/runtime/proc.go
-index 7fa19d8..e4e58b3 100644
---- go/src/runtime/proc.go
-+++ go-new/src/runtime/proc.go
+diff --git go.1.15.6/src/runtime/proc.go myGo.1.15.6/src/runtime/proc.go
+index 7fa19d8..036a502 100644
+--- go.1.15.6/src/runtime/proc.go
++++ myGo.1.15.6/src/runtime/proc.go
 @@ -313,6 +313,9 @@ func goparkunlock(lock *mutex, reason waitReason, traceEv byte, traceskip int) {
  }
  
@@ -265,24 +267,7 @@ index 7fa19d8..e4e58b3 100644
  
  	execute(gp, inheritTime)
  }
-@@ -5270,6 +5285,9 @@ func runqget(_p_ *p) (gp *g, inheritTime bool) {
- 			break
- 		}
- 		if _p_.runnext.cas(next, 0) {
-+			if trace.enabled{
-+				traceSched(4,uint64(gp.goid),201) // goTrace: sched event. pos=4 --> runqget, aux=201 --> return next
-+			}
- 			return next.ptr(), true
- 		}
- 	}
-@@ -5278,10 +5296,16 @@ func runqget(_p_ *p) (gp *g, inheritTime bool) {
- 		h := atomic.LoadAcq(&_p_.runqhead) // load-acquire, synchronize with other consumers
- 		t := _p_.runqtail
- 		if t == h {
-+			if trace.enabled{
-+				traceSched(4,uint64(gp.goid),202) // goTrace: sched event. pos=4 --> runqget, aux=202 --> return nil as q is empty
-+			}
- 			return nil, false
+@@ -5282,6 +5297,9 @@ func runqget(_p_ *p) (gp *g, inheritTime bool) {
  		}
  		gp := _p_.runq[h%uint32(len(_p_.runq))].ptr()
  		if atomic.CasRel(&_p_.runqhead, h, h+1) { // cas-release, commits consume
@@ -292,10 +277,10 @@ index 7fa19d8..e4e58b3 100644
  			return gp, false
  		}
  	}
-diff --git go/src/runtime/runtime2.go go-new/src/runtime/runtime2.go
+diff --git go.1.15.6/src/runtime/runtime2.go myGo.1.15.6/src/runtime/runtime2.go
 index 814364a..5c0c16a 100644
---- go/src/runtime/runtime2.go
-+++ go-new/src/runtime/runtime2.go
+--- go.1.15.6/src/runtime/runtime2.go
++++ myGo.1.15.6/src/runtime/runtime2.go
 @@ -370,6 +370,10 @@ type sudog struct {
  	waitlink *sudog // g.waiting list or semaRoot
  	waittail *sudog // semaRoot
@@ -307,10 +292,10 @@ index 814364a..5c0c16a 100644
  }
  
  type libcall struct {
-diff --git go/src/runtime/select.go go-new/src/runtime/select.go
+diff --git go.1.15.6/src/runtime/select.go myGo.1.15.6/src/runtime/select.go
 index 69d2557..d8551d0 100644
---- go/src/runtime/select.go
-+++ go-new/src/runtime/select.go
+--- go.1.15.6/src/runtime/select.go
++++ myGo.1.15.6/src/runtime/select.go
 @@ -315,6 +315,8 @@ loop:
  			sg.releasetime = -1
  		}
@@ -344,30 +329,31 @@ index 69d2557..d8551d0 100644
  	selunlock(scases, lockorder)
  	recvOK = false
  	if cas.elem != nil {
-diff --git go/src/runtime/trace.go go-new/src/runtime/trace.go
-index 169b650..8b9599e 100644
---- go/src/runtime/trace.go
-+++ go-new/src/runtime/trace.go
-@@ -68,7 +68,17 @@ const (
+diff --git go.1.15.6/src/runtime/trace.go myGo.1.15.6/src/runtime/trace.go
+index 169b650..0a65c40 100644
+--- go.1.15.6/src/runtime/trace.go
++++ myGo.1.15.6/src/runtime/trace.go
+@@ -68,7 +68,18 @@ const (
  	traceEvUserTaskEnd       = 46 // end of a task [timestamp, internal task id, stack]
  	traceEvUserRegion        = 47 // trace.WithRegion [timestamp, internal task id, mode(0:start, 1:end), stack, name string]
  	traceEvUserLog           = 48 // trace.Log [timestamp, internal task id, key string id, stack, value string]
 -	traceEvCount             = 49
 +	traceEvChSend            = 49 // goTrace: chan send [timestamp, stack, channel id, ch_event id, value, pos]
 +        traceEvChRecv            = 50 // goTrace: chan recv [timestamp, stack, channel id, ch_event id, value, pos]
-+        traceEvChOp              = 51 // goTrace: chan make/close [timestamp, stack, channel id, value{0:close,1:make}]
-+        traceEvWgAdd             = 52 // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
-+        traceEvWgWait            = 53 // goTrace: wg wait [timestamp, stack, wg id, pos]
-+        traceEvMuLock            = 54 // goTrace: mu lock [timestamp, stack, mu id, pos]
-+        traceEvMuUnlock          = 55 // goTrace: mu unlock [timestamp, stack, mu id]
-+        traceEvSelect            = 56 // goTrace: select [timestamp, stack, pos]
-+        traceEvSched             = 57 // goTrace: sched [timestamp, stack, pos, curg, aux]
-+        traceEvCount             = 58
++        traceEvChMake            = 51 // goTrace: chan make [timestamp, stack, channel id]
++        traceEvChClose           = 52 // goTrace: chan close [timestamp, stack, channel id]
++	traceEvWgAdd             = 53 // goTrace: wg add (and inited) [timestamp, stack, wg id, value]
++        traceEvWgWait            = 54 // goTrace: wg wait [timestamp, stack, wg id, pos]
++        traceEvMuLock            = 55 // goTrace: mu lock [timestamp, stack, mu id, pos]
++        traceEvMuUnlock          = 56 // goTrace: mu unlock [timestamp, stack, mu id]
++        traceEvSelect            = 57 // goTrace: select [timestamp, stack, pos]
++        traceEvSched             = 58 // goTrace: sched [timestamp, stack, pos, curg, aux]
++        traceEvCount             = 59
 +
  	// Byte is used but only 6 bits are available for event type.
  	// The remaining 2 bits are used to specify the number of arguments.
  	// That means, the max event type value is 63.
-@@ -1228,3 +1238,42 @@ func trace_userLog(id uint64, category, message string) {
+@@ -1228,3 +1239,46 @@ func trace_userLog(id uint64, category, message string) {
  
  	traceReleaseBuffer(pid)
  }
@@ -386,8 +372,12 @@ index 169b650..8b9599e 100644
 +}
 +
 +
-+func traceChOp(cid, val uint64){
-+  traceEvent(traceEvChOp, 2, cid, val)
++func traceChMake(cid uint64){
++  traceEvent(traceEvChMake, 2, cid)
++}
++
++func traceChClose(cid uint64){
++  traceEvent(traceEvChClose, 2, cid)
 +}
 +
 +func TraceWgAdd(wgid ,val uint64){
@@ -410,10 +400,10 @@ index 169b650..8b9599e 100644
 +func traceSched(pos, curg, aux uint64){
 +  traceEvent(traceEvSched, 1, pos, curg, aux)
 +}
-diff --git go/src/sync/mutex.go go-new/src/sync/mutex.go
+diff --git go.1.15.6/src/sync/mutex.go myGo.1.15.6/src/sync/mutex.go
 index 3028552..0a03c4c 100644
---- go/src/sync/mutex.go
-+++ go-new/src/sync/mutex.go
+--- go.1.15.6/src/sync/mutex.go
++++ myGo.1.15.6/src/sync/mutex.go
 @@ -14,6 +14,7 @@ import (
  	"internal/race"
  	"sync/atomic"
@@ -478,10 +468,10 @@ index 3028552..0a03c4c 100644
  	if new != 0 {
  		// Outlined slow path to allow inlining the fast path.
  		// To hide unlockSlow during tracing we skip one extra frame when tracing GoUnblock.
-diff --git go/src/sync/waitgroup.go go-new/src/sync/waitgroup.go
+diff --git go.1.15.6/src/sync/waitgroup.go myGo.1.15.6/src/sync/waitgroup.go
 index e81a493..33d6347 100644
---- go/src/sync/waitgroup.go
-+++ go-new/src/sync/waitgroup.go
+--- go.1.15.6/src/sync/waitgroup.go
++++ myGo.1.15.6/src/sync/waitgroup.go
 @@ -8,6 +8,7 @@ import (
  	"internal/race"
  	"sync/atomic"
