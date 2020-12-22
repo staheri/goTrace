@@ -1615,13 +1615,13 @@ func ResourceGraph(dbName, outdir string){
 		}
 		if rid != "M3"{ // trace lock, ignore it
 			if event == "EvChSend"{
-				if pos != 5{
+				if pos != 0{
 					edges["G"+strconv.Itoa(g)] = append(edges["G"+strconv.Itoa(g)],rid)
 				}else{
 					waitingEdges["G"+strconv.Itoa(g)] = append(waitingEdges["G"+strconv.Itoa(g)],rid)
 				}
 			} else{
-				if pos != 7{
+				if pos != 0{
 					edges[rid] = append(edges[rid],"G"+strconv.Itoa(g))
 				}else{
 					waitingEdges[rid] = append(waitingEdges[rid],"G"+strconv.Itoa(g))
