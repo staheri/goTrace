@@ -670,6 +670,9 @@ func ChannelReport(dbName, outdir string){
 				check(err)
 			}
 
+			if pos==0{
+				continue
+			}
 			res6,err := eidStmt.Query(id)
 			check(err)
 			if res6.Next(){
