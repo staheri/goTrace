@@ -5,13 +5,14 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"strconv"
-	"log"
+	_"log"
 	"os"
-	"os/exec"
+	_"os/exec"
 	"strings"
-	"bytes"
+	_"bytes"
 	"github.com/jedib0t/go-pretty/table"
-	"util"
+	_"util"
+	_"text/tabwriter"
 )
 
 func Checker(dbName string) {
@@ -23,42 +24,141 @@ func Checker(dbName string) {
 		fmt.Println("Connection Established")
 	}
 	defer db.Close()
+	// END DB
+
+	//fmt.Println(appGoroutineFinder(db))
+	var gs []int
+	var g int
+	var event,rid string
+
+	// last events stroe every last event of goroutines
+	lastEvents := make(map[int]string)
 
 	// Query mutexes
-	q = `SELECT type,g,rid
-	     FROM Events
-			 WHERE type="EvMuUnlock" OR type="EvMuLock"`
-
+	q := `select gid from goroutines;`
 	res, err := db.Query(q)
 	if err != nil {
 		panic(err)
 	}
 	for res.Next(){
-		err = res.Scan(&event,&g,&rid)
-		if err != nil{
-			panic(err)
-		}
-		if rid != "M3"{ // trace lock, ignore it
-			if event == "EvMuLock"{
-				edges["G"+strconv.Itoa(g)] = append(edges["G"+strconv.Itoa(g)],rid)
-			} else{
-				edges[rid] = append(edges[rid],"G"+strconv.Itoa(g))
-			}
-
-			if _,ok := nodes["G"+strconv.Itoa(g)] ; !ok{
-				nodes["G"+strconv.Itoa(g)] = 1
-			}
-			if _,ok := nodes[rid] ; !ok{
-				nodes[rid] = 1
-			}
-		}
+		err = res.Scan(&g)
+		check(err)
+		gs = append(gs,g) // append g to gs
 	}
 	res.Close()
 
+	lastEventStmt,err := db.Prepare("SELECT type FROM Events WHERE g=? ORDER BY id DESC LIMIT 1")
+	check(err)
+	defer lastEventStmt.Close()
+
+	resStmt,err := db.Prepare("SELECT type,rid FROM Events WHERE rid IS NOT NULL AND g=?")
+	check(err)
+	defer resStmt.Close()
 
 
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Goroutine","Last Event","Resources","Goroutines"})
+
+	for _,gi := range(gs){
+		// New row
+		var row []interface{}
+		row = append(row,gi)
+
+		// Last event
+		res,err = lastEventStmt.Query(gi)
+		check(err)
+		for res.Next(){
+			err = res.Scan(&event)
+			check(err)
+			lastEvents[gi]=event
+			//gs = append(gs,g) // append g to gs
+			row = append(row,event)
+		}
+
+		// Resources
+		resMap := make(map[string]int)
+		var resources []interface{}
+		var otherg []interface{}
+		res,err = resStmt.Query(gi)
+		check(err)
+		for res.Next(){
+			err = res.Scan(&event,&rid)
+			check(err)
+			if _,ok := resMap[rid]; !ok{
+				resMap[rid] = 1
+				if strings.HasPrefix(rid,"G"){
+					otherg = append(otherg,rid)
+				}else{
+					resources = append(resources,rid)
+				}
+
+			}
+		}
+		row = append(row,resources)
+		row = append(row,otherg)
+
+		t.AppendRow(row)
+		res.Close()
+	}
+
+	t.Render()
+	//fmt.Println(lastEvents)
+	textReport(lastEvents)
 }
-func ResourceGraph(dbName, outdir string){
+
+func textReport(lastEvents map[int]string){
+	//writer := tabwriter.NewWriter(os.Stdout,0 , 16, 1, '\t', tabwriter.AlignRight)
+	totalG := len(lastEvents)
+	var suspicious []int
+	var   isGlobalDL   bool
+	var   numWaiting   int
+	var   numBlock     int
+	var   numEnd       int
+
+	colorReset := "\033[0m"
+	colorRed := "\033[31m"
+	colorGreen := "\033[32m"
+
+	for k,v := range(lastEvents){
+		if k == 1 && v != "EvGoSched"{
+			isGlobalDL = true
+			continue
+		}
+		switch v {
+		case "EvGoWaiting":
+			numWaiting++
+		case "EvGoEnd":
+			numEnd++
+		case "EvGoBlock":
+			numBlock++
+		default:
+			if k != 0 && k != 1{
+				// the goroutine is in app goroutine which has not ended!
+				suspicious = append(suspicious,k)
+			}
+		}
+	}
+
+	fmt.Println("Total # goroutines:",totalG)
+	fmt.Println("Total # runtime goroutines (0,1,tracing):",numWaiting+numBlock+2)
+	if isGlobalDL{
+		fmt.Println("Global Deadlock:",string(colorRed),"TRUE",string(colorReset))
+	} else{
+		fmt.Println("Global Deadlock:",string(colorGreen),"FALSE",string(colorReset))
+	}
+
+	if len(suspicious) != 0{
+		temp := ""
+		for _,i := range(suspicious){
+			temp = temp + strconv.Itoa(i) + " "
+		}
+		fmt.Println("Leaked Goroutines:",string(colorRed),temp,string(colorReset))
+	} else{
+		fmt.Println("Leaked Goroutines:",string(colorGreen),"NONE",string(colorReset))
+	}
+}
+/*func ResourceGraph(dbName, outdir string){
 
 	// Variables
 	var q1,q2, event             string
@@ -182,4 +282,4 @@ func ResourceGraph(dbName, outdir string){
 	}
 	fmt.Println("Result: " + stdout.String())
 	//fmt.Println(out)
-}
+}*/
