@@ -1,5 +1,12 @@
 package main
 
+import (
+  "runtime"
+  "time"
+  "sync"
+  "fmt"
+)
+
 // https://github.com/kubernetes/kubernetes/pull/16223
 // Buggy version: e755988d5922df4d0e111a0167d9859359113463
 // https://github.com/kubernetes/kubernetes/pull/10182
@@ -16,14 +23,6 @@ package main
 //                                  send // block
 // lock //block
 
-
-import (
-  "runtime"
-  "time"
-  "sync"
-  "fmt"
-)
-
 func main() {
   //runtime.GOMAXPROCS(1)
   runtime.GOMAXPROCS(1)
@@ -32,26 +31,6 @@ func main() {
   var m sync.Mutex
 
   // goroutine 1
-  go func() {
-    runtime.Gosched()
-    m.Lock()
-    ch1 <- 1
-    m.Unlock()
-    stop <- 1
-
-  }()
-
-  // goroutine 2
-  go func() {
-    runtime.Gosched()
-    m.Lock()
-    ch1 <- 1
-    m.Unlock()
-    stop <- 1
-
-  }()
-
-  // goroutine 3
   go func(){
     for {
       select{
@@ -67,7 +46,25 @@ func main() {
       <- ch1
     }
   }()
-  time.Sleep(time.Second)
 
+  // goroutine 2
+  go func() {
+    runtime.Gosched()
+    m.Lock()
+    ch1 <- 1
+    m.Unlock()
+    stop <- 1
+  }()
+
+  // goroutine 3
+  go func() {
+    runtime.Gosched()
+    m.Lock()
+    ch1 <- 1
+    m.Unlock()
+    stop <- 1
+  }()
+
+  time.Sleep(time.Second)
   fmt.Println("End of main!")
 }

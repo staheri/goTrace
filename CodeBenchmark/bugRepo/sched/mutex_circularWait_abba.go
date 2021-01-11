@@ -1,12 +1,14 @@
 package main
 
+import (
+  "fmt"
+  "sync"
+  "runtime"
+  "time"
+)
+
 // https://github.com/moby/moby/pull/4951
 // introduce commit : 81f148be
-
-import "fmt"
-import "sync"
-import "runtime"
-//import "time"
 
 type sharedObject struct{
   content      bool
@@ -25,16 +27,15 @@ func main() {
 
   go func(){
     a.and(b)
-    }()
+  }()
 
-
+  time.Sleep(5*time.Millisecond)
   fmt.Println("End of main!")
 }
 
 func (a *sharedObject) and(b *sharedObject){
-  //runtime.Gosched()
   a.mu.Lock()
-  //runtime.Gosched()
+  runtime.Gosched()
   b.mu.Lock()
   a.content = a.content && b.content
   b.content = a.content && b.content

@@ -1,12 +1,5 @@
 package main
 
-// commit hash: a69a59ffc7e3d028a72d1195c2c1535f447eaa84
-// buggy version: 18768fdc2e76ec6c600c8ab57d2d487ee7877794
-// https://github.com/moby/moby/pull/27782
-// Different timing in select options and conditionals cause deadlock
-
-
-
 import (
   "fmt"
   "sync"
@@ -14,13 +7,13 @@ import (
   "time"
 )
 
-type sharedObject struct{
-  content      bool
-  mu           sync.Mutex
-}
+// commit hash: a69a59ffc7e3d028a72d1195c2c1535f447eaa84
+// buggy version: 18768fdc2e76ec6c600c8ab57d2d487ee7877794
+// https://github.com/moby/moby/pull/27782
+// Different timing in select options and conditionals cause deadlock
 
 func main() {
-  runtime.GOMAXPROCS(1)
+  runtime.GOMAXPROCS(4)
   cv := sync.NewCond(&sync.Mutex{})
 
   done := make(chan int)
@@ -60,6 +53,5 @@ func g2(cv *sync.Cond, done,eventch chan int){
   case eventch <- 1:
   case <- done:
   }
-  //fmt.Println("g2: Broadcast")
   cv.Broadcast()
 }

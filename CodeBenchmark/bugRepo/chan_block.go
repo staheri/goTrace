@@ -1,5 +1,3 @@
-package main
-
 // 58befe3081726ef74ea09198cd9488fb42c51f51
 // https://github.com/moby/moby/pull/256
 // the bug above happened because the os pipe buffer is full
@@ -8,24 +6,23 @@ package main
 // Fix: read the buffer before copys to it
 
 // Here we simulate the scenario with two goroutines and a channel
-
+package main
 
 import (
   "fmt"
-  "runtime"
-  _"time"
+  _"runtime"
+  "time"
 )
 
 
 func main() {
-  runtime.GOMAXPROCS(1)
-
+  //runtime.GOMAXPROCS(1)
   ch := make(chan int)
   go func(){
     ch <- 1
   }()
   go func(){
-    runtime.Gosched()
+    //runtime.Gosched()
     ch <- 2 // expect to be blocked
   }()
   /*go func(){
@@ -33,6 +30,6 @@ func main() {
     <- ch // read
   }()*/
   <- ch
-//  time.Sleep(time.Millisecond*10)
+  time.Sleep(time.Millisecond*10)
   fmt.Println("End of main!")
 }

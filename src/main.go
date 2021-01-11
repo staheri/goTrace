@@ -88,7 +88,10 @@ func main(){
     }
 
   case "rg":
-    db.SwimLanes(dbName,flagOut)
+    for _,arg := range(flag.Args()){
+      tl := strings.Split(arg,",")
+      db.SwimLanes(dbName,flagOut,tl...)
+    }
   case "diff":
     baseDBName := db.Ops("x",util.AppName(flagBase),"13")
     for _,arg := range(flag.Args()){
