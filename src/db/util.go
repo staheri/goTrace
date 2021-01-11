@@ -136,13 +136,16 @@ func appGoroutineFinder(db *sql.DB) (appGss []int){
 			log.Fatal(err)
 		}
 		if dbs.Valid{
-			if strings.Split(strings.Split(dbs.String,":")[1],".")[0] == "main" {
+			fmt.Println(dbs.String)
+			if dbs.String != "XXX" && strings.Split(strings.Split(dbs.String,":")[1],".")[0] == "main" {
 				// this is the app goroutine
 				// add it to slice
 				appGss = append(appGss,gid)
 			}
 		}
 	}
+	res.Close()
+
 	return appGss
 }
 

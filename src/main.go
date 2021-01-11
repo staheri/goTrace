@@ -122,7 +122,8 @@ func main(){
       hbtable := db.HBTable(dbName,tl...)
       db.Dev(dbName,hbtable, flagOut)
     }*/
-    db.Gtree(dbName,flagOut)
+    db.Checker(dbName)
+    //db.Gtree(dbName,flagOut)
     //db.Histogram(10,dbName)
 
 
