@@ -1,4 +1,5 @@
 CREATE TABLE catGRTN(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
+CREATE TABLE catBLCK(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
 CREATE TABLE catCHNL(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
 CREATE TABLE catWGRP(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
 CREATE TABLE catPROC(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
@@ -37,7 +38,6 @@ insert into catCHNL (eventName) VALUES ("EvChClose");
 
 
 insert into catWGRP (eventName) VALUES ("EvWgAdd");
-insert into catWGRP (eventName) VALUES ("EvWgDone");
 insert into catWGRP (eventName) VALUES ("EvWgWait");
 
 
@@ -74,7 +74,20 @@ insert into catMISC (eventName) VALUES ("EvString");
 
 insert into catMUTX (eventName) VALUES ("EvMuLock");
 insert into catMUTX (eventName) VALUES ("EvMuUnlock");
-insert into catMUTX (eventName) VALUES ("EvRWMLock");
-insert into catMUTX (eventName) VALUES ("EvRWMUnlock");
-insert into catMUTX (eventName) VALUES ("EvRWMrLock");
-insert into catMUTX (eventName) VALUES ("EvRWMrUnlock");
+
+insert into catBLCK (eventName) VALUES ("EvGoStart");
+insert into catBLCK (eventName) VALUES ("EvGoEnd");
+insert into catBLCK (eventName) VALUES ("EvGoStop");
+insert into catBLCK (eventName) VALUES ("EvGoSched");
+insert into catBLCK (eventName) VALUES ("EvGoPreempt");
+insert into catBLCK (eventName) VALUES ("EvGoSleep");
+insert into catBLCK (eventName) VALUES ("EvGoBlock");
+insert into catBLCK (eventName) VALUES ("EvGoUnblock");
+insert into catBLCK (eventName) VALUES ("EvGoBlockSend");
+insert into catBLCK (eventName) VALUES ("EvGoBlockRecv");
+insert into catBLCK (eventName) VALUES ("EvGoBlockSelect");
+insert into catBLCK (eventName) VALUES ("EvGoBlockSync");
+insert into catBLCK (eventName) VALUES ("EvGoBlockCond");
+insert into catBLCK (eventName) VALUES ("EvGoBlockNet");
+insert into catBLCK (eventName) VALUES ("EvGoUnblockLocal");
+insert into catBLCK (eventName) VALUES ("EvGoBlockGC");

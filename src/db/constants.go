@@ -136,14 +136,15 @@ var EventDescriptions = [EvCount]struct {
 }
 
 
-const num_of_ctgs = 8
+const num_of_ctgs = 9
 const num_of_atrmodes = 9
 
 var ctgDescriptions = [num_of_ctgs]struct {
 	Category      string
 	Members      []string
 }{
-	catGRTN :  {"GRTN", []string{"EvGoCreate","EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoWaiting","EvGoInSyscall","EvGoStartLocal","EvGoUnblockLocal","EvGoSysExitLocal","EvGoStartLabel","EvGoBlockGC"}},
+	catGRTN :  {"GRTN",[]string{"EvGoCreate","EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoWaiting","EvGoInSyscall","EvGoStartLocal","EvGoUnblockLocal","EvGoSysExitLocal","EvGoStartLabel","EvGoBlockGC"}},
+	catBLCK :  {"BLCK",[]string{"EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoUnblockLocal","EvGoBlockGC"}},
   catCHNL :  {"CHNL",[]string{"EvChSend","EvChRecv","EvChMake","EvChClose"}},
 	catWGRP :  {"WGRP",[]string{"EvWgAdd","EvWgWait"}},
 	catMUTX :  {"MUTX",[]string{"EvMuLock","EvMuUnlock"}},
@@ -163,20 +164,9 @@ const (
 	catGCMM         = 5  // Garbage collection/memory events
 	catSYSC         = 6  // Syscall events
 	catMISC         = 7  // Other events
+	catBLCK         = 8  // Blocking events
 )
 
-
-const (
-  AtrMode_StkNone           = 0 // no stack
-  AtrMode_StkTopAll         = 1 // Top element of stack (immediate parent) - File, Function, Line
-  AtrMode_StkTopFlFn        = 2 // Top element of stack (immediate parent) - File, Function
-  AtrMode_StkTopFnLn        = 3 // Top element of stack (immediate parent) - Function, Line
-  AtrMode_StkTopFn          = 4 // Top element of stack (immediate parent) - Function
-  AtrMode_StkBotAll         = 5 // Bottom element of stack (great ancesstor) - File, Function, Line
-  AtrMode_StkBotFlFn        = 6 // Bottom element of stack (great ancesstor) - File, Function
-  AtrMode_StkBotFnLn        = 7 // Bottom element of stack (great ancesstor) - Function, Line
-  AtrMode_StkBotFn          = 8 // Bottom element of stack (great ancesstor) - Function
-)
 
 type msgKey struct{
 	cid    uint64
