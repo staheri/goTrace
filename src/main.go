@@ -26,6 +26,7 @@ var (
   flagN       int
   flagBase    string
   flagTO      int
+  flagDepth   int
   flagApp     string
   flagArgs    []string
   dbName      string
@@ -125,7 +126,8 @@ func main(){
       hbtable := db.HBTable(dbName,tl...)
       db.Dev(dbName,hbtable, flagOut)
     }*/
-    db.Checker(dbName)
+    //db.Checker(dbName)
+    fmt.Println(dbName)
     //db.Gtree(dbName,flagOut)
     //db.Histogram(10,dbName)
 
@@ -151,6 +153,7 @@ func parseFlags() (){
   flag.IntVar(&flagAtrMode,"atrmode",0,"Modes for HAC & DIFF")
   flag.StringVar(&flagApp,"app","","Target application (*.go)")
   flag.IntVar(&flagTO,"to",-1,"Timeout for deadlocks")
+  flag.IntVar(&flagDepth,"depth",2,"Max depth for rescheduling")
 
   flag.Parse()
 
@@ -168,7 +171,7 @@ func parseFlags() (){
   }
 
   // Check src
-  if flagSrc != "native" && flagSrc != "latest" && flagSrc != "x"{
+  if flagSrc != "native" && flagSrc != "latest" && flagSrc != "x" && flagSrc != "test"{
     util.PrintUsage()
     panic("Wrong source")
   }
@@ -205,7 +208,15 @@ func parseFlags() (){
 func dbPointer() (dbName string){
 
   switch flagSrc {
-
+  case "test":
+    fmt.Println("Analyzing ", flagApp, "...")
+    var src instrument.EventSource
+    src = instrument.NewNativeRunSched(flagApp,flagTO,flagDepth)
+    _,err := src.Events()
+    if err != nil {
+  		panic(err)
+  	}
+    return "XX"
   case "native":
     fmt.Println("Analyzing ", flagApp, "...")
     var src instrument.EventSource

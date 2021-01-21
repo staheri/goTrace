@@ -21,7 +21,83 @@ func channelAnalyis(source string){
       log.Fatal(err)
   }
   ast.Inspect(node, func(n ast.Node) bool {
-		/*switch x := n.(type) { // check the type of each node,
+		switch x := n.(type) { // check the type of each node,
+
+		case *ast.File:
+			_ = x // blank identifier
+		file := n.(*ast.File)
+		fmt.Printf("||||\nFile: %+v\npos:%+v\n||||\n",file,fset.Position(n.Pos()))
+/*
+		case *ast.GenDecl:
+			_ = x // blank identifier
+		gendecl := n.(*ast.GenDecl)
+		fmt.Printf("||||\nGenDecl: %+v\npos:%+v\n||||\n",gendecl,fset.Position(n.Pos()))
+
+		case *ast.ValueSpec:
+			_ = x // blank identifier
+			valueSpec := n.(*ast.ValueSpec)
+			fmt.Printf("||||\nValueSpec: %+v\npos:%+v\n||||\n",valueSpec,fset.Position(n.Pos()))
+
+		case *ast.TypeSpec:
+			_ = x // blank identifier
+			typeSpec := n.(*ast.TypeSpec)
+			fmt.Printf("||||\ntypeSpec: %+v\npos:%+v\n||||\n",typeSpec,fset.Position(n.Pos()))
+
+		case *ast.Ident:
+			_ = x // blank identifier
+			ident := n.(*ast.Ident)
+			fmt.Printf("||||\nIdent: %+v\npos:%+v\n||||\n",ident,fset.Position(n.Pos()))
+
+		case *ast.IfStmt:
+			_ = x // blank identifier
+			ifstmt := n.(*ast.IfStmt)
+			fmt.Printf("||||\nifstmt: %+v\npos:%+v\n||||\n",ifstmt,fset.Position(n.Pos()))
+
+		case *ast.ExprStmt:
+			_ = x // blank identifier
+			exprStmt := n.(*ast.ExprStmt)
+			fmt.Printf("||||\nexprStmt: %+v\npos:%+v\n||||\n",exprStmt,fset.Position(n.Pos()))
+
+		case *ast.CallExpr:
+			_ = x // blank identifier
+			callExpr := n.(*ast.CallExpr)
+			fmt.Printf("||||\ncallExpr: %+v\npos:%+v\n||||\n",callExpr,fset.Position(n.Pos()))
+
+		case *ast.SelectorExpr:
+			_ = x // blank identifier
+			selectorExpr := n.(*ast.SelectorExpr)
+			fmt.Printf("||||\nselectorExpr: %+v\npos:%+v\n||||\n",selectorExpr,fset.Position(n.Pos()))
+
+		case *ast.StructType:
+			_ = x // blank identifier
+			structType := n.(*ast.StructType)
+			fmt.Printf("||||\nStructType: %+v\npos:%+v\n||||\n",structType,fset.Position(n.Pos()))
+
+		case *ast.FieldList:
+			_ = x // blank identifier
+			fieldList := n.(*ast.FieldList)
+			fmt.Printf("||||\nFieldList: %+v\npos:%+v\n||||\n",fieldList,fset.Position(n.Pos()))
+
+		case *ast.Field:
+			_ = x // blank identifier
+			field := n.(*ast.Field)
+			fmt.Printf("||||\nField: %+v\npos:%+v\n||||\n",field,fset.Position(n.Pos()))
+
+		case *ast.FuncDecl:
+			_ = x // blank identifier
+			funcDecl := n.(*ast.FuncDecl)
+			fmt.Printf("||||\nFuncDecl: %+v\npos:%+v\n||||\n",funcDecl,fset.Position(n.Pos()))
+
+*/
+		default:
+			//fmt.Printf(".")
+			_ = x // blank identifier
+			if n != nil{
+				fmt.Printf("%+v : %+v\n*******\n",reflect.TypeOf(n),fset.Position(n.Pos()))
+			}
+			//*/
+		}
+		/*
 		case *ast.ChanType:
       _ = x // blank identifier
       ct := n.(*ast.ChanType) // extract the structs := type assertion
@@ -39,9 +115,7 @@ func channelAnalyis(source string){
       cc := n.(*ast.CommClause)
       fmt.Printf("%s: \tSelect statment\n%+v\n\n",fset.Position(n.Pos()),cc)
 		}*/
-		if n != nil{
-			fmt.Printf("%+v : %+v\n*******\n",reflect.TypeOf(n),fset.Position(n.Pos()))
-		}
+
 		/*ident,ok := n.(*ast.Ident)
 		if ok{
 			fmt.Printf("\tIdent Name: %s\n\tPosition: %s\n",ident.Name,fset.Position(n.Pos()))

@@ -69,11 +69,25 @@ type NativeRun struct {
 	timeout        int
 }
 
+type NativeRunSched struct {
+	OrigPath, Path string
+	timeout        int
+	depth          int
+}
+
 // NewNativeRun inits new NativeRun source.
 func NewNativeRun(path string, to int) *NativeRun {
 	return &NativeRun{
 		OrigPath: path,
 		timeout:  to,
+	}
+}
+
+func NewNativeRunSched(path string, to,depth int) *NativeRunSched {
+	return &NativeRunSched{
+		OrigPath: path,
+		timeout:  to,
+		depth: depth,
 	}
 }
 
@@ -137,6 +151,78 @@ func (r *NativeRun) Events() ([]*trace.Event, error) {
 // TODO: add support for multiple files and package selectors
 func (r *NativeRun) RewriteSource(timeout int) error {
 	path, err := rewriteSource(r.OrigPath, timeout)
+	if err != nil {
+		return err
+	}
+
+	r.Path = path
+	fmt.Println("Orig Path:", r.OrigPath)
+	fmt.Println("Path:", r.Path)
+
+	return nil
+}
+
+func (r *NativeRunSched) Events() ([]*trace.Event, error) {
+//func (r *NativeRunSched) Events() error {
+	// rewrite AST
+	err := r.RewriteSourceSched(r.timeout,r.depth)
+	if err != nil {
+		return nil,fmt.Errorf("couldn't rewrite source code: %v", err)
+	}
+	fmt.Println("Orig Path:", r.OrigPath)
+	fmt.Println("Path:", r.Path)
+
+	return nil,nil
+	/*defer func(tmpDir string) {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			fmt.Println("Cannot remove temp dir:", err)
+		}
+	}(r.Path)
+
+	tmpBinary, err := ioutil.TempFile("", "goTMP")
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("%v\n",tmpBinary.Name())
+	defer os.Remove(tmpBinary.Name())
+
+	// build binary
+	// TODO: replace build&run part with "go run" when there is no more need
+	// to keep binary
+	cmd := exec.Command("go", "build", "-o", tmpBinary.Name())
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Dir = r.Path
+	err = cmd.Run()
+	if err != nil {
+		fmt.Println("go build error", stderr.String())
+		// TODO: test on most common errors, possibly add stderr to
+		// error information or smth.
+		return nil, err
+	}
+
+	// run
+	stderr.Reset()
+	cmd = exec.Command(tmpBinary.Name())
+	cmd.Stderr = &stderr
+	if err = cmd.Run(); err != nil {
+		fmt.Println("modified program failed:", err, stderr.String())
+		// TODO: test on most common errors, possibly add stderr to
+		// error information or smth.
+		return nil, err
+	}
+
+	if stderr.Len() == 0 {
+		return nil, errors.New("empty trace")
+	}
+
+	// parse trace
+	return parseTrace(&stderr, tmpBinary.Name())
+	*/
+}
+
+func (r *NativeRunSched) RewriteSourceSched(timeout,depth int) error {
+	path, err := rewriteSourceSched(r.OrigPath, timeout,depth)
 	if err != nil {
 		return err
 	}
