@@ -40,10 +40,24 @@ src/golang.org
 *.exe
 */*.exe
 
+*/*mod.go
+*/*/*mod.go
+*/*/*/*mod.go
+*/*/*/*/*mod.go
+*/*/*/*/*/*mod.go
+
 */*.mod
 */*/*.mod
 */*/*/*.mod
 */*/*/*/*.mod
+*/*/*/*/*/*.mod
+
+*/*mod_sched.go
+*/*/*mod_sched.go
+*/*/*/*mod_sched.go
+*/*/*/*/*mod_sched.go
+*/*/*/*/*/*mod_sched.go
+
 
 */*/*/*.out
 */*/*.out
