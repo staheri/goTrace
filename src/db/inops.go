@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"log"
 	"util"
+	"strings"
 )
 
 // Take sequence of events, create a new DB Schema and insert events into tables
@@ -242,14 +243,19 @@ func Store(events []*trace.Event, app string) (dbName string) {
 				predG = sql.NullInt64{}
 				predClk = sql.NullInt64{}
 			}
-		} else if util.Contains(ctgDescriptions[catWGRP].Members, "Ev"+desc.Name){
+		} else if util.Contains(ctgDescriptions[catWGCV].Members, "Ev"+desc.Name){
 			// WGRP event
 			// Assign wgsClock
 			// Assign rid, rval=(add? val, else? Null), rclock
 			// predG, predClk: null
 
-			tkey= e.Args[0] // wgid
-			rid =  sql.NullString{Valid:true, String: "W"+strconv.FormatUint(tkey,10)} // wgid
+			tkey= e.Args[0] // wgid/cvid
+			if strings.HasPrefix(desc.Name,"Cv"){
+				rid =  sql.NullString{Valid:true, String: "CV"+strconv.FormatUint(tkey,10)} // cvid
+			} else{
+				rid =  sql.NullString{Valid:true, String: "W"+strconv.FormatUint(tkey,10)} // wgid
+			}
+
 			if _,ok := wgClock[tkey];ok{
 				wgClock[tkey] = wgClock[tkey] + 1
 			} else{

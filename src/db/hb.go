@@ -35,8 +35,8 @@ func asp2int(asp string) (ret int){
 		ret = catMUTX
 	}else if asp == "SYSC"{
 		ret = catSYSC
-	}else if asp == "WGRP"{
-		ret = catWGRP
+	}else if asp == "WGCV"{
+		ret = catWGCV
 	}else if asp == "PROC"{
 		ret = catPROC
 	}else if asp == "MISC"{
@@ -433,7 +433,7 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 				}else{
 					event = event + "]"
 				}
-			}else if util.Contains(ctgDescriptions[catMUTX].Members, "Ev"+event1) || util.Contains(ctgDescriptions[catWGRP].Members, "Ev"+event1){
+			}else if util.Contains(ctgDescriptions[catMUTX].Members, "Ev"+event1) || util.Contains(ctgDescriptions[catWGCV].Members, "Ev"+event1){
 				if rid.Valid{
 					event = event + " ["+rid.String+"]"
 				}else{

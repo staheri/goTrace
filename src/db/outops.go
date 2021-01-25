@@ -1717,3 +1717,57 @@ func ResourceGraph(dbName, outdir string){
 	fmt.Println("Result: " + stdout.String())
 	//fmt.Println(out)
 }
+
+func ConcUsage(dbName string) map[string][]*ConcurrencyUsage{
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	}else{
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+	// END DB
+
+	var g uint64
+	var event,src string
+	var rid    sql.NullString
+
+	// last events stroe every last event of goroutines
+	concUsage := make(map[string][]*ConcurrencyUsage)
+
+	// Query mutexes
+	q := `SELECT t1.type,t1.g,t1.rid,t1.src FROM Events t1
+				INNER JOIN global.catSCHD t2
+				ON t1.type=t2.eventName;`
+
+	res, err := db.Query(q)
+	check(err)
+
+
+
+	for res.Next(){
+		err = res.Scan(&event,&g,&rid,&src)
+		check(err)
+		// create concurrencyUsage struct
+		var newConcUsage ConcurrencyUsage
+		if rid.Valid{
+			newConcUsage = ConcurrencyUsage{g:g,rid:rid.String,event:event}
+		}else{
+			newConcUsage = ConcurrencyUsage{g:g,event:event}
+		}
+
+		posSlice := strings.Split(src,":")
+		pos := posSlice[0]+":"+posSlice[2]
+
+		if val,ok := concUsage[pos];ok{
+			concUsage[pos] = append(val,&newConcUsage)
+		} else{
+			concUsage[pos] = []*ConcurrencyUsage{&newConcUsage}
+		}
+	}
+	res.Close()
+
+	//lets filter a bit
+	return concUsage
+}
