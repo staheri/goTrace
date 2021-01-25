@@ -7,6 +7,7 @@ CREATE TABLE catGCMM(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varch
 CREATE TABLE catSYSC(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
 CREATE TABLE catMUTX(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
 CREATE TABLE catMISC(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
+CREATE TABLE catSCHD(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
 
 insert into catGRTN (eventName) VALUES ("EvGoCreate");
 insert into catGRTN (eventName) VALUES ("EvGoStart");
@@ -91,3 +92,13 @@ insert into catBLCK (eventName) VALUES ("EvGoBlockCond");
 insert into catBLCK (eventName) VALUES ("EvGoBlockNet");
 insert into catBLCK (eventName) VALUES ("EvGoUnblockLocal");
 insert into catBLCK (eventName) VALUES ("EvGoBlockGC");
+
+insert into catSCHD (eventName) VALUES ("EvSelect");
+insert into catSCHD (eventName) VALUES ("EvWgAdd");
+insert into catSCHD (eventName) VALUES ("EvChSend");
+insert into catSCHD (eventName) VALUES ("EvWgWait");
+insert into catSCHD (eventName) VALUES ("EvChClose");
+insert into catSCHD (eventName) VALUES ("EvChRecv");
+insert into catSCHD (eventName) VALUES ("EvMuLock");
+insert into catSCHD (eventName) VALUES ("EvMuUnlock");
+insert into catSCHD (eventName) VALUES ("EvGoCreate");
