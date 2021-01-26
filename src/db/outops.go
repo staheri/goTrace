@@ -1718,7 +1718,7 @@ func ResourceGraph(dbName, outdir string){
 	//fmt.Println(out)
 }
 
-func ConcUsage(dbName string) map[string][]*ConcurrencyUsage{
+func ConcUsage(dbName string) map[string]int{
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
 	if err != nil {
@@ -1734,7 +1734,7 @@ func ConcUsage(dbName string) map[string][]*ConcurrencyUsage{
 	var rid    sql.NullString
 
 	// last events stroe every last event of goroutines
-	concUsage := make(map[string][]*ConcurrencyUsage)
+	concUsage := make(map[string]int)
 
 	// Query mutexes
 	q := `SELECT t1.type,t1.g,t1.rid,t1.src FROM Events t1
@@ -1749,21 +1749,19 @@ func ConcUsage(dbName string) map[string][]*ConcurrencyUsage{
 	for res.Next(){
 		err = res.Scan(&event,&g,&rid,&src)
 		check(err)
-		// create concurrencyUsage struct
-		var newConcUsage ConcurrencyUsage
-		if rid.Valid{
-			newConcUsage = ConcurrencyUsage{g:g,rid:rid.String,event:event}
-		}else{
-			newConcUsage = ConcurrencyUsage{g:g,event:event}
-		}
+
+
 
 		posSlice := strings.Split(src,":")
 		pos := posSlice[0]+":"+posSlice[2]
 
-		if val,ok := concUsage[pos];ok{
-			concUsage[pos] = append(val,&newConcUsage)
-		} else{
-			concUsage[pos] = []*ConcurrencyUsage{&newConcUsage}
+		if _,ok := concUsage[pos];!ok{
+			if rid.Valid {
+				concUsage[pos] = 1
+			}else{
+				concUsage[pos] = 0
+			}
+
 		}
 	}
 	res.Close()

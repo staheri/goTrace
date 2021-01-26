@@ -28,13 +28,13 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	// Creating new database for current experiment
 	idx := 0
 	dbName = app + "X" + strconv.Itoa(idx)
-	fmt.Printf("Attempt to create database: %s\n",dbName)
+	//fmt.Printf("Attempt to create database: %s\n",dbName)
 	_,err = db.Exec("CREATE DATABASE "+dbName + ";")
 	for err != nil{
-		fmt.Printf("Error: %v\n",err)
+		//fmt.Printf("Error: %v\n",err)
 		idx = idx + 1
 		dbName = app + "X" + strconv.Itoa(idx)
-		fmt.Printf("Attempt to create database: %s\n",dbName)
+		//fmt.Printf("Attempt to create database: %s\n",dbName)
 		_,err = db.Exec("CREATE DATABASE "+dbName+ ";")
 	}
 
@@ -137,7 +137,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 		// Debug info
 		cnt+=1
 		desc := EventDescriptions[e.Type]
-		fmt.Printf("%v: %v\n",cnt,desc.Name)
+		//fmt.Printf("%v: %v\n",cnt,desc.Name)
 		//if cnt > TOPX{
 		//	break
 		//}
@@ -276,8 +276,8 @@ func Store(events []*trace.Event, app string) (dbName string) {
 
 		} else if e.Link != nil{
 			// Set Predecessor for an event (key to the event: TS)
-			fmt.Printf("Source: %s\n",e)
-			fmt.Printf("LINK: %s\n",e.Link)
+			//fmt.Printf("Source: %s\n",e)
+			//fmt.Printf("LINK: %s\n",e.Link)
 			linkoff = sql.NullInt64{Valid:true, Int64: int64(e.Link.Off)}
 			if _,ok := links[int64(e.Link.Off)] ; !ok{
 				links[int64(e.Link.Off)] = eventPredecessor{e.G, localClock[e.G]}
@@ -643,7 +643,7 @@ func createTables(db *sql.DB){
 
 // Create individual tables for schema db
 func createTable(stmt , name string, db *sql.DB) () {
-	fmt.Printf("Creating table %v ... \n",name)
+	//fmt.Printf("Creating table %v ... \n",name)
 	_,err := db.Exec(stmt)
 	if err != nil {
 		panic(err)
@@ -709,7 +709,7 @@ func insertStackframe(eventID int64, stkIDX uint64, frames []*trace.Frame, db *s
 		s = s + "\""+path.Base(a.File) + "\", "
 		s = s + strconv.Itoa(a.Line)
 		s = s +");"
-		fmt.Printf("> Executing %s...\n",s)
+		//fmt.Printf("> Executing %s...\n",s)
 		_,err := db.Exec(s)
 		if err != nil{
 			panic(err)
@@ -728,7 +728,7 @@ func insertArgs(eventID int64, args [4]uint64, descArgs []string, db *sql.DB) {
 		s = s + "\""+ a + "\", "
 		s = s + strconv.FormatInt(int64(args[i]),10)
 		s = s +");"
-		fmt.Printf("> Executing %s ...\n",s)
+		//fmt.Printf("> Executing %s ...\n",s)
 		_,err := db.Exec(s)
 		if err != nil{
 			panic(err)
@@ -743,7 +743,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 	var startLoc string
 	//search for event gid in the table
 	q = "SELECT * FROM Goroutines WHERE gid="+strconv.FormatUint(e.G,10)+";"
-	fmt.Printf(">>> Executing %s...\n",q)
+	//fmt.Printf(">>> Executing %s...\n",q)
 	res, err := db.Query(q)
 	if err != nil {
 		panic(err)
@@ -760,7 +760,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 			parent_id := e.G
 			createLoc := util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))
 			q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id, createLoc, create_eid) VALUES (%v,%v,\"%s\",%v);",gid,parent_id,createLoc,eid)
-			fmt.Printf(">>> Executing %s...\n",q)
+			//fmt.Printf(">>> Executing %s...\n",q)
 			_,err := db.Exec(q)
 			if err != nil{
 				panic(err)
@@ -779,7 +779,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 			}
 
 			q = fmt.Sprintf("UPDATE Goroutines SET startLOC=\"%s\", start_eid=%v WHERE gid=%v;",startLoc,eid,gid)
-			fmt.Printf(">>> Executing %s...\n",q)
+			//fmt.Printf(">>> Executing %s...\n",q)
 			_,err := db.Exec(q)
 			if err != nil{
 				panic(err)
@@ -792,7 +792,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 			// update
 			gid := e.G
 			q = fmt.Sprintf("UPDATE Goroutines SET ended=%v WHERE gid=%v;",eid,gid)
-			fmt.Printf(">>> Executing %s...\n",q)
+			//fmt.Printf(">>> Executing %s...\n",q)
 			_,err := db.Exec(q)
 			if err != nil{
 				panic(err)
@@ -807,7 +807,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 			gid := strconv.FormatUint(e.G,10) // current G
 			parent_id := -1
 			q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id) VALUES (%s,%v);",gid,parent_id)
-			fmt.Printf(">>> Executing %s...\n",q)
+			//fmt.Printf(">>> Executing %s...\n",q)
 			res,err := db.Exec(q)
 			if err != nil{
 				panic(err)
@@ -820,7 +820,7 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 			parent_id = int(e.G)
 			createLoc := util.FilterSlash(path.Base(e.Stk[len(e.Stk)-1].File)+":"+ e.Stk[len(e.Stk)-1].Fn + ":" + strconv.Itoa(e.Stk[len(e.Stk)-1].Line))
 			q = fmt.Sprintf("INSERT INTO Goroutines (gid, parent_id, createLoc, create_eid) VALUES (%v,%v,\"%s\",%v);",gid,parent_id,createLoc,eid)
-			fmt.Printf(">>> Executing %s...\n",q)
+			//fmt.Printf(">>> Executing %s...\n",q)
 			_,err = db.Exec(q)
 			if err != nil{
 				panic(err)
@@ -850,7 +850,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
     cid = e.Args[1]
   }
   q = "SELECT * FROM Channels WHERE cid="+strconv.FormatUint(cid,10)+";"
-  fmt.Printf(">>> Executing %s...\n",q)
+  //fmt.Printf(">>> Executing %s...\n",q)
 	res, err := db.Query(q)
 	if err != nil {
 		panic(err)
@@ -863,7 +863,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
       if desc.Name == "ChClose"{
         // update Channels
         q = fmt.Sprintf("UPDATE Channels SET close_eid=%v, close_gid=%v WHERE cid=%v;",eid,e.G,cid)
-  			fmt.Printf(">>> Executing %s...\n",q)
+  			//fmt.Printf(">>> Executing %s...\n",q)
   			_,err := db.Exec(q)
   			if err != nil{
   				panic(err)
@@ -871,7 +871,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
       } else if desc.Name == "ChSend"{
         // update Channels
         q = fmt.Sprintf("UPDATE Channels SET cntSends = cntSends + 1 WHERE cid=%v;",cid)
-        fmt.Printf(">>> Executing %s...\n",q)
+        //fmt.Printf(">>> Executing %s...\n",q)
       	_, err := db.Exec(q)
       	if err != nil {
       		panic(err)
@@ -879,7 +879,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
       } else if desc.Name == "ChRecv"{
         // update Channels
         q = fmt.Sprintf("UPDATE Channels SET cntRecvs = cntRecvs + 1 WHERE cid=%v;",cid)
-        fmt.Printf(">>> Executing %s...\n",q)
+        //fmt.Printf(">>> Executing %s...\n",q)
       	_, err := db.Exec(q)
       	if err != nil {
       		panic(err)
@@ -894,7 +894,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
 			// there might be a global channel creation, then what?
 			// First insert the uninitiated channel
       q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",cid,-1,-1)
-      fmt.Printf(">>> Executing %s...\n",q)
+      //fmt.Printf(">>> Executing %s...\n",q)
     	_, err := db.Exec(q)
     	if err != nil {
     		panic(err)
@@ -903,7 +903,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
 			if desc.Name == "ChClose"{
         // update Channels
         q = fmt.Sprintf("UPDATE Channels SET close_eid=%v, close_gid=%v WHERE cid=%v;",eid,e.G,cid)
-  			fmt.Printf(">>> Executing %s...\n",q)
+  			//fmt.Printf(">>> Executing %s...\n",q)
   			_,err := db.Exec(q)
   			if err != nil{
   				panic(err)
@@ -911,7 +911,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
       } else if desc.Name == "ChSend"{
         // update Channels
         q = fmt.Sprintf("UPDATE Channels SET cntSends = cntSends + 1 WHERE cid=%v;",cid)
-        fmt.Printf(">>> Executing %s...\n",q)
+        //fmt.Printf(">>> Executing %s...\n",q)
       	_, err := db.Exec(q)
       	if err != nil {
       		panic(err)
@@ -919,7 +919,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
       } else if desc.Name == "ChRecv"{
         // update Channels
         q = fmt.Sprintf("UPDATE Channels SET cntRecvs = cntRecvs + 1 WHERE cid=%v;",cid)
-        fmt.Printf(">>> Executing %s...\n",q)
+        //fmt.Printf(">>> Executing %s...\n",q)
       	_, err := db.Exec(q)
       	if err != nil {
       		panic(err)
@@ -930,7 +930,7 @@ func chanEntry(e *trace.Event, eid int64, db *sql.DB){
     } else{
       // insert
       q = fmt.Sprintf("INSERT INTO Channels (cid, make_gid, make_eid) VALUES (%v,%v,%v);",cid,e.G,eid)
-      fmt.Printf(">>> Executing %s...\n",q)
+      //fmt.Printf(">>> Executing %s...\n",q)
     	_, err := db.Exec(q)
     	if err != nil {
     		panic(err)
