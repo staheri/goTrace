@@ -4,7 +4,6 @@ package instrument
 
 import (
 	"bytes"
-	"errors"
 	"go/ast"
 	"go/printer"
 	"go/token"
@@ -16,42 +15,81 @@ import (
 	"golang.org/x/tools/go/loader"
 
 	"strconv"
+	_"reflect"
+	"fmt"
+	"strings"
 )
 
-var ErrImported = errors.New("trace already imported")
-
-// rewriteSource rewrites current source and saves
-// into temporary file, returning it's path.
-func rewriteSource(path string,timeout int) (string, error) {
-	data, err := addCode(path,timeout)
-	if err == ErrImported {
-		data, err = ioutil.ReadFile(path)
-		if err != nil {
-			return "", err
-		}
-	} else if err != nil {
-		return "", err
-	}
-
-	tmpDir, err := ioutil.TempDir("", "gotracer_package")
+// injects and rewrite source in app.OrigPath
+// rewritten file(s) are stored in app.NewPath
+// nothing returns
+func (app *AppExec) RewriteSource() error {
+	var data []byte
+	var err error
+	data, err = addCode(app.OrigPath,app.Timeout)
 	if err != nil {
-		return "", err
+		fmt.Println("Error in addCode:", err)
+		return err
 	}
-	filename := filepath.Join(tmpDir, filepath.Base(path))
-	// SAEED
-	filename2 := filepath.Join(filepath.Dir(path), filepath.Base(path)+".mod")
-	err = ioutil.WriteFile(filename2, data, 0666)
+	// create files to store rewritten data
+	filename := filepath.Join(app.NewPath, filepath.Base(app.OrigPath))
+	toStore := filepath.Join(filepath.Dir(app.OrigPath), strings.Split(filepath.Base(app.OrigPath),".")[0]+"_mod.go")
 
+	// write files
+	err = ioutil.WriteFile(toStore, data, 0666)
+	fmt.Println("writes data to ",toStore)
+	if err != nil {
+		fmt.Println("Write data failed:", err)
+		return err
+	}
 	err = ioutil.WriteFile(filename, data, 0666)
+	fmt.Println("writes data to ",filename)
 	if err != nil {
-		return "", err
+		fmt.Println("Write data failed:", err)
+		return err
 	}
-
-	return tmpDir, nil
+	return nil
 }
 
-// addCode searches for main func in data, and updates AST code
-// adding tracing functions.
+// injects and rewrite source in app.OrigPath
+// rewritten file(s) are stored in app.NewPath
+// nothing returns
+func (app *AppTest) RewriteSourceSched() error {
+	var data []byte
+	var err error
+	data, err = addCodeSched(app.OrigPath,app.Depth,app.ConcUsage)
+	if err != nil {
+		fmt.Println("Error in addCodeSched:", err)
+		return err
+	}
+	// create files to store rewritten data
+	filename := filepath.Join(app.TestPath, filepath.Base(app.OrigPath))
+	//toStore := filepath.Join(filepath.Dir(path), strings.Split(filepath.Base(path),".")[0]+"_mod.go")
+
+	// write files
+	/*err = ioutil.WriteFile(toStore, data, 0666)
+	fmt.Println("writes data to ",toStore)
+	if err != nil {
+		fmt.Println("Write data failed:", err)
+		return err
+	}
+	*/
+
+	err = ioutil.WriteFile(filename, data, 0666)
+	fmt.Println("writes data to ",filename)
+	if err != nil {
+		fmt.Println("Write data failed:", err)
+		return err
+	}
+	return nil
+}
+
+// This function:
+//    - traverses the AST
+//    - finds the main package, file, function
+//    - adds needed imports
+//    - adds tracing mechanism (start/stop)
+//    - adds constant depth, struct type, global counter and Reschedule function declaration
 func addCode(path string, timeout int) ([]byte, error) {
 	var conf loader.Config
 	if _, err := conf.FromArgs([]string{path}, false); err != nil {
@@ -61,13 +99,6 @@ func addCode(path string, timeout int) ([]byte, error) {
 	prog, err := conf.Load()
 	if err != nil {
 		return nil, err
-	}
-
-	// check if runtime/trace already imported
-	for i, _ := range prog.Imported {
-		if i == "runtime/trace" {
-			return nil, ErrImported
-		}
 	}
 
 	pkg := prog.Created[0]
@@ -107,6 +138,95 @@ func addCode(path string, timeout int) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// This function:
+//    - traverses the AST
+//    - finds the main package, file, function
+//    - adds needed imports
+//    - adds tracing mechanism (start/stop)
+//    - adds constant depth, struct type, global counter and Reschedule function declaration
+func addCodeSched(path string,depth int,concUsage map[string]int) ([]byte, error) {
+	var conf loader.Config
+	if _, err := conf.FromArgs([]string{path}, false); err != nil {
+		return nil, err
+	}
+
+	prog, err := conf.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	pkg := prog.Created[0]
+
+	// TODO: find file with main func inside
+	astFile := pkg.Files[0]
+
+	// add imports
+	astutil.AddImport(prog.Fset, astFile, "sync")
+	astutil.AddImport(prog.Fset, astFile, "runtime")
+	astutil.AddImport(prog.Fset, astFile, "math/rand")
+	fmt.Println(" >>> Added Impots")
+
+	// add constant, struct type, global counter, function declration
+	ast.Inspect(astFile, func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.File:
+			// add constant, struct type, global counter, function declration
+			decls := newDecls(depth)
+			decls2 := x.Decls
+			decls = append(decls2,decls...)
+			x.Decls = decls
+			return true
+		}
+		return true
+	})
+
+	fmt.Println(" >>> Added Decls")
+
+	astutil.Apply(astFile, func(cr *astutil.Cursor) bool{
+		//_,ok := cr.Node().(*ast.GoStmt)
+		n := cr.Node()
+		if n != nil{
+			t1 := n.Pos()
+			t2 := prog.Fset.Position(t1)
+			s := fmt.Sprintf("%v",t2)
+			if !matches(n,concUsage,s) {
+				return true
+			}
+		} else{
+			return true
+		}
+		cr.InsertBefore(callFuncSched())
+		fmt.Println("Inserted Before Match")
+		return true
+		//fmt.Println("")
+	},nil)
+
+	// add GOMACPROCS
+	ast.Inspect(astFile, func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.FuncDecl:
+			// find 'main' function
+			if x.Name.Name == "main" && x.Recv == nil {
+				stmts := goMaxProcs()
+				stmts = append(stmts, x.Body.List...)
+				x.Body.List = stmts
+				return true
+			}
+		}
+		return true
+	})
+
+
+	var buf bytes.Buffer
+	err = printer.Fprint(&buf, prog.Fset, astFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+// wrapper for trace statments
 func createTraceStmts(timeout int) []ast.Stmt {
 	ret := make([]ast.Stmt, 2)
 
@@ -217,4 +337,24 @@ func createTraceStmts(timeout int) []ast.Stmt {
 	}
 
 	return ret
+}
+
+// checks if current AST node matches with any concUsage instances
+func matches(n ast.Node, conc map[string]int, location string) bool{
+	if location != "-"{
+		t := strings.Split(filepath.Base(location),":")[0] + ":" + strings.Split(filepath.Base(location),":")[1]
+		tt := strings.Split(t,"_mod")[0] + strings.Split(t,"_mod")[1]
+		// fmt.Printf("* %v\n",tt)
+		// for k,v := range(conc){
+		// 	fmt.Println(">> K:",k)
+		// 	fmt.Println(">> V:",v)
+		// }
+		if val,ok := conc[tt]; ok && val != 2 {
+			conc[tt] = 2
+			fmt.Println("Return True > ",tt)
+			return true
+		}
+		return false
+	}
+	return false
 }

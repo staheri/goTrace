@@ -150,13 +150,13 @@ var ctgDescriptions = [num_of_ctgs]struct {
 	catGRTN :  {"GRTN",[]string{"EvGoCreate","EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoWaiting","EvGoInSyscall","EvGoStartLocal","EvGoUnblockLocal","EvGoSysExitLocal","EvGoStartLabel","EvGoBlockGC"}},
 	catBLCK :  {"BLCK",[]string{"EvGoStart","EvGoEnd","EvGoStop","EvGoSched","EvGoPreempt","EvGoSleep","EvGoBlock","EvGoUnblock","EvGoBlockSend","EvGoBlockRecv","EvGoBlockSelect","EvGoBlockSync","EvGoBlockCond","EvGoBlockNet","EvGoUnblockLocal","EvGoBlockGC"}},
   catCHNL :  {"CHNL",[]string{"EvChSend","EvChRecv","EvChMake","EvChClose"}},
-	catWGCV :  {"WGRP",[]string{"EvWgAdd","EvWgWait","EvCvWait","EvCvSig"}},
+	catWGCV :  {"WGCV",[]string{"EvWgAdd","EvWgWait","EvCvWait","EvCvSig"}},
 	catMUTX :  {"MUTX",[]string{"EvMuLock","EvMuUnlock"}},
   catPROC :  {"PROC",[]string{"EvNone","EvBatch","EvFrequency","EvStack","EvGomaxprocs","EvProcStart","EvProcStop"}},
   catGCMM :  {"GCMM",[]string{"EvGCStart","EvGCDone","EvGCSTWStart","EvGCSTWDone","EvGCSweepStart","EvGCSweepDone","EvHeapAlloc","EvNextGC","EvGCMarkAssistStart","EvGCMarkAssistDone"}},
   catSYSC :  {"SYSC",[]string{"EvGoSysCall","EvGoSysExit","EvGoSysBlock"}},
   catMISC :  {"MISC",[]string{"EvUserTaskCreate","EvUserTaskEnd","EvUserRegion","EvUserLog","EvTimerGoroutine","EvFutileWakeup","EvString"}},
-	catSCHD :  {"SCHD",[]string{"EvSelect","EvWgAdd","EvChSend","EvWgWait","EvChClose","EvChRecv","EvMuLock","EvMuUnlock"}},
+	catSCHD :  {"SCHD",[]string{"EvSelect","EvWgAdd","EvChSend","EvWgWait","EvChClose","EvChRecv","EvMuLock","EvMuUnlock","EvCvWait","EvCvSig"}},
 }
 
 

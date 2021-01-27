@@ -1728,44 +1728,52 @@ func ConcUsage(dbName string) map[string]int{
 	}
 	defer db.Close()
 	// END DB
-
-	var g uint64
-	var event,src string
-	var rid    sql.NullString
+	var id                     int
+	var g                      uint64
+	var event,file,funct,line   string
+	var rid                    sql.NullString
 
 	// last events stroe every last event of goroutines
 	concUsage := make(map[string]int)
+	fullstack := make(map[int][]string) // key: eventid, value: slice of stacks
 
 	// Query mutexes
-	q := `SELECT t1.type,t1.g,t1.rid,t1.src FROM Events t1
+	q := `SELECT t1.id,t1.type,t1.g,t1.rid,t3.file,t3.func,t3.line FROM Events t1
 				INNER JOIN global.catSCHD t2
-				ON t1.type=t2.eventName;`
+				ON t1.type=t2.eventName
+				INNER JOIN Stackframes t3 on t1.id=t3.eventid;`
 
 	res, err := db.Query(q)
 	check(err)
 
-
-
 	for res.Next(){
-		err = res.Scan(&event,&g,&rid,&src)
+		err = res.Scan(&id,&event,&g,&rid,&file,&funct,&line)
 		check(err)
+		fullstack[id] = append(fullstack[id],file+":"+funct+":"+line)
+	}
+	res.Close()
 
-
-
-		posSlice := strings.Split(src,":")
-		pos := posSlice[0]+":"+posSlice[2]
-
+	for _,v := range(fullstack){
+		//for _,usage := range(v){
+		t := strings.Split(v[len(v)-1],":")
+		src := t[0]
+		for i:=len(v)-2;i>=0;i--{
+			t1 := strings.Split(v[i],":")
+			if src != t1[0]{
+				break
+			}
+			t = t1
+			src = t[0]
+		}
+		pos := t[0]+":"+t[2]
 		if _,ok := concUsage[pos];!ok{
 			if rid.Valid {
 				concUsage[pos] = 1
 			}else{
 				concUsage[pos] = 0
 			}
-
 		}
 	}
-	res.Close()
-
 	//lets filter a bit
 	return concUsage
 }

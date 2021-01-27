@@ -1,65 +1,133 @@
 package instrument
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
 	"trace"
 	"io"
 	"io/ioutil"
-	"os"
-	"os/exec"
+	_"os"
+	_"os/exec"
+	"util"
+	"strconv"
+	"db"
+	"strings"
 )
 
-// Execution defines anything that can
-// return a database table name.
-type Execution interface {
-	DBName(app, to, d, x string) (dbName string, error)
-}
 
-type AppDB struct{
-	App      string
-	DBName   string
-}
-
+// holds execution info
 type AppExec struct {
-	OrigPath, Path string
-	timeout        int
-	depth          int
+	App               string // DB-compatible app name
+	OrigPath          string // path to the original source
+	NewPath           string // path to the temp dir
+	DBName            string // final DB table name
+	Source            string // source of events (native,latest,x)
+	X                 string // version of execution
+	Timeout           int    // timeout (for DL apps)
 }
 
-func NewAppExec(path string, to,depth int) *AppExec
-
-// TraceSource implements EventSource for
-// pre-made trace file
-type TraceSource struct {
-	// Trace is the path to the trace file.
-	Trace string
-
-	// Binary is a path to binary, needed to symbolize stacks.
-	// In the future it may be dropped, see
-	// https://groups.google.com/d/topic/golang-dev/PGX1H8IbhFU
-	Binary string
-}
-
-// NewTraceSource inits new TraceSource.
-func NewTraceSource(trace, binary string) *TraceSource {
-	return &TraceSource{
-		Trace:  trace,
-		Binary: binary,
+func NewAppExec(path,src,x string, to int) *AppExec{
+	return &AppExec{
+		App:       util.AppName(path),
+		OrigPath:  path,
+		Timeout:   to,
+		Source:    src,
+		X:         x,
 	}
 }
 
-// Events reads trace file from filesystem and symbolizes
-// stacks.
-func (t *TraceSource) Events() ([]*trace.Event, error) {
-	f, err := os.Open(t.Trace)
+// holds test info
+type AppTest struct {
+	BaseExec          *AppExec
+	Name              string
+	OrigPath          string
+	TestPath          string
+	Depth             int
+	ConcUsage         map[string]int
+	DBNames           map[int]string
+}
+
+func NewAppTest(base *AppExec,depth int) *AppTest{
+	return &AppTest{
+		BaseExec:  base,
+		Name:      base.App+"_D"+strconv.Itoa(depth),
+		Depth:     depth,
+		ConcUsage: db.ConcUsage(base.DBName),
+		DBNames: make(map[int]string),
+	}
+}
+
+// based on app.X, retrieve a previously stored DB
+// Or trace (rewrite,execute,collect) and store a new execution
+func (app *AppExec) DBPointer() (dbName string, err error){
+
+	// retrieve from db
+
+	if app.Source != "native" && app.Source != "schedTest"{
+		return db.Ops(app.Source, app.App, app.X),nil
+	}
+
+	// instrument, rewrite, execute, collect, store, obtain DBname
+	dbName,err = app.Trace()
+	if err != nil{
+		return "",err
+	}
+	fmt.Println("DB Name:",dbName)
+	app.X = strings.Split(dbName,"X")[1]
+	return dbName,nil
+}
+
+// rewrite,execute,collect
+func (app *AppExec) Trace() (dbName string, err error){
+
+	// create tmp dir
+	tmpDir, err := ioutil.TempDir("", "GOAT")
 	if err != nil {
-		return nil, err
+		return  "", err
 	}
-	defer f.Close()
+	app.NewPath = tmpDir
+	defer removeDir(app.NewPath)
 
-	return parseTrace(f, t.Binary)
+	// writes instrumented code into app.NewPath
+	err = app.RewriteSource()
+	if err != nil {
+		return "", fmt.Errorf("couldn't rewrite source code: %v", err)
+	}
+
+	// exeute, capture and parse trace
+	events, err := ExecuteTrace(app.NewPath)
+	if err != nil{
+		return "", fmt.Errorf("Error in ExecuteTrace:", err)
+	}
+
+	// store traces
+	return db.Store(events,app.App),nil
+
+}
+
+// appExec to string
+func (app *AppExec) ToString() string{
+	s := fmt.Sprintf("-----------\n")
+	s = s + fmt.Sprintf("App: %s\n",app.App)
+	s = s + fmt.Sprintf("Orig. Path: %s\n",app.OrigPath)
+	s = s + fmt.Sprintf("Timeout %d\n",app.Timeout)
+	s = s + fmt.Sprintf("X %d\n",app.X)
+	s = s + fmt.Sprintf("-----------\n")
+	return s
+}
+
+// appTest to string
+func (app *AppTest) ToString() string{
+	s := fmt.Sprintf("-----------\n")
+	s = s + fmt.Sprintf("Base INFO\n***\n%s\n***\n",app.BaseExec.ToString())
+	s = s + fmt.Sprintf("Name: %s\n",app.Name)
+	s = s + fmt.Sprintf("Test Path: %s\n",app.TestPath)
+	s = s + fmt.Sprintf("Depth %d\n",app.Depth)
+	s = s + fmt.Sprintf("Concurrency Usage\n")
+	for k,_ := range(app.ConcUsage){
+		s = s + fmt.Sprintf("\t> %s\n",k)
+	}
+	s = s + fmt.Sprintf("-----------\n")
+	return s
 }
 
 func parseTrace(r io.Reader, binary string) ([]*trace.Event, error) {
@@ -73,174 +141,9 @@ func parseTrace(r io.Reader, binary string) ([]*trace.Event, error) {
 	return parseResult.Events, err
 }
 
-// NativeRun implements EventSource for running app locally,
-// using native Go installation.
-type NativeRun struct {
-	OrigPath, Path string
-	timeout        int
-}
 
-type NativeRunSched struct {
-	OrigPath, Path string
-	timeout        int
-	depth          int
-}
-
-// NewNativeRun inits new NativeRun source.
-func NewNativeRun(path string, to int) *NativeRun {
-	return &NativeRun{
-		OrigPath: path,
-		timeout:  to,
+func check(err error){
+	if err != nil{
+		panic(err)
 	}
-}
-
-func NewNativeRunSched(path string, to,depth int) *NativeRunSched {
-	return &NativeRunSched{
-		OrigPath: path,
-		timeout:  to,
-		depth: depth,
-	}
-}
-
-// Events rewrites package if needed, adding Go execution tracer
-// to the main function, then builds and runs package using default Go
-// installation and returns parsed events.
-func (r *NativeRun) Events() ([]*trace.Event, error) {
-	// rewrite AST
-	err := r.RewriteSource(r.timeout)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't rewrite source code: %v", err)
-	}
-	defer func(tmpDir string) {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			fmt.Println("Cannot remove temp dir:", err)
-		}
-	}(r.Path)
-
-	tmpBinary, err := ioutil.TempFile("", "goTMP")
-	if err != nil {
-		return nil, err
-	}
-	fmt.Printf("%v\n",tmpBinary.Name())
-	defer os.Remove(tmpBinary.Name())
-
-	// build binary
-	// TODO: replace build&run part with "go run" when there is no more need
-	// to keep binary
-	cmd := exec.Command("go", "build", "-o", tmpBinary.Name())
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	cmd.Dir = r.Path
-	err = cmd.Run()
-	if err != nil {
-		fmt.Println("go build error", stderr.String())
-		// TODO: test on most common errors, possibly add stderr to
-		// error information or smth.
-		return nil, err
-	}
-
-	// run
-	stderr.Reset()
-	cmd = exec.Command(tmpBinary.Name())
-	cmd.Stderr = &stderr
-	if err = cmd.Run(); err != nil {
-		fmt.Println("modified program failed:", err, stderr.String())
-		// TODO: test on most common errors, possibly add stderr to
-		// error information or smth.
-		return nil, err
-	}
-
-	if stderr.Len() == 0 {
-		return nil, errors.New("empty trace")
-	}
-
-	// parse trace
-	return parseTrace(&stderr, tmpBinary.Name())
-}
-
-// RewriteSource attempts to add trace-related code if needed.
-// TODO: add support for multiple files and package selectors
-func (r *NativeRun) RewriteSource(timeout int) error {
-	path, err := rewriteSource(r.OrigPath, timeout)
-	if err != nil {
-		return err
-	}
-
-	r.Path = path
-	fmt.Println("Orig Path:", r.OrigPath)
-	fmt.Println("Path:", r.Path)
-
-	return nil
-}
-
-func (r *NativeRunSched) Events() ([]*trace.Event, error) {
-//func (r *NativeRunSched) Events() error {
-	// rewrite AST
-	err := r.RewriteSourceSched(r.timeout,r.depth)
-	if err != nil {
-		return nil,fmt.Errorf("couldn't rewrite source code: %v", err)
-	}
-	fmt.Println("Orig Path:", r.OrigPath)
-	fmt.Println("Path:", r.Path)
-
-	return nil,nil
-	/*defer func(tmpDir string) {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			fmt.Println("Cannot remove temp dir:", err)
-		}
-	}(r.Path)
-
-	tmpBinary, err := ioutil.TempFile("", "goTMP")
-	if err != nil {
-		return nil, err
-	}
-	fmt.Printf("%v\n",tmpBinary.Name())
-	defer os.Remove(tmpBinary.Name())
-
-	// build binary
-	// TODO: replace build&run part with "go run" when there is no more need
-	// to keep binary
-	cmd := exec.Command("go", "build", "-o", tmpBinary.Name())
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	cmd.Dir = r.Path
-	err = cmd.Run()
-	if err != nil {
-		fmt.Println("go build error", stderr.String())
-		// TODO: test on most common errors, possibly add stderr to
-		// error information or smth.
-		return nil, err
-	}
-
-	// run
-	stderr.Reset()
-	cmd = exec.Command(tmpBinary.Name())
-	cmd.Stderr = &stderr
-	if err = cmd.Run(); err != nil {
-		fmt.Println("modified program failed:", err, stderr.String())
-		// TODO: test on most common errors, possibly add stderr to
-		// error information or smth.
-		return nil, err
-	}
-
-	if stderr.Len() == 0 {
-		return nil, errors.New("empty trace")
-	}
-
-	// parse trace
-	return parseTrace(&stderr, tmpBinary.Name())
-	*/
-}
-
-func (r *NativeRunSched) RewriteSourceSched(timeout,depth int) error {
-	path, err := rewriteSourceSched(r.OrigPath, timeout,depth)
-	if err != nil {
-		return err
-	}
-
-	r.Path = path
-	fmt.Println("Orig Path:", r.OrigPath)
-	fmt.Println("Path:", r.Path)
-
-	return nil
 }

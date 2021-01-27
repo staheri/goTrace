@@ -8,11 +8,11 @@ import (
   "strings"
   "db"
   "os"
+  "schedtest"
 )
 
 const WORD_CHUNK_LENGTH = 11
 var CLOUTPATH = os.Getenv("GOPATH")+"/traces/clx"
-//var validCategories = []string{"CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGRP"}
 
 
 
@@ -27,10 +27,14 @@ var (
   flagBase    string
   flagTO      int
   flagDepth   int
+  flagIter    int
   flagApp     string
   flagArgs    []string
   dbName      string
-  validCategories = []string{"CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGRP"}
+  validCategories = []string{"CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGCV","SCHD","BLCK"}
+  validPrimeCmds = []string{"word","hac","rr","rg","diff","dineData","cleanDB","dev","hb","gtree","cgraph","resg"}
+  validTestSchedCmds = []string{"test"}
+  validSrc = []string{"native","x","latest","schedTest"}
 )
 
 
@@ -40,14 +44,109 @@ func main(){
   // Read flags
   parseFlags()
 
-  // Obtain dbName
-  dbName = dbPointer()
+  if flagSrc == "schedTest"{
+    handleSchedTestCommands()
+  } else {
+    myapp := instrument.NewAppExec(flagApp,flagSrc,flagX,flagTO)
+    dbn,err := myapp.DBPointer()
+    if err != nil{
+      panic(err)
+    }
+    myapp.DBName = dbn
+    handlePrimaryCommands(myapp.DBName)
+    fmt.Println(myapp.ToString())
+  }
+}
 
-  fmt.Printf("DB Name: %s\n",dbName)
 
+// Parse flags, execute app & store traces (if necessary), return app database handler
+func parseFlags() (){
+  srcDescription := "native: execute the app and collect from scratch, latest: retrieve data from latest execution, x: retrieve data from specific execution (requires -x option)"
+  // Parse flags
+  flag.StringVar(&flagCmd,"cmd","","Commands: word, cl, rr, rg, diff")
+  flag.StringVar(&flagBase,"baseX","0","Base execution for \"diff\" or \"schedTrace\" command")
+  flag.StringVar(&flagOut,"outdir","","Output directory to write words and/or reports")
+  flag.StringVar(&flagSrc,"src","latest",srcDescription)
+  flag.StringVar(&flagX,"x","","Execution version stored in database")
+  flag.IntVar(&flagN,"n",0,"Number of philosophers for dineData command")
+  flag.IntVar(&flagCons,"cons",1,"Number of consecutive elements for HAC & DIFF")
+  flag.IntVar(&flagAtrMode,"atrmode",0,"Modes for HAC & DIFF")
+  flag.StringVar(&flagApp,"app","","Target application (*.go)")
+  flag.IntVar(&flagTO,"to",0,"Timeout for deadlocks")
+  flag.IntVar(&flagDepth,"depth",0,"Max depth for rescheduling")
+  flag.IntVar(&flagIter,"iter",2,"Testing iteration")
+
+  flag.Parse()
+
+  // Check src validity
+  if !util.Contains(validSrc,flagSrc){
+    util.PrintUsage()
+    panic("Wrong source")
+  }
+
+  // Check prime cmd validity
+  if flagSrc != "schedTest" && !util.Contains(validPrimeCmds,flagCmd){
+    util.PrintUsage()
+    fmt.Printf("flagCMD: %s\n",flagCmd)
+    panic("Wrong prime command")
+  }
+
+  // Check prime cmd validity
+  if flagSrc == "schedTest" && !util.Contains(validTestSchedCmds,flagCmd){
+    util.PrintUsage()
+    fmt.Printf("flagCMD: %s\n",flagCmd)
+    panic("Wrong schedTest command")
+  }
+
+  // Check Outdir
+  if flagOut == "" {
+    util.PrintUsage()
+    panic("Outdir required")
+  }
+
+  // Check app
+  if flagApp == "" {
+    util.PrintUsage()
+    panic("App required")
+  }
+
+  // Check validity of categories
+  for _,arg := range(flagArgs){
+    tl := strings.Split(arg,",")
+    for _,e := range(tl){
+      if ! util.Contains(validCategories,e){
+        panic("Invalid category: "+e)
+      }
+    }
+  }
+
+  // diff command needs a base
+  if flagCmd == "diff" && flagBase == ""{
+    util.PrintUsage()
+    panic("Undefined base for diff command!")
+  }
+
+  // dineData command needs N
+  if flagCmd == "dineData" && flagN == 0{
+    util.PrintUsage()
+    panic("Wrong N for dineData!")
+  }
+
+  // x command needs X value
+  if flagSrc == "x" && flagX == ""{
+    util.PrintUsage()
+    panic("Needs X value!")
+  }
+
+  flagArgs = flag.Args()
+}
+
+
+// handle primary commands
+func handlePrimaryCommands(dbName string){
   switch flagCmd {
   case "word":
-    for _,arg := range(flag.Args()){
+    for _,arg := range(flagArgs){
       // For now, only one filter is allowed at a time
       if len(strings.Split(arg,",")) != 1{
         panic("Currently more than one filter is not allowed!")
@@ -59,8 +158,8 @@ func main(){
     }
 
   case "hac":
-    if len(flag.Args()) > 0{
-      for _,arg := range(flag.Args()){
+    if len(flagArgs) > 0{
+      for _,arg := range(flagArgs){
         tl := strings.Split(arg,",")
         db.HAC(dbName,CLOUTPATH,flagOut,flagCons,flagAtrMode,tl...)
       }
@@ -71,7 +170,7 @@ func main(){
 
 
   case "rr":
-    for _,arg := range(flag.Args()){
+    for _,arg := range(flagArgs){
       if len(strings.Split(arg,",")) != 1{
         panic("For rr, only one category is allowed")
       }
@@ -89,13 +188,13 @@ func main(){
     }
 
   case "rg":
-    for _,arg := range(flag.Args()){
+    for _,arg := range(flagArgs){
       tl := strings.Split(arg,",")
       db.SwimLanes(dbName,flagOut,tl...)
     }
   case "diff":
     baseDBName := db.Ops("x",util.AppName(flagBase),"13")
-    for _,arg := range(flag.Args()){
+    for _,arg := range(flagArgs){
       tl := strings.Split(arg,",")
       db.JointHAC(dbName,baseDBName,CLOUTPATH,flagOut,flagCons,flagAtrMode,tl...)
     }
@@ -107,7 +206,8 @@ func main(){
   case "cleanDB":
     db.Ops("clean all","","0")
   case "hb":
-    for _,arg := range(flag.Args()){
+    fmt.Println("HB DBNAME:",dbName)
+    for _,arg := range(flagArgs){
       tl := strings.Split(arg,",")
       hbtable := db.HBTable(dbName,tl...)
       db.HBLog(dbName,hbtable,flagOut,true)
@@ -121,13 +221,13 @@ func main(){
   case "resg":
     db.ResourceGraph(dbName,flagOut)
   case "dev":
-    /*for _,arg := range(flag.Args()){
+    /*for _,arg := range(flagArgs){
       tl := strings.Split(arg,",")
       hbtable := db.HBTable(dbName,tl...)
       db.Dev(dbName,hbtable, flagOut)
     }*/
-    //db.Checker(dbName)
-    fmt.Println(dbName)
+    db.Checker(dbName)
+    //fmt.Println(dbName)
     //db.Gtree(dbName,flagOut)
     //db.Histogram(10,dbName)
 
@@ -139,100 +239,8 @@ func main(){
 }
 
 
-// Parse flags, execute app & store traces (if necessary), return app database handler
-func parseFlags() (){
-  srcDescription := "native: execute the app and collect from scratch, latest: retrieve data from latest execution, x: retrieve data from specific execution (requires -x option)"
-  // Parse flags
-  flag.StringVar(&flagCmd,"cmd","","Commands: word, cl, rr, rg, diff")
-  flag.StringVar(&flagBase,"base","","Base for \"diff\" command (latest)")
-  flag.StringVar(&flagOut,"outdir","","Output directory to write words and/or reports")
-  flag.StringVar(&flagSrc,"src","latest",srcDescription)
-  flag.StringVar(&flagX,"x","0","Execution version stored in database")
-  flag.IntVar(&flagN,"n",0,"Number of philosophers for dineData command")
-  flag.IntVar(&flagCons,"cons",1,"Number of consecutive elements for HAC & DIFF")
-  flag.IntVar(&flagAtrMode,"atrmode",0,"Modes for HAC & DIFF")
-  flag.StringVar(&flagApp,"app","","Target application (*.go)")
-  flag.IntVar(&flagTO,"to",-1,"Timeout for deadlocks")
-  flag.IntVar(&flagDepth,"depth",2,"Max depth for rescheduling")
-
-  flag.Parse()
-
-  // Check cmd
-  if flagCmd != "word" && flagCmd != "hac" && flagCmd != "rr" && flagCmd != "rg" && flagCmd != "diff" && flagCmd != "dineData" && flagCmd != "cleanDB" && flagCmd != "dev" && flagCmd != "hb" && flagCmd != "gtree" && flagCmd != "cgraph" && flagCmd != "resg"{
-    util.PrintUsage()
-    fmt.Printf("flagCMD: %s\n",flagCmd)
-    panic("Wrong command")
-  }
-
-  // Check Outdir
-  if flagOut == "" {
-    util.PrintUsage()
-    panic("Outdir required")
-  }
-
-  // Check src
-  if flagSrc != "native" && flagSrc != "latest" && flagSrc != "x" && flagSrc != "test"{
-    util.PrintUsage()
-    panic("Wrong source")
-  }
-
-  // Check app
-  if flagApp == "" {
-    util.PrintUsage()
-    panic("App required")
-  }
-
-  for _,arg := range(flag.Args()){
-    tl := strings.Split(arg,",")
-    for _,e := range(tl){
-      if ! util.Contains(validCategories,e){
-        panic("Invalid category: "+e)
-      }
-    }
-  }
-
-  if flagCmd == "diff" && flagBase == ""{
-    util.PrintUsage()
-    panic("Undefined base for diff command!")
-  }
-
-  if flagCmd == "dineData" && flagN == 0{
-    util.PrintUsage()
-    panic("Wrong N for dineData!")
-  }
-
-  flagArgs = flag.Args()
-}
-
-// Find appropriate DB handler According to options
-func dbPointer() (dbName string){
-
-  switch flagSrc {
-  case "test":
-    fmt.Println("Analyzing ", flagApp, "...")
-    var src instrument.EventSource
-    src = instrument.NewNativeRunSched(flagApp,flagTO,flagDepth)
-    _,err := src.Events()
-    if err != nil {
-  		panic(err)
-  	}
-    return "XX"
-  case "native":
-    fmt.Println("Analyzing ", flagApp, "...")
-    var src instrument.EventSource
-    src = instrument.NewNativeRun(flagApp,flagTO)
-    events, err := src.Events()
-  	if err != nil {
-  		panic(err)
-  	}
-    dbName = db.Store(events,util.AppName(flagApp))
-    return dbName
-
-  case "latest", "x":
-    dbName = db.Ops(flagSrc, util.AppName(flagApp), flagX )
-    return dbName
-
-  default:
-    panic("DbPointer not available!")
-  }
+// handle schedTest commands
+func handleSchedTestCommands(){
+  mytest := schedtest.SchedTest(flagApp,flagSrc,flagX,flagTO,flagDepth,flagIter)
+  fmt.Println(mytest.ToString())
 }

@@ -44,6 +44,15 @@ func AppName(app string) string{
 	return ret
 }
 
+// Returns appName from long paths (omitting forbidden chars for database)
+func ExecName(app string, to int) string{
+	return AppName(app)+"_T"+strconv.Itoa(to)+"_"
+}
+
+// Returns appName from long paths (omitting forbidden chars for database)
+func TestName(app string, to,d int) string{
+	return AppName(app)+"_T"+strconv.Itoa(to)+"_D"+strconv.Itoa(d)+"_"
+}
 
 // Display trace.Events grouped by Goroutines
 func dispGTable(m map[uint64][]*trace.Event) (){

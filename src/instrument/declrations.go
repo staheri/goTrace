@@ -68,8 +68,9 @@ func globalCount() *ast.GenDecl{
 }
 
 // returns GOMAXPROCS line node
-func goMaxProcs() *ast.ExprStmt{
-	return &ast.ExprStmt{
+func goMaxProcs() []ast.Stmt{
+	ret := make([]ast.Stmt, 1)
+	ret[0] = &ast.ExprStmt{
 		X: &ast.CallExpr{
 			Fun: &ast.SelectorExpr{
 				X:   &ast.Ident{Name: "runtime"},
@@ -80,6 +81,7 @@ func goMaxProcs() *ast.ExprStmt{
 			},
 		},
 	}
+	return ret
 }
 
 // returns "if Reschedule then Gosched()" line node
