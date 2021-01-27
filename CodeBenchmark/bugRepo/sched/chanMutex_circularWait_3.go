@@ -1,7 +1,6 @@
 package main
 
 import (
-  "runtime"
   "time"
   "sync"
   "fmt"
@@ -25,7 +24,6 @@ import (
 
 func main() {
   //runtime.GOMAXPROCS(1)
-  runtime.GOMAXPROCS(1)
   ch1 := make(chan int)
   stop := make(chan int)
   var m sync.Mutex
@@ -40,7 +38,6 @@ func main() {
       default:
       }
       <- ch1
-      runtime.Gosched()
       m.Lock()
       m.Unlock()
       <- ch1
@@ -49,7 +46,6 @@ func main() {
 
   // goroutine 2
   go func() {
-    runtime.Gosched()
     m.Lock()
     ch1 <- 1
     m.Unlock()
@@ -58,7 +54,6 @@ func main() {
 
   // goroutine 3
   go func() {
-    runtime.Gosched()
     m.Lock()
     ch1 <- 1
     m.Unlock()

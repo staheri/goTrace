@@ -1,9 +1,8 @@
 package main
 import (
-  "runtime"
-  "time"
   "sync"
   "fmt"
+  "time"
 )
 
 // https://github.com/moby/moby/pull/28462
@@ -12,12 +11,12 @@ import (
 // Blocking of channel and lock
 
 func main() {
-  runtime.GOMAXPROCS(1)
   ch := make(chan int)
   var m sync.Mutex
 
   // goroutine 1
   go func() {
+    time.Sleep(1*time.Millisecond)
     m.Lock()
     ch <- 1
     m.Unlock()
@@ -25,12 +24,9 @@ func main() {
 
   // goroutine 2
   go func() {
-    runtime.Gosched()
     m.Lock() // block here
     m.Unlock()
     <- ch
   }()
-
-  time.Sleep(time.Second)
   fmt.Println("End of main!")
 }

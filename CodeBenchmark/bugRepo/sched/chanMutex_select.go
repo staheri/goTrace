@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"sync"
-	"runtime"
 	"time"
 )
 
@@ -13,8 +12,6 @@ import (
 // Different timing in select options and conditionals cause deadlock
 
 func main() {
-
-	runtime.GOMAXPROCS(4)
 	cv := sync.NewCond(&sync.Mutex{})
 
 	done := make(chan int)
@@ -48,7 +45,6 @@ func g1(cv *sync.Cond, done, eventch, closec chan int) {
 }
 
 func g2(cv *sync.Cond, done, eventch chan int) {
-	runtime.Gosched()
 	select {
 	case eventch <- 1:
 	case <-done:
