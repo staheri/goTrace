@@ -204,3 +204,23 @@ func descOf(pos int, event string) string {
 		return "unknown"
 	}
 }
+
+// check if event,id is bad select (pos=1,2,3)
+func isBadSelect(db *sql.DB, event string, id int) (bool){
+	if event != "EvSelect"{
+		return false
+	}
+
+	value := 0
+	q := `SELECT value FROM args WHERE arg="pos" and eventid=`+strconv.Itoa(id)+`;`
+	res,err := db.Query(q)
+	check(err)
+	defer res.Close()
+	if res.Next(){
+		err = res.Scan(&value)
+		if value != 0 {
+			return true
+		}
+	}
+	return false
+}
