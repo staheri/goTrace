@@ -1,7 +1,7 @@
 CREATE TABLE catGRTN(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
 CREATE TABLE catBLCK(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
 CREATE TABLE catCHNL(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
-CREATE TABLE catWGRP(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
+CREATE TABLE catWGCV(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
 CREATE TABLE catPROC(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
 CREATE TABLE catGCMM(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
 CREATE TABLE catSYSC(id int NOT NULL AUTO_INCREMENT PRIMARY KEY, eventName varchar(255));
@@ -38,8 +38,10 @@ insert into catCHNL (eventName) VALUES ("EvChMake");
 insert into catCHNL (eventName) VALUES ("EvChClose");
 
 
-insert into catWGRP (eventName) VALUES ("EvWgAdd");
-insert into catWGRP (eventName) VALUES ("EvWgWait");
+insert into catWGCV (eventName) VALUES ("EvWgAdd");
+insert into catWGCV (eventName) VALUES ("EvWgWait");
+insert into catWGCV (eventName) VALUES ("EvCvWait");
+insert into catWGCV (eventName) VALUES ("EvCvSig");
 
 
 insert into catPROC (eventName) VALUES ("EvNone");
@@ -102,3 +104,5 @@ insert into catSCHD (eventName) VALUES ("EvChRecv");
 insert into catSCHD (eventName) VALUES ("EvMuLock");
 insert into catSCHD (eventName) VALUES ("EvMuUnlock");
 insert into catSCHD (eventName) VALUES ("EvGoCreate");
+insert into catSCHD (eventName) VALUES ("EvCvSig");
+insert into catSCHD (eventName) VALUES ("EvCvWait");
