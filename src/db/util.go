@@ -224,3 +224,27 @@ func isBadSelect(db *sql.DB, event string, id int) (bool){
 	}
 	return false
 }
+
+// check if the rid is one of print, trace, rand, reschedule()
+func ridToIgnore(db *sql.DB,rid string,id int) (string,bool){
+	var file,funct string
+	q := `select file,func from stackframes where eventid=`+strconv.Itoa(id)+`;`
+	res,err := db.Query(q)
+	check(err)
+	for res.Next(){
+		err = res.Scan(&file,&funct)
+		if file == "rand.go" && funct == "math/rand.(*Rand).Intn"{ // random lock
+			return rid,true
+		}
+		if file == "print.go" && strings.Split(funct,".")[0] == "fmt"{ // print lock
+			return rid,true
+		}
+		if funct == "main.Reschedule"{ // reschedule lock
+			return rid,true
+		}
+		if funct == "runtime/trace.Stop"{ // trace lock
+			return rid,true
+		}
+	}
+	return "",false
+}

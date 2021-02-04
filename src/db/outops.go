@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"util"
+	"sort"
 )
 
 func Gtree(dbName, outdir string) {
@@ -1726,7 +1727,7 @@ func ConcUsage(dbName string) map[string]int {
 	res, err := db.Query(q)
 	check(err)
 
-	// store fullstack first 
+	// store fullstack first
 	for res.Next() {
 		err = res.Scan(&id, &event, &g, &rid, &file, &funct, &line)
 		check(err)
@@ -1769,4 +1770,107 @@ func ConcUsage(dbName string) map[string]int {
 	}
 	//lets filter a bit
 	return concUsage
+}
+
+func ExecVis(dbName, resultpath string) {
+
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Connection Established")
+	}
+	defer db.Close()
+	// END DB
+
+	var id int
+	var g uint64
+	var event, rid string
+	var _rid sql.NullString
+	var row []string
+
+
+	var ignored,data  []string
+	gmap := make(map[int]int)
+	//data := make([]string)
+	q := `SELECT t1.id,t1.type,t1.g,t1.rid FROM Events t1
+				INNER JOIN (select * from global.catBLCK union select * from global.catSCHD) t2
+				ON t1.type=t2.eventName
+				ORDER BY t1.id;`
+	res, err := db.Query(q)
+	check(err)
+	for res.Next() {
+		err = res.Scan(&id,&event, &g, &_rid)
+		check(err)
+		if _rid.Valid{
+			rid = _rid.String
+		}else{
+			rid = ""
+		}
+		if !util.Contains(ignored,rid){
+			if toIgnore,isIgnore := ridToIgnore(db,rid,id);isIgnore{
+				ignored = append(ignored,toIgnore)
+				continue
+			}
+			gmap[int(g)]=1
+			data = append(data,strconv.Itoa(int(g))+":"+rid+">"+event)
+		}
+	}
+	res.Close()
+
+	// data has the sequence of events that we want
+
+	// now create gmat
+	var gs []int
+	var gmat [][]string
+	for k,_ := range(gmap){
+		gs = append(gs,k)
+	}
+	sort.Ints(gs)
+
+	// create gmat
+	for _,ev := range(data){
+		row = nil
+		evs := strings.Split(ev,":")
+		// figure out g
+		g,err := strconv.Atoi(evs[0])
+		if err != nil{
+			panic(err)
+		}
+		for _,gg := range(gs){
+			if g == gg {
+				row = append(row, evs[1])
+			}else{
+				row = append(row, "-")
+			}
+		}
+		gmat = append(gmat, row)
+	}
+
+	outdot := resultpath + "/" + dbName + "_vis.dot"
+	outpdf := resultpath + "/" + dbName + "_vis.pdf"
+	f, err := os.Create(outdot)
+	if err != nil {
+		log.Fatal(err)
+	}
+	f.WriteString(mat2dot(gmat))
+	f.Close()
+
+	// Create pdf
+	_cmd := "dot -Tpdf " + outdot + " -o " + outpdf
+
+	cmd := exec.Command("dot", "-Tpdf", outdot, "-o", outpdf)
+	fmt.Printf(">>> Executing %s...\n", _cmd)
+	//err = cmd.Run()
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+		return
+	}
+	fmt.Println("Result: " + out.String())
 }
