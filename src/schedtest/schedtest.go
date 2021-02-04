@@ -63,6 +63,5 @@ func SchedTest(app,src,x string, to,depth,iter int) *instrument.AppTest {
 		db.Checker(dbn)
 		test.DBNames[i] = dbn
 	}
-
 	return test
 }

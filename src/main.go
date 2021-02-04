@@ -234,4 +234,18 @@ func handlePrimaryCommands(dbName string) {
 func handleSchedTestCommands() {
 	mytest := schedtest.SchedTest(flagApp, flagSrc, flagX, flagTO, flagDepth, flagIter)
 	fmt.Println(mytest.ToString())
+	//cats := []string{"SCHD"}
+	for k,v := range(mytest.DBNames){
+		fmt.Println(k)
+		fmt.Println("-------")
+		fmt.Println(v)
+		db.Checker(v)
+
+		//db.SwimLanes(v,flagOut,"SCHD")
+		db.ExecVis(v,flagOut)
+		//db.MutexReport(v)
+
+
+
+	}
 }
