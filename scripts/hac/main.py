@@ -74,7 +74,7 @@ fo.write(lat.toReucedFancyDot())
 fo.close()
 
 # Generate pdf from dot
-cmd = "dot -Tpdf "+outname+".dot -o "+outname+"-cl.pdf"
+cmd = "dot -Tpdf "+outname+".dot -o "+outname+"_cl.pdf"
 print cmd
 process = subprocess.Popen([cmd], stdout=subprocess.PIPE,shell=True)
 si, err = process.communicate()

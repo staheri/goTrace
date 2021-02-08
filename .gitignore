@@ -1,70 +1,81 @@
-*.exe
+# DS_Store
 .DS_Store
 */.DS_Store
 */*/.DS_Store
 */*/*/.DS_Store
 */*/*/*/.DS_Store
 
+# SchedTest files
+
+*_sched.go
+*_vis.pdf
+*_vis.dot
+
+# Log
+*_log.txt
+
+# CL
 cl/cltrace
 cl/obj/*
 traces/*
+
+# Dot-PDF
 scripts/*.dot
 scripts/*/*.dot
 scripts/*/*/*.dot
-
 scripts/*.pdf
 scripts/*/*.pdf
 scripts/*/*/*.pdf
 
+# Tests
 test.*
 */test.*
 */*/test.*
 */*/*/test.*
-
 */*/test*
 */test*
 test*
 
+# Binaries/Libraries
 bin/*
 bin
-
 src/src
-
 pkg
-
 src/github.com
 src/go.mongodb.org
 src/golang.org
-
-
 *.exe
 */*.exe
 
+# Modified files
 */*mod.go
 */*/*mod.go
 */*/*/*mod.go
 */*/*/*/*mod.go
 */*/*/*/*/*mod.go
-
 */*.mod
 */*/*.mod
 */*/*/*.mod
 */*/*/*/*.mod
 */*/*/*/*/*.mod
 
-*/*mod_sched.go
-*/*/*mod_sched.go
-*/*/*/*mod_sched.go
-*/*/*/*/*mod_sched.go
-*/*/*/*/*/*mod_sched.go
-
-
+# Out files
 */*/*/*.out
 */*/*.out
 */*.out
 *.out
+results/*
+*_glog.txt
+*_rlog.txt
+*_chans.md
+*_cgraph.dot
+*_cgraph.pdf
+*_rg.dot
+*_rg.pdf
+*_cl.pdf
+*_dend.pdf
+*_hac.md
 
+# Python classes
 scripts/*.pyc
 scripts/*/*.pyc
-
-results/*

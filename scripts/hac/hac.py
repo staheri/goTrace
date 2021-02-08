@@ -37,7 +37,7 @@ def cluster(m,maxc,out):
 	dendrogram(ward(jac2pdist(m)))
 	#dendrogram(ward(jac2pdist(mat1)), truncate_mode='level', p=4)
 	#plt.show()
-	plt.savefig(out+"-dend.pdf")
+	plt.savefig(out+"_dend.pdf")
 	dt = [0.1,0.2,0.4,0.5,0.8,1,2]
 	mt = [2,3,4,5,6]
 	#ret = fcluster(ward(jac2pdist(m)),maxc,criterion='maxclust')
