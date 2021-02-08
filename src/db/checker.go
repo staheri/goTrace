@@ -5,23 +5,20 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"strconv"
-	_"log"
+	"log"
 	"os"
-	_"os/exec"
 	"strings"
-	_"bytes"
 	"github.com/jedib0t/go-pretty/table"
-	_"util"
-	_"text/tabwriter"
+
 )
 
 func longLeakReport(dbName string) {
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}else{
-		fmt.Println("Connection Established")
+		log.Println("Cheker(long): Connected to ",dbName)
 	}
 	defer db.Close()
 	// END DB
@@ -171,9 +168,9 @@ func shortLeakReport(dbName string) {
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}else{
-		fmt.Println("Connection Established")
+		log.Println("Cheker(short): Connected to ",dbName)
 	}
 	defer db.Close()
 	// END DB
@@ -249,5 +246,4 @@ func shortLeakReport(dbName string) {
 	} else{
 		fmt.Println(string(colorGreen),"Pass",string(colorReset))
 	}
-
 }

@@ -20,9 +20,9 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	// Connecting to mysql driver
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/")
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}else{
-		fmt.Println("Connection Established")
+		log.Println("Store: Initial connection established")
 	}
 
 	// Creating new database for current experiment
@@ -31,10 +31,10 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	//fmt.Printf("Attempt to create database: %s\n",dbName)
 	_,err = db.Exec("CREATE DATABASE "+dbName + ";")
 	for err != nil{
-		//fmt.Printf("Error: %v\n",err)
+		//log.Printf("Error: %v\n",err)
 		idx = idx + 1
 		dbName = app + "X" + strconv.Itoa(idx)
-		//fmt.Printf("Attempt to create database: %s\n",dbName)
+		log.Printf("Store: Attempt to create database: %s\n",dbName)
 		_,err = db.Exec("CREATE DATABASE "+dbName+ ";")
 	}
 
@@ -47,7 +47,7 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	if err != nil {
 		panic(err)
 	}else{
-		fmt.Println("Connection Re-Established")
+		log.Println("Store: Connected to ",dbName)
 	}
 	defer db.Close()
 	db.SetMaxOpenConns(50000)
@@ -127,9 +127,6 @@ func Store(events []*trace.Event, app string) (dbName string) {
 	linkoff   := sql.NullInt64{}
 	srcLine  := sql.NullString{}
 	srcLine0  := sql.NullString{}
-
-
-
 
 	cnt := 0
 	var crlid,crlid0 int
@@ -648,7 +645,7 @@ func createTable(stmt , name string, db *sql.DB) () {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("%v Created! \n",name)
+	log.Printf("%v Created! \n",name)
 }
 
 // Take an event and insert to tables
@@ -669,19 +666,13 @@ func insertEvent(e *trace.Event, db *sql.DB){
 	q = q + strconv.FormatBool(len(e.Stk) != 0) + ", "
 	q = q + strconv.FormatBool(len(e.Args) != 0)
 	q = q + ");"
-	fmt.Printf("> Executing %s...\n",q)
+	//fmt.Printf("> Executing %s...\n",q)
 	res,err := db.Exec(q)
 	if err != nil {
 		panic(err)
 	} else{
 		eid, err = res.LastInsertId()
 	}
-
-
-	// insert stacks
-	//if len(e.Stk) != 0{
-	//	insertStackframe(eid, e.StkID, e.Stk, db)
-	//}
 
 	// insert args
 	if len(e.Args) != 0{
@@ -788,8 +779,6 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 		} else if desc.Name == "GoEnd"{
 			// this goroutine has been inserted before (with create)
 			// Now we need to update its row with GoEnd eventID
-			// select * from
-			// update
 			gid := e.G
 			q = fmt.Sprintf("UPDATE Goroutines SET ended=%v WHERE gid=%v;",eid,gid)
 			//fmt.Printf(">>> Executing %s...\n",q)
@@ -802,7 +791,6 @@ func grtnEntry(e *trace.Event, eid int64, db *sql.DB){
 	} else{
 		if desc.Name == "GoCreate"{
 			// this goroutine has not been inserted (no create) and it creates another goroutine
-
 			// insert current goroutine
 			gid := strconv.FormatUint(e.G,10) // current G
 			parent_id := -1
@@ -953,12 +941,13 @@ func Ops(command, appName, X string) (dbName string){
 	defer db.Close()
 
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}else{
-		fmt.Println("Connection Established")
+		log.Println("OPS: Initial Connection")
 	}
 	//fmt.Println("Command: "+command)
 	if command == "clean all"{
+		log.Println("OPS: Clean all")
 		res,err := db.Query("SHOW DATABASES;")
 		if err != nil {
 			log.Fatal(err)
@@ -971,11 +960,11 @@ func Ops(command, appName, X string) (dbName string){
 			//fmt.Printf("DB: %s \n",dbs)
 			if dbs[len(dbs)-1] >= '0' && dbs[len(dbs)-1] <= '9'{
 				q = "DROP DATABASE "+dbs+";"
-				//fmt.Printf(">>> Executing %s...\n",q)
 				_,err2 := db.Exec(q)
 				if err2 != nil {
 					log.Fatal(err2)
 				}
+				log.Println("OPS-CleanAll: DROP ",dbs)
 			}
 		}
 		err=res.Close()
@@ -984,7 +973,6 @@ func Ops(command, appName, X string) (dbName string){
 		}
 		return ""
 	}else if command == "x"{
-		//fmt.Println("SHOW DATABASES LIKE \""+appName+"X"+X+"\";")
 		res,err := db.Query("SHOW DATABASES LIKE \""+appName+"X"+X+"\";")
 		if err != nil {
 			log.Fatal(err)
@@ -994,6 +982,7 @@ func Ops(command, appName, X string) (dbName string){
 			if err != nil {
 				log.Fatal(err)
 			}
+			log.Println("OPS-X: Return ",dbs)
 			return dbs
 		}else{
 			panic("Database "+appName+"X"+X+" does not exist!")
@@ -1010,7 +999,8 @@ func Ops(command, appName, X string) (dbName string){
 				log.Fatal(err)
 			}
 			if !res.Next(){
-			return appName+"X"+strconv.Itoa(xx-1)
+				log.Println("OPS-latest: Return ",appName+"X"+strconv.Itoa(xx-1))
+				return appName+"X"+strconv.Itoa(xx-1)
 			} else{
 				xx += 1
 				continue

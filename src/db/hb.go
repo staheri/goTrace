@@ -43,6 +43,10 @@ func asp2int(asp string) (ret int){
 		ret = catMISC
 	}else if asp == "GCMM"{
 		ret = catGCMM
+	}else if asp == "BLCK"{
+		ret = catBLCK
+	}else if asp == "SCHD"{
+		ret = catSCHD
 	}else{
 		panic("Wrong Aspect")
 	}
@@ -90,9 +94,9 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}else{
-		fmt.Println("Connection Established")
+		log.Println("HBTable: Initial connection established")
 	}
 	defer db.Close()
 
@@ -107,6 +111,7 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 	check(err)
 	if res.Next(){
 		// table exist
+		log.Println("HBTable: Table ", HBTableName ," exists & returns")
 		return HBTableName
 	}
 
@@ -129,7 +134,7 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 					PRIMARY KEY (id)
 					);`
 	// create new table
-	fmt.Printf("Creating table %v ... \n",HBTableName)
+	log.Printf("HBTable: Creating table %v ... \n",HBTableName)
 	_,err = db.Exec(stmt)
 	if err != nil {
 		panic(err)
@@ -196,17 +201,17 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 				panic("_rid")
 			}
 			if event == "ChRecv"{
-				fmt.Printf("Recv\n")
+				log.Printf("Recv\n")
 				//rval = sql.NullInt32{Valid:true, Int32: int32(e.Args[2])} // message val
 				if vv,ok := msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] ; ok{
 					// A matching sent is found for the recv
-					fmt.Printf("\tMatching sent is found\n")
+					//fmt.Printf("\tMatching sent is found\n")
 					predG    = sql.NullInt64{Valid:true, Int64: int64(vv.g)}
 					predClk  = sql.NullInt64{Valid:true, Int64: int64(vv.clock)}
 				}else{
 					// Receiver without a matching sender
 					// might be found later
-					fmt.Printf("\tNo matching (store null for predG,PredCLK)\n\tStore msg[%v,%v,%v] = g:%v localClock:%v",_rid,uint64(reid.Int64),uint64(rval.Int64),g, localClock[g])
+					//fmt.Printf("\tNo matching (store null for predG,PredCLK)\n\tStore msg[%v,%v,%v] = g:%v localClock:%v",_rid,uint64(reid.Int64),uint64(rval.Int64),g, localClock[g])
 					msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] = eventPredecessor{g, localClock[g]}
 					predG = sql.NullInt64{}
 					predClk = sql.NullInt64{}
@@ -214,23 +219,22 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 			}else{
 				// ChMake, ChSend, ChClose
 				if event == "ChSend"{
-					//rval = sql.NullInt32{Valid:true, Int32: int32(e.Args[2])} // message val
 					// Set Predecessor for a receive (key to the event: {cid, eid, val})
-					fmt.Printf("Send\n")
+					log.Printf("HBTable: Send\n")
 					if vv,ok := msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] ; ok{
-						fmt.Printf("\tMatching recv is found\n")
+						log.Printf("\tMatching recv is found\n")
 						predG    = sql.NullInt64{Valid:true, Int64: int64(vv.g)}
 						predClk  = sql.NullInt64{Valid:true, Int64: int64(vv.clock)}
 					} else{ // a send for this particular message has been stored before
 						msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] = eventPredecessor{g, localClock[g]}
-						fmt.Printf("\tNo matching (store null for predG,PredCLK)\n\tStore msg[%v,%v,%v] = g:%v localClock:%v",_rid,uint64(reid.Int64),uint64(rval.Int64),g, localClock[g])
+						log.Printf("\tNo matching (store null for predG,PredCLK)\n\tStore msg[%v,%v,%v] = g:%v localClock:%v",_rid,uint64(reid.Int64),uint64(rval.Int64),g, localClock[g])
 						predG = sql.NullInt64{}
 						predClk = sql.NullInt64{}
 						//panic("Previously stored as sent!")
 					}
 				}else{ // ChMake. ChClose
 				//	rval = sql.NullInt32{}
-					fmt.Printf("Make/Close (null predG predClk)\n")
+					log.Printf("HBTable: Make/Close (null predG predClk)\n")
 					predG = sql.NullInt64{}
 					predClk = sql.NullInt64{}
 				}
@@ -284,7 +288,7 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 
 //func HBLog(dbName, outdir string, resourceView bool, aspects ...string){
 func HBLog(dbName, hbtable, outdir string, resourceView bool){
-	fmt.Println("HBLOG")
+	fmt.Println("HBLog")
 	// Variables
 	var q, event, _ev         string
 	var event1                string
@@ -301,7 +305,7 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 	if err != nil {
 		fmt.Println(err)
 	}else{
-		fmt.Println("Connection Established")
+		fmt.Println("HBLog: Conntected to ",dbName)
 	}
 	defer db.Close()
 
@@ -352,11 +356,11 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 				srcLine = ""
 			}
 			if rid.Valid && rclock.Valid {
-				fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+				//fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 				buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 				f.WriteString(buff)
 
-				fmt.Printf("%v@%v (%v) {\"G%v\": %v,\"%v\": %v}\n","_"+event,srcLine,rid.String,g,logclock,rid.String,rclock.Int32)
+				//fmt.Printf("%v@%v (%v) {\"G%v\": %v,\"%v\": %v}\n","_"+event,srcLine,rid.String,g,logclock,rid.String,rclock.Int32)
 				buff = fmt.Sprintf("%v@%v (%v) {\"G%v\": %v,\"%v\": %v}\n","_"+event,srcLine,rid.String,g,logclock,rid.String,rclock.Int32)
 				f.WriteString(buff)
 			}else{
@@ -365,27 +369,21 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 				if predG.Valid {
 					if g == int(predG.Int32){
 						//happening on same goroutine, just GID is enough
-						fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+						//fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 						buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 						f.WriteString(buff)
 
 					} else{
-						fmt.Printf("%v@%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,srcLine,g,g,logclock,predG.Int32,predClk.Int32)
+						//fmt.Printf("%v@%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,srcLine,g,g,logclock,predG.Int32,predClk.Int32)
 						buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,srcLine,g,g,logclock,predG.Int32,predClk.Int32)
 						f.WriteString(buff)
 					}
 				} else{
-					fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+					//fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 					buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 					f.WriteString(buff)
 				}
-
-				/*
-				fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
-				buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
-				f.WriteString(buff)*/
 			}
-			//fmt.Printf("%v (G%v) {\"G%v\": %v}\n",event,g,g,logclock)
 		}
 		f.Close()
 	}else{
@@ -449,17 +447,17 @@ func HBLog(dbName, hbtable, outdir string, resourceView bool){
 			if predG.Valid {
 				if g == int(predG.Int32){
 					//happening on same goroutine, just GID is enough
-					fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+					//fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 					buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 					f.WriteString(buff)
 
 				} else{
-					fmt.Printf("%v@%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,srcLine,g,g,logclock,predG.Int32,predClk.Int32)
+					//fmt.Printf("%v@%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,srcLine,g,g,logclock,predG.Int32,predClk.Int32)
 					buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v, \"G%v\": %v }\n",event,srcLine,g,g,logclock,predG.Int32,predClk.Int32)
 					f.WriteString(buff)
 				}
 			} else{
-				fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
+				//fmt.Printf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 				buff = fmt.Sprintf("%v@%v (G%v) {\"G%v\": %v}\n",event,srcLine,g,g,logclock)
 				f.WriteString(buff)
 			}
