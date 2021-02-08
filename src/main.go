@@ -9,6 +9,8 @@ import (
 	"schedtest"
 	"strings"
 	"util"
+	"log"
+	"path"
 )
 
 const WORD_CHUNK_LENGTH = 11
@@ -16,20 +18,9 @@ const WORD_CHUNK_LENGTH = 11
 var CLOUTPATH = os.Getenv("GOPATH") + "/traces/clx"
 
 var (
-	flagCmd            string
-	flagOut            string
-	flagSrc            string
-	flagX              string
-	flagCons           int
-	flagAtrMode        int
-	flagN              int
-	flagBase           string
-	flagTO             int
-	flagDepth          int
-	flagIter           int
-	flagApp            string
-	flagArgs           []string
-	dbName             string
+	flagCmd, flagOut, flagSrc, flagX, flagBase, flagApp, dbName       string
+	flagCons, flagAtrMode, flagN, flagTO, flagDepth, flagIter         int
+	flagArgs                                                          []string
 	validCategories    = []string{"CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGCV", "SCHD", "BLCK"}
 	validPrimeCmds     = []string{"word", "hac", "rr", "rg", "diff", "dineData", "cleanDB", "dev", "hb", "gtree", "cgraph", "resg"}
 	validTestSchedCmds = []string{"test"}
@@ -37,17 +28,26 @@ var (
 )
 
 func main() {
-	// Read flags
+
+	fmt.Println("Initializing GOAT V.0.1 ...")
 	parseFlags()
 
 	if flagSrc == "schedTest" {
+
+		fmt.Println("GOAT SchedTest mode ...")
 		handleSchedTestCommands()
+
 	} else {
+
+		fmt.Println("GOAT Prime mode ...")
+		// New App instance
 		myapp := instrument.NewAppExec(flagApp, flagSrc, flagX, flagTO)
+		// Obtain DB
 		dbn, err := myapp.DBPointer()
 		if err != nil {
 			panic(err)
 		}
+		fmt.Println("Working DB: ",dbn)
 		myapp.DBName = dbn
 		handlePrimaryCommands(myapp.DBName)
 		fmt.Println(myapp.ToString())
@@ -95,8 +95,7 @@ func parseFlags() {
 
 	// Check Outdir
 	if flagOut == "" {
-		util.PrintUsage()
-		panic("Outdir required")
+		flagOut = path.Dir(flagApp)
 	}
 
 	// Check app
@@ -134,6 +133,15 @@ func parseFlags() {
 	}
 
 	flagArgs = flag.Args()
+
+	// init log
+	//file, err := os.OpenFile(path.Dir(flagApp)+"/GOAT_log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile(path.Dir(flagApp)+"/GOAT_log.txt", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+  if err != nil {
+  	log.Fatal(err)
+  }
+  log.SetOutput(file)
+
 }
 
 // handle primary commands
@@ -214,16 +222,16 @@ func handlePrimaryCommands(dbName string) {
 	case "resg":
 		db.ResourceGraph(dbName, flagOut)
 	case "dev":
+		db.Checker(dbName,true)
 		/*for _,arg := range(flagArgs){
 		  tl := strings.Split(arg,",")
 		  hbtable := db.HBTable(dbName,tl...)
 		  db.Dev(dbName,hbtable, flagOut)
 		}*/
-		db.Checker(dbName)
+
 		//fmt.Println(dbName)
 		//db.Gtree(dbName,flagOut)
 		//db.Histogram(10,dbName)
-
 		//db.HBLog(dbName,flagOut,true)
 		//fmt.Println("****")
 		//db.HBLog(dbName,flagOut,false)
@@ -232,20 +240,23 @@ func handlePrimaryCommands(dbName string) {
 
 // handle schedTest commands
 func handleSchedTestCommands() {
-	mytest := schedtest.SchedTest(flagApp, flagSrc, flagX, flagTO, flagDepth, flagIter)
-	fmt.Println(mytest.ToString())
-	//cats := []string{"SCHD"}
-	for k,v := range(mytest.DBNames){
-		fmt.Println(k)
-		fmt.Println("-------")
-		fmt.Println(v)
-		db.Checker(v)
-
-		//db.SwimLanes(v,flagOut,"SCHD")
-		db.ExecVis(v,flagOut)
-		//db.MutexReport(v)
-
-
-
+	switch flagCmd {
+	case "test":
+		mytest := schedtest.SchedTest(flagApp, flagSrc, flagX, flagTO, flagDepth, flagIter)
+		//fmt.Println(mytest.ToString())
+		for _,v := range(mytest.DBNames){
+			//fmt.Println(k)
+			//fmt.Println("-------")
+			//fmt.Println(v)
+			//db.Checker(v,true)
+			//db.SwimLanes(v,flagOut,"SCHD")
+			db.ExecVis(v,mytest.TestPath)
+			//db.MutexReport(v)
+		}
+	case "execvis":
+		// figure out test name
+		//
+		//schedTest.ExecVis()
 	}
+
 }
