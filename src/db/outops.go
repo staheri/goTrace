@@ -1412,17 +1412,11 @@ func ChannelGraph(dbName, outdir string) {
 	// Variables
 	var q, event string
 	var rid string
-	//var file, funct          string
-	//var createDesc,closeDesc string
 	var g int
 	var pos int
 
 	edges := make(map[string][]string)
 	waitingEdges := make(map[string][]string)
-	//var make_eid, make_gid   int
-	//var close_eid, close_gid int
-	//var line                 int
-	//var val, pos, eid        int
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -1545,9 +1539,9 @@ func ResourceGraph(dbName, outdir string) {
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	} else {
-		fmt.Println("Connection Established")
+		log.Println("ResourceGraph: Connected to ",dbName)
 	}
 	defer db.Close()
 
@@ -1555,12 +1549,12 @@ func ResourceGraph(dbName, outdir string) {
 	q1 = `SELECT type,g,rid
 	     FROM Events
 			 WHERE type="EvMuUnlock" OR type="EvMuLock"`
+
+	// Query channels
 	q2 = `SELECT t1.type,t1.g,t1.rid,t2.value
 			 FROM Events t1
 			 INNER JOIN Args t2 ON t1.id=t2.eventId
 			 WHERE (type="EvChSend" OR type="EvChRecv") and t2.arg="pos";`
-
-	//fmt.Printf("Executing: %v\n",q)
 
 	res, err := db.Query(q1)
 	if err != nil {
@@ -1571,19 +1565,17 @@ func ResourceGraph(dbName, outdir string) {
 		if err != nil {
 			panic(err)
 		}
-		if rid != "M3" { // trace lock, ignore it
-			if event == "EvMuLock" {
-				edges["G"+strconv.Itoa(g)] = append(edges["G"+strconv.Itoa(g)], rid)
-			} else {
-				edges[rid] = append(edges[rid], "G"+strconv.Itoa(g))
-			}
+		if event == "EvMuLock" {
+			edges["G"+strconv.Itoa(g)] = append(edges["G"+strconv.Itoa(g)], rid)
+		} else {
+			edges[rid] = append(edges[rid], "G"+strconv.Itoa(g))
+		}
 
-			if _, ok := nodes["G"+strconv.Itoa(g)]; !ok {
-				nodes["G"+strconv.Itoa(g)] = 1
-			}
-			if _, ok := nodes[rid]; !ok {
-				nodes[rid] = 1
-			}
+		if _, ok := nodes["G"+strconv.Itoa(g)]; !ok {
+			nodes["G"+strconv.Itoa(g)] = 1
+		}
+		if _, ok := nodes[rid]; !ok {
+			nodes[rid] = 1
 		}
 	}
 	res.Close()
@@ -1597,28 +1589,25 @@ func ResourceGraph(dbName, outdir string) {
 		if err != nil {
 			panic(err)
 		}
-		if rid != "M3" { // trace lock, ignore it
-			if event == "EvChSend" {
-				if pos != 0 {
-					edges["G"+strconv.Itoa(g)] = append(edges["G"+strconv.Itoa(g)], rid)
-				} else {
-					waitingEdges["G"+strconv.Itoa(g)] = append(waitingEdges["G"+strconv.Itoa(g)], rid)
-				}
+		if event == "EvChSend" {
+			if pos != 0 {
+				edges["G"+strconv.Itoa(g)] = append(edges["G"+strconv.Itoa(g)], rid)
 			} else {
-				if pos != 0 {
-					edges[rid] = append(edges[rid], "G"+strconv.Itoa(g))
-				} else {
-					waitingEdges[rid] = append(waitingEdges[rid], "G"+strconv.Itoa(g))
-				}
+				waitingEdges["G"+strconv.Itoa(g)] = append(waitingEdges["G"+strconv.Itoa(g)], rid)
 			}
-			if _, ok := nodes["G"+strconv.Itoa(g)]; !ok {
-				nodes["G"+strconv.Itoa(g)] = 1
-			}
-			if _, ok := nodes[rid]; !ok {
-				nodes[rid] = 1
+		} else {
+			if pos != 0 {
+				edges[rid] = append(edges[rid], "G"+strconv.Itoa(g))
+			} else {
+				waitingEdges[rid] = append(waitingEdges[rid], "G"+strconv.Itoa(g))
 			}
 		}
-
+		if _, ok := nodes["G"+strconv.Itoa(g)]; !ok {
+			nodes["G"+strconv.Itoa(g)] = 1
+		}
+		if _, ok := nodes[rid]; !ok {
+			nodes[rid] = 1
+		}
 	}
 	res.Close()
 
@@ -1656,9 +1645,10 @@ func ResourceGraph(dbName, outdir string) {
 		}
 	}
 
-	fmt.Println(nodes_st)
-	fmt.Println(edges_st)
+	//fmt.Println(nodes_st)
+	//fmt.Println(edges_st)
 
+	// write nodes/edges to dot file
 	f, err := os.Create(outdir + "/" + dbName + "_resg.dot")
 	check(err)
 	f.WriteString("digraph {\n\t" + nodes_st + "\n\n\t" + edges_st + "\n}")
@@ -1666,9 +1656,8 @@ func ResourceGraph(dbName, outdir string) {
 
 	// Create pdf
 	_cmd := "dot -Tpdf " + outdir + "/" + dbName + "_resg.dot" + " -o " + outdir + "/" + dbName + "_resg.pdf"
-
 	cmd := exec.Command("dot", "-Tpdf", outdir+"/"+dbName+"_resg.dot", "-o", outdir+"/"+dbName+"_resg.pdf")
-	fmt.Printf(">>> Executing %s...\n", _cmd)
+	log.Printf(">>> ResourceGraph: Executing %s...\n", _cmd)
 	//err = cmd.Run()
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -1676,49 +1665,49 @@ func ResourceGraph(dbName, outdir string) {
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+		panic(fmt.Sprint(err) + ": " + stderr.String())
 		return
 	}
-	fmt.Println("Result: " + stdout.String())
+	log.Println(">>> ResourceGraph: Result: " + stdout.String())
 
 	_cmd = "open" + outdir + "/" + dbName + "_resg.pdf"
-
 	cmd = exec.Command("open", outdir+"/"+dbName+"_resg.pdf")
-	fmt.Printf(">>> Executing %s...\n", _cmd)
+	log.Printf(">>> ResourceGraph: Executing %s...\n", _cmd)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+		panic(fmt.Sprint(err) + ": " + stderr.String())
 		return
 	}
-	fmt.Println("Result: " + stdout.String())
-	//fmt.Println(out)
+	log.Println(">>> ResourceGraph: Result: " + stdout.String())
+
+	fmt.Println("Resource Graph visualization: ", outdir+"/"+dbName+"_resg.pdf")
 }
 
 func ConcUsage(dbName string) map[string]int {
-	// Establish connection to DB
-	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println("Connection Established")
-	}
-	defer db.Close()
-	// END DB
 
+	// Variables
+	var id                      int
+	var g                       uint64
+	var event,file,funct,line   string
+	var rid                     sql.NullString
 
-	var id int
-	var g uint64
-	var event, file, funct, line string
-	var rid sql.NullString
-
-	// last events stroe every last event of goroutines
 	concUsage := make(map[string]int)
 	fullstack := make(map[int][]string) // key: eventid, value: slice of stacks
 	blacklist := make(map[string]int)
 
-	// Query mutexes
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		panic(err)
+	} else {
+		log.Println("ConcUsage: Connected to ",dbName)
+	}
+	defer db.Close()
+	// END DB
+
+	// Query catSCHD
 	q := `SELECT t1.id,t1.type,t1.g,t1.rid,t3.file,t3.func,t3.line FROM Events t1
 				INNER JOIN global.catSCHD t2
 				ON t1.type=t2.eventName
@@ -1768,32 +1757,31 @@ func ConcUsage(dbName string) map[string]int {
 			}
 		}
 	}
-	//lets filter a bit
 	return concUsage
 }
 
 func ExecVis(dbName, resultpath string) {
+	// vars
+	var id            int
+	var g             uint64
+	var event, rid    string
+	var _rid          sql.NullString
+	var row           []string
+	var ignored,data  []string
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	} else {
-		fmt.Println("Connection Established")
+		log.Println("ExecVis: Connected to ",dbName)
 	}
 	defer db.Close()
 	// END DB
 
-	var id int
-	var g uint64
-	var event, rid string
-	var _rid sql.NullString
-	var row []string
 
-
-	var ignored,data  []string
+	// Generate gmap and gmat
 	gmap := make(map[int]int)
-	//data := make([]string)
 	q := `SELECT t1.id,t1.type,t1.g,t1.rid FROM Events t1
 				INNER JOIN (select * from global.catBLCK union select * from global.catSCHD) t2
 				ON t1.type=t2.eventName
@@ -1818,7 +1806,6 @@ func ExecVis(dbName, resultpath string) {
 		}
 	}
 	res.Close()
-
 	// data has the sequence of events that we want
 
 	// now create gmat
@@ -1850,6 +1837,8 @@ func ExecVis(dbName, resultpath string) {
 
 	outdot := resultpath + "/" + dbName + "_vis.dot"
 	outpdf := resultpath + "/" + dbName + "_vis.pdf"
+
+	//write dot file
 	f, err := os.Create(outdot)
 	if err != nil {
 		log.Fatal(err)
@@ -1857,12 +1846,11 @@ func ExecVis(dbName, resultpath string) {
 	f.WriteString(mat2dot(gmat))
 	f.Close()
 
+	// start cmd
 	// Create pdf
 	_cmd := "dot -Tpdf " + outdot + " -o " + outpdf
-
 	cmd := exec.Command("dot", "-Tpdf", outdot, "-o", outpdf)
-	fmt.Printf(">>> Executing %s...\n", _cmd)
-	//err = cmd.Run()
+	log.Printf(">>> ExecVis: Executing %s...\n", _cmd)
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out
@@ -1872,5 +1860,9 @@ func ExecVis(dbName, resultpath string) {
 		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 		return
 	}
-	fmt.Println("Result: " + out.String())
+	log.Println(">>> ExecVis: Result: " + out.String())
+	// end cmd
+
+	fmt.Println("ExecVis: Generated visualization: ", outpdf)
+
 }
