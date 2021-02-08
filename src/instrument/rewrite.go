@@ -9,11 +9,9 @@ import (
 	"go/token"
 	"io/ioutil"
 	"path/filepath"
-
 	"golang.org/x/tools/go/ast/astutil"
-
 	"golang.org/x/tools/go/loader"
-
+	"log"
 	"strconv"
 	_"reflect"
 	"fmt"
@@ -26,6 +24,7 @@ import (
 func (app *AppExec) RewriteSource() error {
 	var data []byte
 	var err error
+	log.Println("RewriteSource: Add code to ",app.OrigPath)
 	data, err = addCode(app.OrigPath,app.Timeout)
 	if err != nil {
 		fmt.Println("Error in addCode:", err)
@@ -37,15 +36,15 @@ func (app *AppExec) RewriteSource() error {
 
 	// write files
 	err = ioutil.WriteFile(toStore, data, 0666)
-	fmt.Println("writes data to ",toStore)
+	log.Println("RewriteSource: Writes data to ",toStore)
 	if err != nil {
-		fmt.Println("Write data failed:", err)
+		panic(err)
 		return err
 	}
 	err = ioutil.WriteFile(filename, data, 0666)
-	fmt.Println("writes data to ",filename)
+	log.Println("RewriteSource: Writes data to ",filename)
 	if err != nil {
-		fmt.Println("Write data failed:", err)
+		panic(err)
 		return err
 	}
 	return nil
@@ -57,28 +56,20 @@ func (app *AppExec) RewriteSource() error {
 func (app *AppTest) RewriteSourceSched() error {
 	var data []byte
 	var err error
+	log.Println("RewriteSourceSched: Add sched code to ",app.OrigPath)
 	data, err = addCodeSched(app.OrigPath,app.Depth,app.ConcUsage)
 	if err != nil {
-		fmt.Println("Error in addCodeSched:", err)
+		panic(err)
 		return err
 	}
 	// create files to store rewritten data
-	filename := filepath.Join(app.TestPath, filepath.Base(app.OrigPath))
-	//toStore := filepath.Join(filepath.Dir(path), strings.Split(filepath.Base(path),".")[0]+"_mod.go")
+	filename := filepath.Join(app.TestPath, app.Name+"_sched.go")
 
-	// write files
-	/*err = ioutil.WriteFile(toStore, data, 0666)
-	fmt.Println("writes data to ",toStore)
-	if err != nil {
-		fmt.Println("Write data failed:", err)
-		return err
-	}
-	*/
 
 	err = ioutil.WriteFile(filename, data, 0666)
-	fmt.Println("writes data to ",filename)
+	log.Println("writes data to ",filename)
 	if err != nil {
-		fmt.Println("Write data failed:", err)
+		panic(err)
 		return err
 	}
 	return nil
@@ -107,6 +98,7 @@ func addCode(path string, timeout int) ([]byte, error) {
 	astFile := pkg.Files[0]
 
 	// add imports
+	log.Println("AddCode: Add imports")
 	astutil.AddImport(prog.Fset, astFile, "os")
 	astutil.AddImport(prog.Fset, astFile, "runtime/trace")
 	astutil.AddImport(prog.Fset, astFile, "time")
@@ -115,6 +107,7 @@ func addCode(path string, timeout int) ([]byte, error) {
 	}
 
 	// add start/stop code
+	log.Println("AddCode: Add trace")
 	ast.Inspect(astFile, func(n ast.Node) bool {
 		switch x := n.(type) {
 		case *ast.FuncDecl:
@@ -145,11 +138,11 @@ func addCode(path string, timeout int) ([]byte, error) {
 //    - adds tracing mechanism (start/stop)
 //    - adds constant depth, struct type, global counter and Reschedule function declaration
 func addCodeSched(path string,depth int,concUsage map[string]int) ([]byte, error) {
+
 	var conf loader.Config
 	if _, err := conf.FromArgs([]string{path}, false); err != nil {
 		return nil, err
 	}
-
 	prog, err := conf.Load()
 	if err != nil {
 		return nil, err
@@ -161,12 +154,14 @@ func addCodeSched(path string,depth int,concUsage map[string]int) ([]byte, error
 	astFile := pkg.Files[0]
 
 	// add imports
+	log.Println("AddCodeSched: Add imports")
 	astutil.AddImport(prog.Fset, astFile, "sync")
 	astutil.AddImport(prog.Fset, astFile, "runtime")
 	astutil.AddImport(prog.Fset, astFile, "math/rand")
-	fmt.Println(" >>> Added Impots")
+	//fmt.Println(" >>> Added Imports")
 
 	// add constant, struct type, global counter, function declration
+	log.Println("AddCodeSched: Add constants, struct, flobal counter, func. decl.")
 	ast.Inspect(astFile, func(n ast.Node) bool {
 		switch x := n.(type) {
 		case *ast.File:
@@ -180,8 +175,7 @@ func addCodeSched(path string,depth int,concUsage map[string]int) ([]byte, error
 		return true
 	})
 
-	fmt.Println(" >>> Added Decls")
-
+	log.Println("AddCodeSched: Add Gosched() invocations")
 	astutil.Apply(astFile, func(cr *astutil.Cursor) bool{
 		//_,ok := cr.Node().(*ast.GoStmt)
 		n := cr.Node()
@@ -196,7 +190,6 @@ func addCodeSched(path string,depth int,concUsage map[string]int) ([]byte, error
 			return true
 		}
 		cr.InsertBefore(callFuncSched())
-		fmt.Println("Inserted Before Match")
 		return true
 		//fmt.Println("")
 	},nil)
@@ -344,14 +337,9 @@ func matches(n ast.Node, conc map[string]int, location string) bool{
 	if location != "-"{
 		t := strings.Split(filepath.Base(location),":")[0] + ":" + strings.Split(filepath.Base(location),":")[1]
 		tt := strings.Split(t,"_mod")[0] + strings.Split(t,"_mod")[1]
-		// fmt.Printf("* %v\n",tt)
-		// for k,v := range(conc){
-		// 	fmt.Println(">> K:",k)
-		// 	fmt.Println(">> V:",v)
-		// }
 		if val,ok := conc[tt]; ok && val != 2 {
 			conc[tt] = 2
-			fmt.Println("Return True > ",tt)
+			log.Println("ConcUsage Matches: Return True > ",tt)
 			return true
 		}
 		return false

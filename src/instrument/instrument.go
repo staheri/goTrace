@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"db"
 	"strings"
+	"log"
 )
 
 
@@ -25,6 +26,7 @@ type AppExec struct {
 	Timeout           int    // timeout (for DL apps)
 }
 
+// returns a pointer to new AppExec
 func NewAppExec(path,src,x string, to int) *AppExec{
 	return &AppExec{
 		App:       util.AppName(path),
@@ -46,6 +48,7 @@ type AppTest struct {
 	DBNames           map[int]string
 }
 
+// returns a pointer to new AppTest
 func NewAppTest(base *AppExec,depth int) *AppTest{
 	return &AppTest{
 		BaseExec:  base,
@@ -61,11 +64,14 @@ func NewAppTest(base *AppExec,depth int) *AppTest{
 func (app *AppExec) DBPointer() (dbName string, err error){
 
 	// retrieve from db
-
 	if app.Source != "native" && app.Source != "schedTest"{
+		log.Printf("DBPointer: %s, Source: %s, X: %s", app.App,app.Source, app.X)
+		fmt.Printf("DBPointer: %s, Source: %s, X: %s", app.App,app.Source, app.X)
 		return db.Ops(app.Source, app.App, app.X),nil
 	}
 
+	fmt.Println("DBPointer: Nativ run...")
+	log.Println("DBPointer: Nativ run...")
 	// instrument, rewrite, execute, collect, store, obtain DBname
 	dbName,err = app.Trace()
 	if err != nil{
@@ -87,21 +93,44 @@ func (app *AppExec) Trace() (dbName string, err error){
 	app.NewPath = tmpDir
 	defer removeDir(app.NewPath)
 
+
 	// writes instrumented code into app.NewPath
+	fmt.Println("Trace: Rewrite...")
 	err = app.RewriteSource()
 	if err != nil {
 		return "", fmt.Errorf("couldn't rewrite source code: %v", err)
 	}
 
 	// exeute, capture and parse trace
+	fmt.Println("Trace: Execute...")
 	events, err := ExecuteTrace(app.NewPath)
 	if err != nil{
 		return "", fmt.Errorf("Error in ExecuteTrace:", err)
 	}
 
 	// store traces
+	fmt.Println("Trace: Store...")
 	return db.Store(events,app.App),nil
 
+}
+
+// reads trace from stderr (io.reader) and parse
+func parseTrace(r io.Reader, binary string) ([]*trace.Event, error) {
+	parseResult, err := trace.Parse(r,binary)
+	if err != nil {
+		return nil, err
+	}
+
+	err = trace.Symbolize(parseResult.Events, binary)
+
+	return parseResult.Events, err
+}
+
+// checks for errors
+func check(err error){
+	if err != nil{
+		panic(err)
+	}
 }
 
 // appExec to string
@@ -128,22 +157,4 @@ func (app *AppTest) ToString() string{
 	}
 	s = s + fmt.Sprintf("-----------\n")
 	return s
-}
-
-func parseTrace(r io.Reader, binary string) ([]*trace.Event, error) {
-	parseResult, err := trace.Parse(r,binary)
-	if err != nil {
-		return nil, err
-	}
-
-	err = trace.Symbolize(parseResult.Events, binary)
-
-	return parseResult.Events, err
-}
-
-
-func check(err error){
-	if err != nil{
-		panic(err)
-	}
 }

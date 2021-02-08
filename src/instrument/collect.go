@@ -8,12 +8,14 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"log"
 )
 
 // - Compile and executes the modified source
 // - Parse collected trace
 func ExecuteTrace(path string) ([]*trace.Event, error){
 	// create binary file holder
+	log.Println("ExecuteTrace: Create tempdir ")
 	tmpBinary, err := ioutil.TempFile("", "GOAT")
 	if err != nil {
 		//fmt.Println("Error creating binary file:",err)
@@ -24,6 +26,7 @@ func ExecuteTrace(path string) ([]*trace.Event, error){
 	defer os.Remove(tmpBinary.Name())
 
 	// build binary
+	log.Println("ExecuteTrace: Build ",tmpBinary.Name()," in ", path)
 	cmd := exec.Command("go", "build", "-o", tmpBinary.Name())
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -35,6 +38,7 @@ func ExecuteTrace(path string) ([]*trace.Event, error){
 	}
 
 	// run
+	log.Println("ExecuteTrace: Run ",tmpBinary.Name())
 	stderr.Reset()
 	cmd = exec.Command(tmpBinary.Name())
 	cmd.Stderr = &stderr
@@ -49,6 +53,7 @@ func ExecuteTrace(path string) ([]*trace.Event, error){
 	}
 
 	// parse
+	log.Println("ExecuteTrace: Redirect stderr to ParseTrace ")
 	return parseTrace(&stderr, tmpBinary.Name())
 }
 
