@@ -22,12 +22,11 @@ func main() {
 	go g1(cv, done, eventch, closec)
 	go g2(cv, done, eventch)
 
-	time.Sleep(time.Millisecond * 10)
 	fmt.Println("End of main!")
 }
 
 func g0(ch chan int) {
-	//time.Sleep(time.Millisecond*10)
+	time.Sleep(time.Microsecond*20)
   //runtime.Gosched()
   // to trigger the bug, it has to happen first
 	close(ch)

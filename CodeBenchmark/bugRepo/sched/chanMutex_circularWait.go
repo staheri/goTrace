@@ -2,7 +2,6 @@ package main
 import (
   "sync"
   "fmt"
-  "time"
 )
 
 // https://github.com/moby/moby/pull/28462
@@ -16,7 +15,6 @@ func main() {
 
   // goroutine 1
   go func() {
-    time.Sleep(1*time.Millisecond)
     m.Lock()
     ch <- 1
     m.Unlock()
@@ -24,9 +22,11 @@ func main() {
 
   // goroutine 2
   go func() {
-    m.Lock() // block here
+    m.Lock()
     m.Unlock()
-    <- ch
+    <-ch
   }()
+
   fmt.Println("End of main!")
 }
+

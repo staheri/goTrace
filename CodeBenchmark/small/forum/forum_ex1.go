@@ -7,14 +7,14 @@ import (
 )
 
 type task struct {
-	name string
-	path string
+	name      string
+	path      string
 	startTime time.Time
 }
 
 func downloader(id int, toDownload chan task, toProcess chan task) {
 	for {
-		task := <- toDownload
+		task := <-toDownload
 		fmt.Printf("[downloader_%v]: downloading %v \n", id, task.name)
 		time.Sleep(1 * time.Second)
 		toProcess <- task
@@ -23,7 +23,7 @@ func downloader(id int, toDownload chan task, toProcess chan task) {
 
 func transformer(id int, toProcess chan task, toFinish chan task) {
 	for {
-		task := <- toProcess
+		task := <-toProcess
 		fmt.Printf("[processor_%v]: processing %v \n", id, task.name)
 		time.Sleep(1 * time.Second)
 		toFinish <- task
@@ -32,7 +32,7 @@ func transformer(id int, toProcess chan task, toFinish chan task) {
 
 func finisher(id int, toFinish chan task, finished chan task) {
 	for {
-		task := <- toFinish
+		task := <-toFinish
 		fmt.Printf("[finisher_%v]: uploading %v \n", id, task.name)
 		time.Sleep(1 * time.Second)
 		finished <- task
@@ -42,7 +42,7 @@ func finisher(id int, toFinish chan task, finished chan task) {
 func fetchJobs(n int) *[]task {
 	tasks := make([]task, n)
 	for i := 0; i < n; i++ {
-		name := "job_" + strconv.Itoa(i);
+		name := "job_" + strconv.Itoa(i)
 		tasks[i] = task{name: name}
 	}
 	return &tasks
@@ -57,7 +57,6 @@ func main() {
 	toProcess := make(chan task)
 	toFinish := make(chan task)
 	finished := make(chan task)
-
 
 	for i := 0; i < 4; i++ {
 		go downloader(i, toDownload, toProcess)
@@ -77,8 +76,8 @@ func main() {
 	}
 
 	for task := range finished {
-		fmt.Printf("finished %v in %s \n", task.name, time.Since(task.startTime) / time.Second)
+		fmt.Printf("finished %v in %s \n", task.name, time.Since(task.startTime)/time.Second)
 	}
 
-	fmt.Printf("all tasks finished in %s", time.Since(start) / time.Second)
+	fmt.Printf("all tasks finished in %s", time.Since(start)/time.Second)
 }

@@ -23,7 +23,6 @@ import (
 // lock //block
 
 func main() {
-  //runtime.GOMAXPROCS(1)
   ch1 := make(chan int)
   stop := make(chan int)
   var m sync.Mutex

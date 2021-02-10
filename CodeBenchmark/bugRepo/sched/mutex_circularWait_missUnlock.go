@@ -44,7 +44,6 @@ func decideBuggy() bool{
     ch <- 1
     }(ch)
   go func(ch chan int){
-    //runtime.Gosched()
     ch <- 2
     }(ch)
   r := <- ch
