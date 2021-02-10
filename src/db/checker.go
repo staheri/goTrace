@@ -12,7 +12,100 @@ import (
 
 )
 
-func longLeakReport(dbName string) {
+func Checker(dbName string, long bool) bool{
+	if long {
+		return longLeakReport(dbName)
+	}
+	return shortLeakReport(dbName)
+}
+
+func shortLeakReport(dbName string) bool{
+	// Establish connection to DB
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
+	if err != nil {
+		panic(err)
+	}else{
+		log.Println("Cheker(short): Connected to ",dbName)
+	}
+	defer db.Close()
+	// END DB
+
+	//fmt.Println(appGoroutineFinder(db))
+	var gs []int
+	var g int
+	var event string
+
+	// last events stroe every last event of goroutines
+	lastEvents := make(map[int]string)
+
+	// Query mutexes
+	q := `select gid from goroutines;`
+	res, err := db.Query(q)
+	if err != nil {
+		panic(err)
+	}
+	for res.Next(){
+		err = res.Scan(&g)
+		check(err)
+		gs = append(gs,g) // append g to gs
+	}
+	res.Close()
+
+	lastEventStmt,err := db.Prepare("SELECT type FROM Events WHERE g=? ORDER BY id DESC LIMIT 1")
+	check(err)
+	defer lastEventStmt.Close()
+
+	for _,gi := range(gs){
+		// Last event
+		res,err = lastEventStmt.Query(gi)
+		check(err)
+		for res.Next(){
+			err = res.Scan(&event)
+			check(err)
+			lastEvents[gi]=event
+		}
+		res.Close()
+	}
+
+	// ****************
+
+	var suspicious []int
+	var   isGlobalDL   bool
+	var   numIgnore   int
+
+	colorReset := "\033[0m"
+	colorRed := "\033[31m"
+	colorGreen := "\033[32m"
+
+
+	for k,v := range(lastEvents){
+		if k == 1 && v != "EvGoSched"{
+			isGlobalDL = true
+			continue
+		}
+		switch v {
+		case "EvGoWaiting","EvGoEnd","EvGoBlock":
+			numIgnore++
+		default:
+			if k != 0 && k != 1{
+				// the goroutine is in app goroutine which has not ended!
+				suspicious = append(suspicious,k)
+			}
+		}
+	}
+
+	if isGlobalDL{
+		fmt.Println(string(colorRed),"Fail (global deadlock)",string(colorReset))
+		return false
+	} else if len(suspicious) != 0{
+		fmt.Println(string(colorRed),"Fail (partial deadlock - leak)",string(colorReset))
+		return false
+	}
+	fmt.Println(string(colorGreen),"Pass",string(colorReset))
+	return true
+}
+
+func longLeakReport(dbName string) bool{
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
 	if err != nil {
@@ -101,10 +194,10 @@ func longLeakReport(dbName string) {
 
 	t.Render()
 	//fmt.Println(lastEvents)
-	textReport(lastEvents)
+	return textReport(lastEvents)
 }
 
-func textReport(lastEvents map[int]string){
+func textReport(lastEvents map[int]string) bool{
 	//writer := tabwriter.NewWriter(os.Stdout,0 , 16, 1, '\t', tabwriter.AlignRight)
 	totalG := len(lastEvents)
 	var suspicious []int
@@ -141,6 +234,7 @@ func textReport(lastEvents map[int]string){
 	fmt.Println("Total # runtime goroutines (0,1,tracing):",numWaiting+numBlock+2)
 	if isGlobalDL{
 		fmt.Println("Global Deadlock:",string(colorRed),"TRUE",string(colorReset))
+		return false
 	} else{
 		fmt.Println("Global Deadlock:",string(colorGreen),"FALSE",string(colorReset))
 	}
@@ -151,99 +245,8 @@ func textReport(lastEvents map[int]string){
 			temp = temp + strconv.Itoa(i) + " "
 		}
 		fmt.Println("Leaked Goroutines:",string(colorRed),temp,string(colorReset))
-	} else{
-		fmt.Println("Leaked Goroutines:",string(colorGreen),"NONE",string(colorReset))
+		return false
 	}
-}
-
-func Checker(dbName string, long bool){
-	if long {
-		longLeakReport(dbName)
-	} else{
-		shortLeakReport(dbName)
-	}
-}
-
-func shortLeakReport(dbName string) {
-	// Establish connection to DB
-	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
-	if err != nil {
-		panic(err)
-	}else{
-		log.Println("Cheker(short): Connected to ",dbName)
-	}
-	defer db.Close()
-	// END DB
-
-	//fmt.Println(appGoroutineFinder(db))
-	var gs []int
-	var g int
-	var event string
-
-	// last events stroe every last event of goroutines
-	lastEvents := make(map[int]string)
-
-	// Query mutexes
-	q := `select gid from goroutines;`
-	res, err := db.Query(q)
-	if err != nil {
-		panic(err)
-	}
-	for res.Next(){
-		err = res.Scan(&g)
-		check(err)
-		gs = append(gs,g) // append g to gs
-	}
-	res.Close()
-
-	lastEventStmt,err := db.Prepare("SELECT type FROM Events WHERE g=? ORDER BY id DESC LIMIT 1")
-	check(err)
-	defer lastEventStmt.Close()
-
-	for _,gi := range(gs){
-		// Last event
-		res,err = lastEventStmt.Query(gi)
-		check(err)
-		for res.Next(){
-			err = res.Scan(&event)
-			check(err)
-			lastEvents[gi]=event
-		}
-		res.Close()
-	}
-
-	// ****************
-
-	var suspicious []int
-	var   isGlobalDL   bool
-	var   numIgnore   int
-
-	colorReset := "\033[0m"
-	colorRed := "\033[31m"
-	colorGreen := "\033[32m"
-
-
-	for k,v := range(lastEvents){
-		if k == 1 && v != "EvGoSched"{
-			isGlobalDL = true
-			continue
-		}
-		switch v {
-		case "EvGoWaiting","EvGoEnd","EvGoBlock":
-			numIgnore++
-		default:
-			if k != 0 && k != 1{
-				// the goroutine is in app goroutine which has not ended!
-				suspicious = append(suspicious,k)
-			}
-		}
-	}
-
-	if isGlobalDL{
-		fmt.Println(string(colorRed),"Fail (global deadlock)",string(colorReset))
-	} else if len(suspicious) != 0{
-		fmt.Println(string(colorRed),"Fail (partial deadlock - leak)",string(colorReset))
-	} else{
-		fmt.Println(string(colorGreen),"Pass",string(colorReset))
-	}
+	fmt.Println("Leaked Goroutines:",string(colorGreen),"NONE",string(colorReset))
+	return true
 }
