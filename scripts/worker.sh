@@ -1,25 +1,9 @@
 #!/bin/bash
 
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=2 -atrmode=2 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=3 -atrmode=2 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=4 -atrmode=2 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=5 -atrmode=2 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=6 -atrmode=2 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=7 -atrmode=2 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=8 -atrmode=2 ;
-
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=2 -atrmode=3 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=3 -atrmode=3 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=4 -atrmode=3 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=5 -atrmode=3 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=6 -atrmode=3 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=7 -atrmode=3 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=8 -atrmode=3 ;
-
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=2 -atrmode=4 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=3 -atrmode=4 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=4 -atrmode=4 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=5 -atrmode=4 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=6 -atrmode=4 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=7 -atrmode=4 ;
-./src -app=../CodeBenchmark/temp/fft1.go -cmd=hac -outdir=../results/ -cons=8 -atrmode=4 ;
+for d in 0 1 2 3 4 5
+do
+  for app in mutex_circularWait_abba chanMutex_select chanMutex_circularWait chanMutex_circularWait2 chanMutexCond_circularWait.go
+  do
+    goat -app=$app.go -src=schedTest -cmd=test -iter=100 -depth=$d;
+  done
+done

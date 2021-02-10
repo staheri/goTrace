@@ -18,12 +18,12 @@ const WORD_CHUNK_LENGTH = 11
 var CLOUTPATH = os.Getenv("GOPATH") + "/traces/clx"
 
 var (
-	flagCmd, flagOut, flagSrc, flagX, flagBase, flagApp, dbName       string
-	flagCons, flagAtrMode, flagN, flagTO, flagDepth, flagIter         int
-	flagArgs                                                          []string
+	flagCmd, flagOut, flagSrc, flagX, flagBase, flagApp, dbName, flagDB  string
+	flagCons, flagAtrMode, flagN, flagTO, flagDepth, flagIter            int
+	flagArgs                                                             []string
 	validCategories    = []string{"CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGCV", "SCHD", "BLCK"}
-	validPrimeCmds     = []string{"word", "hac", "rr", "rg", "diff", "dineData", "cleanDB", "dev", "hb", "gtree", "cgraph", "resg"}
-	validTestSchedCmds = []string{"test"}
+	validPrimeCmds     = []string{"word", "hac", "rr", "diff", "dineData", "cleanDB", "dev", "hb", "gtree", "cgraph", "resg"}
+	validTestSchedCmds = []string{"test","execvis"}
 	validSrc           = []string{"native", "x", "latest", "schedTest"}
 )
 
@@ -67,6 +67,7 @@ func parseFlags() {
 	flag.IntVar(&flagCons, "cons", 1, "Number of consecutive elements for HAC & DIFF")
 	flag.IntVar(&flagAtrMode, "atrmode", 0, "Modes for HAC & DIFF")
 	flag.StringVar(&flagApp, "app", "", "Target application (*.go)")
+	flag.StringVar(&flagDB, "db", "", "Specific SQL table name")
 	flag.IntVar(&flagTO, "to", 0, "Timeout for deadlocks")
 	flag.IntVar(&flagDepth, "depth", 0, "Max depth for rescheduling")
 	flag.IntVar(&flagIter, "iter", 2, "Testing iteration")
@@ -93,6 +94,10 @@ func parseFlags() {
 		panic("Wrong schedTest command")
 	}
 
+	if flagSrc == "SchedTest" && flagCmd == "execvis" && flagDB == ""{
+		util.PrintUsage()
+		panic("DB name required")
+	}
 	// Check Outdir
 	if flagOut == "" {
 		flagOut = path.Dir(flagApp)
@@ -188,11 +193,11 @@ func handlePrimaryCommands(dbName string) {
 			}
 		}
 
-	case "rg":
+	/*case "rg":
 		for _, arg := range flagArgs {
 			tl := strings.Split(arg, ",")
 			db.SwimLanes(dbName, flagOut, tl...)
-		}
+		}*/
 	case "diff":
 		baseDBName := db.Ops("x", util.AppName(flagBase), "13")
 		for _, arg := range flagArgs {
@@ -242,9 +247,12 @@ func handlePrimaryCommands(dbName string) {
 func handleSchedTestCommands() {
 	switch flagCmd {
 	case "test":
-		mytest := schedtest.SchedTest(flagApp, flagSrc, flagX, flagTO, flagDepth, flagIter)
+		// for measuring overhead
+		//schedtest.NativeRun(flagApp)
+		//mytest := schedtest.SchedTest(flagApp, flagSrc, flagX, flagTO, flagDepth, flagIter)
+		schedtest.SchedTest(flagApp, flagSrc, flagX, flagTO, flagDepth, flagIter)
 		//fmt.Println(mytest.ToString())
-		for _,v := range(mytest.DBNames){
+		/*for _,v := range(mytest.DBNames){
 			//fmt.Println(k)
 			//fmt.Println("-------")
 			//fmt.Println(v)
@@ -252,10 +260,10 @@ func handleSchedTestCommands() {
 			//db.SwimLanes(v,flagOut,"SCHD")
 			db.ExecVis(v,mytest.TestPath)
 			//db.MutexReport(v)
-		}
+		}*/
 	case "execvis":
 		// figure out test name
-		//
+		db.ExecVis(flagDB,flagOut)
 		//schedTest.ExecVis()
 	}
 

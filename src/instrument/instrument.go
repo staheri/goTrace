@@ -12,6 +12,7 @@ import (
 	"db"
 	"strings"
 	"log"
+	"time"
 )
 
 
@@ -70,8 +71,8 @@ func (app *AppExec) DBPointer() (dbName string, err error){
 		return db.Ops(app.Source, app.App, app.X),nil
 	}
 
-	fmt.Println("DBPointer: Nativ run...")
-	log.Println("DBPointer: Nativ run...")
+	fmt.Println("DBPointer: Native run...")
+	log.Println("DBPointer: Native run...")
 	// instrument, rewrite, execute, collect, store, obtain DBname
 	dbName,err = app.Trace()
 	if err != nil{
@@ -96,21 +97,48 @@ func (app *AppExec) Trace() (dbName string, err error){
 
 	// writes instrumented code into app.NewPath
 	fmt.Println("Trace: Rewrite...")
+
+	// timing start
+	start := time.Now()
+
 	err = app.RewriteSource()
 	if err != nil {
 		return "", fmt.Errorf("couldn't rewrite source code: %v", err)
 	}
 
+	// timing end
+	end := time.Since(start)
+	log.Printf("[TIME %v: %v]\n","Prime Rewrite",end)
+	//fmt.Printf("***\n[TIME %v: %v]\n***\n","Prime Rewrite",end)
+
 	// exeute, capture and parse trace
 	fmt.Println("Trace: Execute...")
+
+	// timing start
+	start = time.Now()
 	events, err := ExecuteTrace(app.NewPath)
 	if err != nil{
 		return "", fmt.Errorf("Error in ExecuteTrace:", err)
 	}
 
+	// timing end
+	end = time.Since(start)
+	log.Printf("[TIME %v: %v]\n","Prime ExecuteTrace",end)
+	//fmt.Printf("***\n[TIME %v: %v]\n***\n","Prime ExecuteTrace",end)
+
 	// store traces
 	fmt.Println("Trace: Store...")
-	return db.Store(events,app.App),nil
+
+	// timing start
+	start = time.Now()
+
+	d := db.Store(events,app.App)
+
+	//timing end
+	end = time.Since(start)
+	log.Printf("[TIME %v: %v]\n","Store",end)
+	//fmt.Printf("***\n[TIME %v: %v]\n***\n","Store",end)
+	return d,nil
 
 }
 
