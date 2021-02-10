@@ -1258,7 +1258,7 @@ func WaitingGroupReport(dbName string) {
 	}
 }
 
-func SwimLanes(dbName, resultpath string, categories ...string) {
+/*func SwimLanes(dbName, resultpath string, categories ...string) {
 	//func ResourceGraph(dbName, resultpath string){
 	// Variables
 	var subq, q, event, arg string
@@ -1291,6 +1291,13 @@ func SwimLanes(dbName, resultpath string, categories ...string) {
 		gmap[gid] = id - 1
 		//fmt.Printf("eventG: %v - tableG: %v\n",gid,id-1)
 	}
+
+	for k,_ := range(gmap){
+		gs = append(gs,k)
+	}
+	sort.Ints(gs)
+
+
 	q = `SELECT t2.id, t2.g, t2.type, t4.arg, t4.value
 			 FROM Events t2 `
 
@@ -1378,7 +1385,7 @@ func SwimLanes(dbName, resultpath string, categories ...string) {
 		}
 		fmt.Printf("\n")
 	}*/
-
+	/*
 	// Write dot
 	outdot := resultpath + "/" + dbName + "_rg.dot"
 	outpdf := resultpath + "/" + dbName + "_rg.pdf"
@@ -1386,7 +1393,7 @@ func SwimLanes(dbName, resultpath string, categories ...string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	f.WriteString(mat2dot(gmat))
+	f.WriteString(mat2dot(gmat,header))
 	f.Close()
 
 	// Create pdf
@@ -1405,7 +1412,7 @@ func SwimLanes(dbName, resultpath string, categories ...string) {
 		return
 	}
 	fmt.Println("Result: " + out.String())
-}
+}*/
 
 func ChannelGraph(dbName, outdir string) {
 
@@ -1761,13 +1768,15 @@ func ConcUsage(dbName string) map[string]int {
 }
 
 func ExecVis(dbName, resultpath string) {
-	// vars
-	var id            int
-	var g             uint64
-	var event, rid    string
-	var _rid          sql.NullString
-	var row           []string
-	var ignored,data  []string
+
+	// Variables
+	var id                int
+	var g                 uint64
+	var event,rid,ev,src  string
+	var _rid,_src,_cl     sql.NullString
+	var ignored,data,row  []string
+	gmap := make(map[int]int)
+	gloc := make(map[int]string)
 
 	// Establish connection to DB
 	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
@@ -1781,31 +1790,72 @@ func ExecVis(dbName, resultpath string) {
 
 
 	// Generate gmap and gmat
-	gmap := make(map[int]int)
-	q := `SELECT t1.id,t1.type,t1.g,t1.rid FROM Events t1
+	gcreateLoc, err := db.Prepare("SELECT createLoc FROM Goroutines WHERE gid=?")
+	check(err)
+
+
+	q := `SELECT t1.id,t1.type,t1.g,t1.rid,t1.src FROM Events t1
 				INNER JOIN (select * from global.catBLCK union select * from global.catSCHD) t2
 				ON t1.type=t2.eventName
 				ORDER BY t1.id;`
+
+	r2ignoreStmt,err := db.Prepare("select file,func from stackframes where eventid=?;")
+	check(err)
+	defer r2ignoreStmt.Close()
+
 	res, err := db.Query(q)
 	check(err)
 	for res.Next() {
-		err = res.Scan(&id,&event, &g, &_rid)
+		err = res.Scan(&id,&event, &g, &_rid,&_src)
+		ev = strings.Split(event,"Ev")[1]
 		check(err)
 		if _rid.Valid{
 			rid = _rid.String
 		}else{
 			rid = ""
 		}
+
+		if _src.Valid{
+			src = strings.Split(_src.String,":")[1]+"."+strings.Split(_src.String,":")[2]
+		} else{
+			src = "-"
+		}
 		if !util.Contains(ignored,rid){
-			if toIgnore,isIgnore := ridToIgnore(db,rid,id);isIgnore{
+			if toIgnore,isIgnore := ridToIgnore(r2ignoreStmt,rid,id);isIgnore{
 				ignored = append(ignored,toIgnore)
 				continue
 			}
+
+			// check to see if we see this g before
+			// if true, the create location is already initialized
+			// if false, we need to initialize it
+			if _,ok := gmap[int(g)];!ok{
+				res1,err1 := gcreateLoc.Query(g)
+				check(err1)
+				if res1.Next(){
+					err1 = res1.Scan(&_cl)
+					check(err1)
+				}
+				res1.Close()
+
+				if _cl.Valid{
+					gloc[int(g)]=strings.Split(_cl.String,":")[1]+"."+strings.Split(_cl.String,":")[2]
+				}else{
+					gloc[int(g)]= "ROOT G"
+				}
+			}
+
 			gmap[int(g)]=1
-			data = append(data,strconv.Itoa(int(g))+":"+rid+">"+event)
+			if !strings.HasPrefix(rid,"G") && rid != ""{
+				data = append(data,strconv.Itoa(int(g))+":"+rid+">"+ev+"\\n"+src+"\\n")
+			} else{
+				data = append(data,strconv.Itoa(int(g))+":"+ev+"\\n"+src+"\\n")
+			}
+
 		}
 	}
 	res.Close()
+	gcreateLoc.Close()
 	// data has the sequence of events that we want
 
 	// now create gmat
@@ -1816,7 +1866,14 @@ func ExecVis(dbName, resultpath string) {
 	}
 	sort.Ints(gs)
 
-	// create gmat
+	// gmat header
+	for _,g := range(gs){
+		row = append(row,"G"+strconv.Itoa(g)+"\\n"+gloc[g]+"\\n")
+	}
+	header := row
+	//gmat.append(gmat,row)
+
+	// gmat body
 	for _,ev := range(data){
 		row = nil
 		evs := strings.Split(ev,":")
@@ -1843,7 +1900,7 @@ func ExecVis(dbName, resultpath string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	f.WriteString(mat2dot(gmat))
+	f.WriteString(mat2dot(gmat,header))
 	f.Close()
 
 	// start cmd
@@ -1862,7 +1919,6 @@ func ExecVis(dbName, resultpath string) {
 	}
 	log.Println(">>> ExecVis: Result: " + out.String())
 	// end cmd
-
 	fmt.Println("ExecVis: Generated visualization: ", outpdf)
 
 }
