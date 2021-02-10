@@ -23,7 +23,11 @@ func check(err error){
 	}
 }
 
-func mat2dot(mat [][]string) string{
+func mat2dot(mat [][]string, header []string) string{
+
+	width := "2"
+	fontsize := "11"
+
 	if len(mat) < 1{
 		panic("Mat is empty")
 	}
@@ -36,11 +40,11 @@ func mat2dot(mat [][]string) string{
 
 	//subgraph G labels (-1)
 	tmp = "\n\tsubgraph{"
-	tmp = tmp + "\n\t\tnode [margin=0 fontsize=8 width=0.75 shape=box style=dashed]"
+	tmp = tmp + "\n\t\tnode [margin=0 fontsize="+fontsize+" width="+width+" shape=box style=dashed]"
 	tmp = tmp + "\n\t\trank=same;"
 	tmp = tmp + "\n\t\trankdir=LR"
-	for i,_ := range(mat[0]){
-		tmp=tmp+"\n\t\t\"-1,"+strconv.Itoa(i)+"\" [label=\"G"+strconv.Itoa(i)+"\"]"
+	for i,g := range(header){
+		tmp=tmp+"\n\t\t\"-1,"+strconv.Itoa(i)+"\" [label=\""+g+"\"]"
 	}
 	tmp = tmp + "\n\n\t\tedge [dir=none, style=invis]"
 
@@ -53,7 +57,7 @@ func mat2dot(mat [][]string) string{
 	// For loop for all the subgraphs
 	for i,row := range(mat){
 		tmp = "\n\tsubgraph{"
-		tmp = tmp + "\n\t\tnode [margin=0 fontsize=8 width=0.75 shape=box style=invis]"
+		tmp = tmp + "\n\t\tnode [margin=0 fontsize="+fontsize+" width="+width+" shape=box style=invis]"
 		tmp = tmp + "\n\t\trank=same;"
 		tmp = tmp + "\n\t\trankdir=LR\n"
 		for j,el := range(row){
@@ -86,7 +90,7 @@ func mat2dot(mat [][]string) string{
 
 	//subgraph X
 	tmp = "\n\tsubgraph{"
-	tmp = tmp + "\n\t\tnode [margin=0 fontsize=8 width=0.75 shape=box style=invis]"
+	tmp = tmp + "\n\t\tnode [margin=0 fontsize="+fontsize+" width="+width+" shape=box style=invis]"
 	tmp = tmp + "\n\t\trank=same;"
 	tmp = tmp + "\n\t\trankdir=LR"
 	for i,_ := range(mat[0]){
@@ -222,14 +226,15 @@ func isBadSelect(db *sql.DB, event string, id int) (bool){
 			return true
 		}
 	}
+	res.Close()
 	return false
 }
 
 // check if the rid is one of print, trace, rand, reschedule()
-func ridToIgnore(db *sql.DB,rid string,id int) (string,bool){
+func ridToIgnore(prep *sql.Stmt,rid string,id int) (string,bool){
 	var file,funct string
-	q := `select file,func from stackframes where eventid=`+strconv.Itoa(id)+`;`
-	res,err := db.Query(q)
+	//q := `select file,func from stackframes where eventid=?;`
+	res,err := prep.Query(id)
 	check(err)
 	for res.Next(){
 		err = res.Scan(&file,&funct)
@@ -246,5 +251,6 @@ func ridToIgnore(db *sql.DB,rid string,id int) (string,bool){
 			return rid,true
 		}
 	}
+	res.Close()
 	return "",false
 }
