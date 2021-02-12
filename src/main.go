@@ -21,6 +21,7 @@ var (
 	flagCmd, flagOut, flagSrc, flagX, flagBase, flagApp, dbName, flagDB  string
 	flagCons, flagAtrMode, flagN, flagTO, flagDepth, flagIter            int
 	flagArgs                                                             []string
+	flagMT                                                               bool
 	validCategories    = []string{"CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGCV", "SCHD", "BLCK"}
 	validPrimeCmds     = []string{"word", "hac", "rr", "diff", "dineData", "cleanDB", "dev", "hb", "gtree", "cgraph", "resg"}
 	validTestSchedCmds = []string{"test","execvis"}
@@ -28,7 +29,7 @@ var (
 )
 
 func main() {
-
+	var err error
 	fmt.Println("Initializing GOAT V.0.1 ...")
 	parseFlags()
 
@@ -43,14 +44,20 @@ func main() {
 		// New App instance
 		myapp := instrument.NewAppExec(flagApp, flagSrc, flagX, flagTO)
 		// Obtain DB
-		dbn, err := myapp.DBPointer()
-		if err != nil {
-			panic(err)
+		dbn := ""
+		if flagDB != ""{
+			dbn, err = myapp.DBPointer()
+			if err != nil {
+				panic(err)
+			}
+		}else{
+			dbn = flagDB
 		}
+
 		fmt.Println("Working DB: ",dbn)
 		myapp.DBName = dbn
 		handlePrimaryCommands(myapp.DBName)
-		fmt.Println(myapp.ToString())
+		//fmt.Println(myapp.ToString())
 	}
 }
 
@@ -71,6 +78,7 @@ func parseFlags() {
 	flag.IntVar(&flagTO, "to", 0, "Timeout for deadlocks")
 	flag.IntVar(&flagDepth, "depth", 0, "Max depth for rescheduling")
 	flag.IntVar(&flagIter, "iter", 2, "Testing iteration")
+	flag.BoolVar(&flagMT, "mt", false, "Measure Times")
 
 	flag.Parse()
 
@@ -135,6 +143,12 @@ func parseFlags() {
 	if flagSrc == "x" && flagX == "" {
 		util.PrintUsage()
 		panic("Needs X value!")
+	}
+
+	if flagMT{
+		util.MeasureTime = true
+	}else{
+		util.MeasureTime = false
 	}
 
 	flagArgs = flag.Args()
@@ -248,7 +262,7 @@ func handleSchedTestCommands() {
 	switch flagCmd {
 	case "test":
 		// for measuring overhead
-		//schedtest.NativeRun(flagApp)
+		schedtest.NativeRun(flagApp)
 		//mytest := schedtest.SchedTest(flagApp, flagSrc, flagX, flagTO, flagDepth, flagIter)
 		schedtest.SchedTest(flagApp, flagSrc, flagX, flagTO, flagDepth, flagIter)
 		//fmt.Println(mytest.ToString())

@@ -1824,10 +1824,7 @@ func ExecVis(dbName, resultpath string) {
 		} else{
 			src = "-"
 		}
-		fmt.Println("IGNORED: ",ignored)
-		fmt.Println(event, " <> ",rid," EOF")
 		if !util.Contains(ignored,rid){
-			fmt.Println(event, " <> ",rid," EOF")
 			if toIgnore,isIgnore := ridToIgnore(r2ignoreStmt,rid,id);isIgnore{
 				ignored = append(ignored,toIgnore)
 				continue
@@ -1853,7 +1850,6 @@ func ExecVis(dbName, resultpath string) {
 			}
 
 			gmap[int(g)]=1
-			fmt.Println(g,rid,ev,src)
 			if !strings.HasPrefix(rid,"G") && rid != ""{
 				if _pos.Valid{
 					pos = int(_pos.Int64)

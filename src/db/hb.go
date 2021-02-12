@@ -162,6 +162,11 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 
 
 	q = "SELECT id,type,ts,offset,g,p,linkoff,rid,reid,rval,rclock,src FROM Events ORDER BY ts;"
+	/*q = `SELECT id,type,ts,offset,g,p,linkoff,rid,reid,rval,rclock,src
+			 FROM Events
+			 LEFT JOIN (select * from Args where arg="pos") t1
+			 ON id=t1.eventid
+			 ORDER BY ts;`*/
 	res,err = db.Query(q)
 	check(err)
 	defer res.Close()

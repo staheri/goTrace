@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	_"util"
+	"util"
 	"db"
 	"instrument"
 	"strings"
@@ -81,7 +81,7 @@ func SchedTest(app,src,x string, to,depth,iter int) *instrument.AppTest {
 }
 
 
-// For measuring the native runtime 
+// For measuring the native runtime
 func NativeRun (app string) {
 	// create tmpdir
 	log.Println("NativeRun: Create tempdir ")
@@ -125,8 +125,9 @@ func NativeRun (app string) {
 		panic(err)
 	}
 	log.Printf("[TIME %v: %v]\n","Native Build",time.Since(start))
-	fmt.Printf("[TIME %v: %v]\n","Native Build",time.Since(start))
-
+	if util.MeasureTime{
+		fmt.Printf("[TIME %v: %v]\n","Native Build",time.Since(start))
+	}
 	// run binary
 	log.Println("ExecuteTrace: Run ",tmpBinary.Name())
 	stderr.Reset()
@@ -136,6 +137,9 @@ func NativeRun (app string) {
 	if err = cmd.Run(); err != nil {
 		panic(err)
 	}
-	log.Printf("[TIME %v: %v s]\n","Native Run",time.Since(start))
-	fmt.Printf("***\n[TIME %v: %v s]\n***\n","Native Run",time.Since(start))
+	log.Printf("[TIME %v: %v]\n","Native Run",time.Since(start))
+	if util.MeasureTime{
+		fmt.Printf("***\n[TIME %v: %v]\n***\n","Native Run",time.Since(start))
+	}
+
 }

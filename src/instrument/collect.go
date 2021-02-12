@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"log"
 	"time"
+	"util"
 )
 
 // - Compile and executes the modified source
@@ -45,7 +46,9 @@ func ExecuteTrace(path string) ([]*trace.Event, error){
 	// timing end
 	end := time.Since(start)
 	log.Printf("[TIME %v: %v]\n","ExecTrace Build",end)
-	//fmt.Printf("***\n[TIME %v: %v]\n***\n","ExecTrace Build",end)
+	if util.MeasureTime{
+		fmt.Printf("***\n[TIME %v: %v]\n***\n","ExecTrace Build",end)
+	}
 
 
 	// run
@@ -64,7 +67,10 @@ func ExecuteTrace(path string) ([]*trace.Event, error){
 	// timing end
 	end = time.Since(start)
 	log.Printf("[TIME %v: %v]\n","ExecTrace Run",end)
-	//fmt.Printf("***\n[TIME %v: %v]\n***\n","ExecTrace Run",end)
+	if util.MeasureTime{
+		fmt.Printf("[TIME %v: %v]\n","ExecTrace Run",end)
+	}
+
 
 	// check length of stderr
 	if stderr.Len() == 0 {
@@ -81,7 +87,10 @@ func ExecuteTrace(path string) ([]*trace.Event, error){
 	// timing end
 	end = time.Since(start)
 	log.Printf("[TIME %v: %v]\n","Parse Trace",end)
-	//fmt.Printf("***\n[TIME %v: %v]\n***\n","Parse Trace",end)
+	if util.MeasureTime{
+		fmt.Printf("[TIME %v: %v]\n","Parse Trace",end)
+	}
+
 
 	return r,e
 }

@@ -109,7 +109,9 @@ func (app *AppExec) Trace() (dbName string, err error){
 	// timing end
 	end := time.Since(start)
 	log.Printf("[TIME %v: %v]\n","Prime Rewrite",end)
-	//fmt.Printf("***\n[TIME %v: %v]\n***\n","Prime Rewrite",end)
+	if util.MeasureTime{
+		fmt.Printf("[TIME %v: %v]\n","Prime Rewrite",end)
+	}
 
 	// exeute, capture and parse trace
 	fmt.Println("Trace: Execute...")
@@ -124,8 +126,9 @@ func (app *AppExec) Trace() (dbName string, err error){
 	// timing end
 	end = time.Since(start)
 	log.Printf("[TIME %v: %v]\n","Prime ExecuteTrace",end)
-	//fmt.Printf("***\n[TIME %v: %v]\n***\n","Prime ExecuteTrace",end)
-
+	if util.MeasureTime{
+		fmt.Printf("[TIME %v: %v]\n","Prime ExecuteTrace",end)
+	}
 	// store traces
 	fmt.Println("Trace: Store...")
 

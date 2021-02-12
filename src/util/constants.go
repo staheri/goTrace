@@ -194,3 +194,5 @@ var QueryStruct = [Q_qcount]struct {
 	Q_dispParntGrtns:          {"SELECT * FROM %s.Events WHERE type=\"EvGoCreate\";",nil},
 	Q_cntTerminatedGrtns:      {"SELECT COUNT(*) FROM %s.Events WHERE type=\"EvGoEnd\";",nil},
 }
+
+var MeasureTime bool
