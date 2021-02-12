@@ -1770,11 +1770,12 @@ func ConcUsage(dbName string) map[string]int {
 func ExecVis(dbName, resultpath string) {
 
 	// Variables
-	var id                int
-	var g                 uint64
-	var event,rid,ev,src  string
-	var _rid,_src,_cl     sql.NullString
-	var ignored,data,row  []string
+	var id,pos              int
+	var g                   uint64
+	var event,rid,ev,src    string
+	var _rid,_src,_cl       sql.NullString
+	var _pos                sql.NullInt64
+	var ignored,data,row    []string
 	gmap := make(map[int]int)
 	gloc := make(map[int]string)
 
@@ -1794,9 +1795,11 @@ func ExecVis(dbName, resultpath string) {
 	check(err)
 
 
-	q := `SELECT t1.id,t1.type,t1.g,t1.rid,t1.src FROM Events t1
-				INNER JOIN (select * from global.catBLCK union select * from global.catSCHD) t2
-				ON t1.type=t2.eventName
+	q := `SELECT t1.id,t1.type,t1.g,t1.rid,t1.src,t2.value FROM Events t1
+				LEFT JOIN (select * from Args where arg="pos") t2
+				ON t1.id=t2.eventid
+				INNER JOIN (select * from global.catBLCK union select * from global.catSCHD) t3
+				ON t1.type=t3.eventName
 				ORDER BY t1.id;`
 
 	r2ignoreStmt,err := db.Prepare("select file,func from stackframes where eventid=?;")
@@ -1806,7 +1809,7 @@ func ExecVis(dbName, resultpath string) {
 	res, err := db.Query(q)
 	check(err)
 	for res.Next() {
-		err = res.Scan(&id,&event, &g, &_rid,&_src)
+		err = res.Scan(&id,&event, &g, &_rid,&_src,&_pos)
 		ev = strings.Split(event,"Ev")[1]
 		check(err)
 		if _rid.Valid{
@@ -1815,12 +1818,16 @@ func ExecVis(dbName, resultpath string) {
 			rid = ""
 		}
 
+
 		if _src.Valid{
 			src = strings.Split(_src.String,":")[1]+"."+strings.Split(_src.String,":")[2]
 		} else{
 			src = "-"
 		}
+		fmt.Println("IGNORED: ",ignored)
+		fmt.Println(event, " <> ",rid," EOF")
 		if !util.Contains(ignored,rid){
+			fmt.Println(event, " <> ",rid," EOF")
 			if toIgnore,isIgnore := ridToIgnore(r2ignoreStmt,rid,id);isIgnore{
 				ignored = append(ignored,toIgnore)
 				continue
@@ -1846,12 +1853,21 @@ func ExecVis(dbName, resultpath string) {
 			}
 
 			gmap[int(g)]=1
+			fmt.Println(g,rid,ev,src)
 			if !strings.HasPrefix(rid,"G") && rid != ""{
-				data = append(data,strconv.Itoa(int(g))+":"+rid+">"+ev+"\\n"+src+"\\n")
+				if _pos.Valid{
+					pos = int(_pos.Int64)
+					if pos == 0 {
+						data = append(data,strconv.Itoa(int(g))+":"+rid+" (B)"+ev+"\\n"+src+"\\n")
+					} else{
+						data = append(data,strconv.Itoa(int(g))+":"+rid+" > "+ev+"\\n"+src+"\\n")
+					}
+				} else{
+					data = append(data,strconv.Itoa(int(g))+":"+rid+" > "+ev+"\\n"+src+"\\n")
+				}
 			} else{
 				data = append(data,strconv.Itoa(int(g))+":"+ev+"\\n"+src+"\\n")
 			}
-
 		}
 	}
 	res.Close()
@@ -1920,5 +1936,18 @@ func ExecVis(dbName, resultpath string) {
 	log.Println(">>> ExecVis: Result: " + out.String())
 	// end cmd
 	fmt.Println("ExecVis: Generated visualization: ", outpdf)
+
+
+	_cmd = "open " + outpdf
+	cmd = exec.Command("open", outpdf)
+	log.Printf(">>> ExecVis: Opening %s...\n", _cmd)
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+		panic(fmt.Sprint(err) + ": " + stderr.String())
+		return
+	}
+	log.Println(">>> ExecVis: Result: " + out.String())
 
 }

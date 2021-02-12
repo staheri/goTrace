@@ -234,23 +234,36 @@ func isBadSelect(db *sql.DB, event string, id int) (bool){
 func ridToIgnore(prep *sql.Stmt,rid string,id int) (string,bool){
 	var file,funct string
 	//q := `select file,func from stackframes where eventid=?;`
+	//fmt.Println("ridToIgnore > ",rid)
+
+	if strings.HasPrefix(rid,"G0"){ // if rid is G0, do not ignore
+		return "",false
+	}
 	res,err := prep.Query(id)
 	check(err)
 	for res.Next(){
 		err = res.Scan(&file,&funct)
 		if file == "rand.go" && funct == "math/rand.(*Rand).Intn"{ // random lock
+			//fmt.Println("******* rand ")
 			return rid,true
 		}
 		if file == "print.go" && strings.Split(funct,".")[0] == "fmt"{ // print lock
+			//fmt.Println("******* print ")
 			return rid,true
 		}
 		if funct == "main.Reschedule"{ // reschedule lock
+			//fmt.Println("******* reschedule ")
 			return rid,true
 		}
 		if funct == "runtime/trace.Stop"{ // trace lock
 			return rid,true
 		}
+		if strings.HasPrefix(funct,"runtime/trace"){ // trace lock
+			//fmt.Println("******* trace ")
+			return rid,true
+		}
 	}
 	res.Close()
+	//fmt.Println(">>>>>>>>> PASSED ")
 	return "",false
 }
