@@ -3,7 +3,6 @@ package main
 import (
   "fmt"
   "sync"
-  //"runtime"
   "time"
 )
 
@@ -16,7 +15,6 @@ type sharedObject struct{
 }
 
 func main() {
-  //runtime.GOMAXPROCS(1)
   a := new(sharedObject)
   b := new(sharedObject)
   a.content = true
@@ -35,7 +33,6 @@ func main() {
 
 func (a *sharedObject) and(b *sharedObject){
   a.mu.Lock()
-  //runtime.Gosched()
   b.mu.Lock()
   a.content = a.content && b.content
   b.content = a.content && b.content

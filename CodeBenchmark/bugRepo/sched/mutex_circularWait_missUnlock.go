@@ -46,8 +46,8 @@ func decideBuggy() bool{
   go func(ch chan int){
     ch <- 2
     }(ch)
-  r := <- ch
-  <- ch
+  r := <-ch
+  <-ch
   if r == 1{
     return true
   } else{
