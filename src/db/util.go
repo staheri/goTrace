@@ -8,6 +8,7 @@ import (
 	"strings"
   "os"
   "log"
+	  "github.com/jedib0t/go-pretty/table"
 )
 
 
@@ -243,6 +244,7 @@ func ridToIgnore(prep *sql.Stmt,rid string,id int) (string,bool){
 	check(err)
 	for res.Next(){
 		err = res.Scan(&file,&funct)
+		//fmt.Println(file,funct)
 		if file == "rand.go" && funct == "math/rand.(*Rand).Intn"{ // random lock
 			//fmt.Println("******* rand ")
 			return rid,true
@@ -258,6 +260,9 @@ func ridToIgnore(prep *sql.Stmt,rid string,id int) (string,bool){
 		if funct == "runtime/trace.Stop"{ // trace lock
 			return rid,true
 		}
+		if funct == "runtime/trace.Start"{ // trace lock
+			return rid,true
+		}
 		if strings.HasPrefix(funct,"runtime/trace"){ // trace lock
 			//fmt.Println("******* trace ")
 			return rid,true
@@ -266,4 +271,30 @@ func ridToIgnore(prep *sql.Stmt,rid string,id int) (string,bool){
 	res.Close()
 	//fmt.Println(">>>>>>>>> PASSED ")
 	return "",false
+}
+
+
+// Display trace.Events grouped by Processes
+func DisplayConcUsageTable(cu []*ConUse) (){
+  t := table.NewWriter()
+  /*var rids []string
+  for _,el := range cu{
+    rids = append(rids,el.rid)
+  }
+  sort.Strings(rids)
+	*/
+  t.SetOutputMirror(os.Stdout)
+  t.AppendHeader(table.Row{"id","Rid", "File", "Function","Line", "Event","G"})
+	for i,el := range(cu){
+		var row []interface{}
+		row = append(row,i)
+		row = append(row,el.Rid)
+		row = append(row,el.File)
+		row = append(row,el.Funct)
+		row = append(row,el.Line)
+		row = append(row,el.Event)
+		row = append(row,el.G)
+		t.AppendRow(row)
+  }
+  t.Render()
 }
