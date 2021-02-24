@@ -2,7 +2,6 @@ package main
 import (
   "sync"
   "fmt"
-	"time"
 )
 
 // https://github.com/moby/moby/pull/28462
@@ -28,7 +27,6 @@ func main() {
     <-ch
   }()
 
-	time.Sleep(2*time.Millisecond)
-  fmt.Println("End of main!")
+	fmt.Println("End of main!")
 }
 
