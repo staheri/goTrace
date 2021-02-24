@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"trace"
 	"io"
-	"io/ioutil"
-	_"os"
+	_"io/ioutil"
+	"os"
 	_"os/exec"
 	"util"
 	"strconv"
@@ -13,6 +13,7 @@ import (
 	"strings"
 	"log"
 	"time"
+	"path/filepath"
 )
 
 
@@ -86,14 +87,13 @@ func (app *AppExec) DBPointer() (dbName string, err error){
 // rewrite,execute,collect
 func (app *AppExec) Trace() (dbName string, err error){
 
-	// create tmp dir
-	tmpDir, err := ioutil.TempDir("", "GOAT")
-	if err != nil {
-		return  "", err
+	// create a dir to store rewritten mod
+	temp := filepath.Dir(app.OrigPath)+"/"+app.App
+	app.NewPath = temp+"/"+app.App+"_mod"
+	err = os.MkdirAll(app.NewPath,os.ModePerm)
+	if err != nil{
+		panic(err)
 	}
-	app.NewPath = tmpDir
-	defer removeDir(app.NewPath)
-
 
 	// writes instrumented code into app.NewPath
 	fmt.Println("Trace: Rewrite...")
@@ -140,7 +140,9 @@ func (app *AppExec) Trace() (dbName string, err error){
 	//timing end
 	end = time.Since(start)
 	log.Printf("[TIME %v: %v]\n","Store",end)
-	//fmt.Printf("***\n[TIME %v: %v]\n***\n","Store",end)
+	if util.MeasureTime{
+		fmt.Printf("[TIME %v: %v]\n","Store",end)
+	}
 	return d,nil
 
 }
@@ -169,8 +171,9 @@ func (app *AppExec) ToString() string{
 	s := fmt.Sprintf("-----------\n")
 	s = s + fmt.Sprintf("App: %s\n",app.App)
 	s = s + fmt.Sprintf("Orig. Path: %s\n",app.OrigPath)
+	s = s + fmt.Sprintf("New Path: %s\n",app.NewPath)
 	s = s + fmt.Sprintf("Timeout %d\n",app.Timeout)
-	s = s + fmt.Sprintf("X %d\n",app.X)
+	s = s + fmt.Sprintf("X %s\n",app.X)
 	s = s + fmt.Sprintf("-----------\n")
 	return s
 }
@@ -180,6 +183,7 @@ func (app *AppTest) ToString() string{
 	s := fmt.Sprintf("-----------\n")
 	s = s + fmt.Sprintf("Base INFO\n***\n%s\n***\n",app.BaseExec.ToString())
 	s = s + fmt.Sprintf("Name: %s\n",app.Name)
+	s = s + fmt.Sprintf("Orig. Path: %s\n",app.OrigPath)
 	s = s + fmt.Sprintf("Test Path: %s\n",app.TestPath)
 	s = s + fmt.Sprintf("Depth %d\n",app.Depth)
 	s = s + fmt.Sprintf("Concurrency Usage\n")

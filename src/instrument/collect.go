@@ -47,7 +47,7 @@ func ExecuteTrace(path string) ([]*trace.Event, error){
 	end := time.Since(start)
 	log.Printf("[TIME %v: %v]\n","ExecTrace Build",end)
 	if util.MeasureTime{
-		fmt.Printf("***\n[TIME %v: %v]\n***\n","ExecTrace Build",end)
+		fmt.Printf("[TIME %v: %v]\n","ExecTrace Build",end)
 	}
 
 

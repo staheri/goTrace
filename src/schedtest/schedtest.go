@@ -16,10 +16,13 @@ import (
 	"path/filepath"
 	"time"
 	"log"
+	"strconv"
 )
 
 // execute sched testing
 func SchedTest(app,src,x string, to,depth,iter int) *instrument.AppTest {
+
+	var maxConcUsage int
 
 	// execute the base first
 	fmt.Println("SchedTest: Execute base run...")
@@ -31,25 +34,39 @@ func SchedTest(app,src,x string, to,depth,iter int) *instrument.AppTest {
 		panic(err)
 	}
 
+	fmt.Println(base.ToString())
+
 	log.Printf("[TIME %v: %v]\n","Total Base Run",time.Since(start))
 	//fmt.Printf("***\n[TIME %v: %v]\n***\n","Total Base Run",time.Since(start))
+
+	/////////////////////////////////////////////////////////////////////////////
+	//  Concurrency Usage
+	/////////////////////////////////////////////////////////////////////////////
+	baseConcUsage := db.ConcUsageStruct(dbn)
+	db.DisplayConcUsageTable(baseConcUsage)
+	maxConcUsage = len(baseConcUsage)
+	//InitCoverageTable2(baseConcUsage)
+
+	// initilize a table to store coverage metrics
+
 
 	fmt.Println("SchedTest: Initialize new test run...")
 	test := instrument.NewAppTest(base,depth)
 	// obtain the base rewritten version
-	test.OrigPath = strings.Split(base.OrigPath,".go")[0]+"_mod.go"
+	test.OrigPath = filepath.Join(base.NewPath, strings.Split(filepath.Base(base.OrigPath),".")[0]+"_mod.go")
 
 	// create a dir to store rewritten schedtest version permanently
-	temp := filepath.Dir(test.OrigPath)+"/"+base.App
-	test.TestPath = temp+"/"+test.Name
+	temp := filepath.Dir(base.OrigPath)+"/"+base.App+"/schedTests"
+	test.TestPath = temp+"/"+test.Name+"_S0"
 	err = os.MkdirAll(test.TestPath,os.ModePerm)
 	if err != nil{
 		panic(err)
 	}
 
 	fmt.Println("SchedTest: Rewrites permanent schedTest version: ",test.TestPath)
+	fmt.Println("SchedTest: Test Origpath: ",test.OrigPath)
 	// rewrite the schedTest based on the base rewritten and concusage
-	err = test.RewriteSourceSched()
+	err = test.RewriteSourceSched(0)
 	if err != nil{
 		panic(err)
 	}
@@ -58,15 +75,22 @@ func SchedTest(app,src,x string, to,depth,iter int) *instrument.AppTest {
 	//    trace (execute,collect,store) the permanent version schedTest
 	//    executeTrace(app.NewPath)
 	//    add dbnames to test object
+
+	fmt.Println(test.ToString())
+	fmt.Println("SchedTest: ///////////////////////////")
 	fmt.Println("SchedTest: Testing iterations begin...")
-	passed := 0
-	failed := 0
+	fmt.Println("SchedTest: ///////////////////////////")
+
+	var passed,failed,latest int
+
 	for i := 0 ; i<iter ; i++ {
+		//fmt.Println("SchedTest: Executing ",test.TestPath)
 		events, err := instrument.ExecuteTrace(test.TestPath)
 		if err != nil{
 			fmt.Errorf("Error in ExecuteTrace:", err)
 			return nil
 		}
+		//fmt.Println("SchedTest: Storing ",test.TestPath," in ", test.Name)
 		dbn := db.Store(events,test.Name)
 		fmt.Printf("Test run %d/%d (%s):\n",i+1,iter,dbn)
 		if db.Checker(dbn,false){
@@ -75,6 +99,40 @@ func SchedTest(app,src,x string, to,depth,iter int) *instrument.AppTest {
 			failed++
 		}
 		test.DBNames[i] = dbn
+
+		// if concurrency usage changes, do the re-write
+		testConcUsage := db.ConcUsageStruct(dbn)
+		db.DisplayConcUsageTable(testConcUsage)
+		//InitCoverageTable2(testConcUsage)
+
+		// we can find a better way to see if concusage is updated
+		if len(testConcUsage) > maxConcUsage{
+			fmt.Println("more concurrency usage is found, REWRITE!")
+			maxConcUsage = len(testConcUsage)
+			// obtain the base rewritten version
+			test.OrigPath = filepath.Join(test.TestPath,test.Name+"_s"+strconv.Itoa(latest)+"_sched.go")
+			latest = i
+
+			// create a dir to store rewritten schedtest version permanently
+			temp := filepath.Dir(base.OrigPath)+"/"+base.App+"/schedTests"
+			test.TestPath = temp+"/"+test.Name+"_S"+strconv.Itoa(i+1)
+			err = os.MkdirAll(test.TestPath,os.ModePerm)
+			if err != nil{
+				panic(err)
+			}
+
+			//fmt.Println(test.ToString())
+			test.ConcUsage = db.ConcUsage(dbn)
+			//fmt.Println("SchedTest: New concurrency usages are added!")
+			//fmt.Println(test.ToString())
+
+			//fmt.Println("SchedTest: Rewrites permanent schedTest version: ",test.TestPath)
+			//fmt.Println("SchedTest: Test Origpath: ",test.OrigPath)
+			err = test.RewriteSourceSched(i+1)
+			if err != nil{
+				panic(err)
+			}
+		}
 	}
 	fmt.Printf("Passed: %d\nFailed: %d\n",passed,failed)
 	return test

@@ -16,6 +16,7 @@ import (
 	_"reflect"
 	"fmt"
 	"strings"
+	"util"
 )
 
 // injects and rewrite source in app.OrigPath
@@ -24,25 +25,27 @@ import (
 func (app *AppExec) RewriteSource() error {
 	var data []byte
 	var err error
+
+	// debugging info
 	log.Println("RewriteSource: Add code to ",app.OrigPath)
+	if util.Debug{
+		fmt.Println("RewriteSource: Add code to ",app.OrigPath)
+	}
+
+	// add tracing code
 	data, err = addCode(app.OrigPath,app.Timeout)
 	if err != nil {
 		fmt.Println("Error in addCode:", err)
 		return err
 	}
-	// create files to store rewritten data
-	filename := filepath.Join(app.NewPath, filepath.Base(app.OrigPath))
-	toStore := filepath.Join(filepath.Dir(app.OrigPath), strings.Split(filepath.Base(app.OrigPath),".")[0]+"_mod.go")
 
-	// write files
-	err = ioutil.WriteFile(toStore, data, 0666)
-	log.Println("RewriteSource: Writes data to ",toStore)
-	if err != nil {
-		panic(err)
-		return err
-	}
+	// create files to store rewritten data
+	filename := filepath.Join(app.NewPath, strings.Split(filepath.Base(app.OrigPath),".")[0]+"_mod.go")
 	err = ioutil.WriteFile(filename, data, 0666)
 	log.Println("RewriteSource: Writes data to ",filename)
+	if util.Debug{
+		fmt.Println("RewriteSource: Writes data to ",filename)
+	}
 	if err != nil {
 		panic(err)
 		return err
@@ -53,24 +56,27 @@ func (app *AppExec) RewriteSource() error {
 // injects and rewrite source in app.OrigPath
 // rewritten file(s) are stored in app.NewPath
 // nothing returns
-func (app *AppTest) RewriteSourceSched() error {
+func (app *AppTest) RewriteSourceSched(ver int) error {
 	var data []byte
 	var err error
+
+	// debugging info
 	log.Println("RewriteSourceSched: Add sched code to ",app.OrigPath)
-	data, err = addCodeSched(app.OrigPath,app.Depth,app.ConcUsage)
+	if util.Debug{
+		fmt.Println("RewriteSourceSched: Add sched code to ",app.OrigPath)
+	}
+
+	// add sched calls
+	data, err = addCodeSched(app.OrigPath,app.Depth,app.ConcUsage,ver)
 	if err != nil {
 		panic(err)
-		return err
 	}
 	// create files to store rewritten data
-	filename := filepath.Join(app.TestPath, app.Name+"_sched.go")
-
-
+	filename := filepath.Join(app.TestPath, app.Name+"_s"+strconv.Itoa(ver)+"_sched.go")
 	err = ioutil.WriteFile(filename, data, 0666)
 	log.Println("writes data to ",filename)
 	if err != nil {
 		panic(err)
-		return err
 	}
 	return nil
 }
@@ -137,9 +143,10 @@ func addCode(path string, timeout int) ([]byte, error) {
 //    - adds needed imports
 //    - adds tracing mechanism (start/stop)
 //    - adds constant depth, struct type, global counter and Reschedule function declaration
-func addCodeSched(path string,depth int,concUsage map[string]int) ([]byte, error) {
+func addCodeSched(path string,depth int,concUsage map[string]int, ver int) ([]byte, error) {
 
 	var conf loader.Config
+	var s string
 	if _, err := conf.FromArgs([]string{path}, false); err != nil {
 		return nil, err
 	}
@@ -161,55 +168,88 @@ func addCodeSched(path string,depth int,concUsage map[string]int) ([]byte, error
 	//fmt.Println(" >>> Added Imports")
 
 	// add constant, struct type, global counter, function declration
-	log.Println("AddCodeSched: Add constants, struct, flobal counter, func. decl.")
-	ast.Inspect(astFile, func(n ast.Node) bool {
-		switch x := n.(type) {
-		case *ast.File:
-			// add constant, struct type, global counter, function declration
-			decls := newDecls(depth)
-			decls2 := x.Decls
-			decls = append(decls2,decls...)
-			x.Decls = decls
-			return true
-		}
-		return true
-	})
-
-	log.Println("AddCodeSched: Add Gosched() invocations")
-	astutil.Apply(astFile, func(cr *astutil.Cursor) bool{
-		//_,ok := cr.Node().(*ast.GoStmt)
-		n := cr.Node()
-		if n != nil{
-			t1 := n.Pos()
-			t2 := prog.Fset.Position(t1)
-			s := fmt.Sprintf("%v",t2)
-			if !matches(n,concUsage,s) {
+	// if this is the first iteration, continue as stated above
+	// otherwise, remove Reschedules and add them again based on new concurrency usage
+	if ver == 0{
+		log.Println("AddCodeSched: Add constants, struct, global counter, func. decl.")
+		ast.Inspect(astFile, func(n ast.Node) bool {
+			switch x := n.(type) {
+			case *ast.File:
+				// add constant, struct type, global counter, function declration
+				decls := newDecls(depth)
+				decls2 := x.Decls
+				decls = append(decls2,decls...)
+				x.Decls = decls
 				return true
 			}
-		} else{
 			return true
-		}
-		cr.InsertBefore(callFuncSched())
-		return true
-		//fmt.Println("")
-	},nil)
+		})
 
-	// add GOMACPROCS
-	ast.Inspect(astFile, func(n ast.Node) bool {
-		switch x := n.(type) {
-		case *ast.FuncDecl:
-			// find 'main' function
-			if x.Name.Name == "main" && x.Recv == nil {
-				stmts := goMaxProcs()
-				stmts = append(stmts, x.Body.List...)
-				x.Body.List = stmts
+		// add GOMACPROCS
+		ast.Inspect(astFile, func(n ast.Node) bool {
+			switch x := n.(type) {
+			case *ast.FuncDecl:
+				// find 'main' function
+				if x.Name.Name == "main" && x.Recv == nil {
+					stmts := goMaxProcs()
+					stmts = append(stmts, x.Body.List...)
+					x.Body.List = stmts
+					return true
+				}
+			}
+			return true
+		})
+		log.Println("AddCodeSched: Add Gosched() invocations")
+		astutil.Apply(astFile, func(cr *astutil.Cursor) bool{
+			//_,ok := cr.Node().(*ast.GoStmt)
+			n := cr.Node()
+			if n != nil{
+				t1 := n.Pos()
+				t2 := prog.Fset.Position(t1)
+				s = fmt.Sprintf("%v",t2)
+				if !matches(n,concUsage,s) {
+					return true
+				}
+			} else{
 				return true
 			}
-		}
-		return true
-	})
 
+			cr.InsertBefore(callFuncSched())
+			return true
+		},nil)
 
+	}else{
+		// remove if (Reschedule) ..
+		astutil.Apply(astFile, func(cr *astutil.Cursor) bool{
+			n := cr.Node()
+			if n != nil && isCallReschedule(n){
+				cr.Delete()
+				return true
+			}
+			return true
+		},nil)
+
+		// add if (Reschedule) ..
+		log.Println("AddCodeSched: Add Gosched() invocations")
+		astutil.Apply(astFile, func(cr *astutil.Cursor) bool{
+			//_,ok := cr.Node().(*ast.GoStmt)
+			n := cr.Node()
+			if n != nil{
+				t1 := n.Pos()
+				t2 := prog.Fset.Position(t1)
+				s = fmt.Sprintf("%v",t2)
+				if !matches(n,concUsage,s) {
+					return true
+				}
+			} else{
+				return true
+			}
+			cr.InsertBefore(callFuncSched())
+			return true
+		},nil)
+	}
+
+	// write modified ast
 	var buf bytes.Buffer
 	err = printer.Fprint(&buf, prog.Fset, astFile)
 	if err != nil {
@@ -334,13 +374,35 @@ func createTraceStmts(timeout int) []ast.Stmt {
 
 // checks if current AST node matches with any concUsage instances
 func matches(n ast.Node, conc map[string]int, location string) bool{
+
 	if location != "-"{
 		t := strings.Split(filepath.Base(location),":")[0] + ":" + strings.Split(filepath.Base(location),":")[1]
-		tt := strings.Split(t,"_mod")[0] + strings.Split(t,"_mod")[1]
-		if val,ok := conc[tt]; ok && val != 2 {
-			conc[tt] = 2
-			log.Println("ConcUsage Matches: Return True > ",tt)
+		if val,ok := conc[t]; ok && val != 2 {
+			conc[t] = 2
+			log.Println("ConcUsage Matches: Return True > ",t)
 			return true
+		}
+		return false
+	}
+	return false
+}
+
+// check if current node is (if Reschedule() ...)
+func isCallReschedule(n interface{}) bool{
+	switch x := n.(type){
+	case *ast.IfStmt:
+		_ = x
+		iff := n.(*ast.IfStmt)
+		cond := iff.Cond
+		switch y := cond.(type) {
+		case *ast.CallExpr:
+			_ = y
+			callx := cond.(*ast.CallExpr)
+			z := callx.Fun.(*ast.Ident)
+			if z.Name == "Reschedule"{
+				return true
+			}
+			return false
 		}
 		return false
 	}
