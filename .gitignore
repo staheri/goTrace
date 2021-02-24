@@ -67,6 +67,8 @@ src/golang.org
 results/*
 *_glog.txt
 *_rlog.txt
+*_resg.pdf
+*_resg.dot
 *_chans.md
 *_cgraph.dot
 *_cgraph.pdf
