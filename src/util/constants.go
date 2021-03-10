@@ -196,3 +196,5 @@ var QueryStruct = [Q_qcount]struct {
 }
 
 var MeasureTime bool
+
+var Debug bool

@@ -34,8 +34,6 @@ func SchedTest(app,src,x string, to,depth,iter int) *instrument.AppTest {
 		panic(err)
 	}
 
-	fmt.Println(base.ToString())
-
 	log.Printf("[TIME %v: %v]\n","Total Base Run",time.Since(start))
 	//fmt.Printf("***\n[TIME %v: %v]\n***\n","Total Base Run",time.Since(start))
 
@@ -43,6 +41,7 @@ func SchedTest(app,src,x string, to,depth,iter int) *instrument.AppTest {
 	//  Concurrency Usage
 	/////////////////////////////////////////////////////////////////////////////
 	baseConcUsage := db.ConcUsageStruct(dbn)
+	fmt.Println("Concurrency Usage:")
 	db.DisplayConcUsageTable(baseConcUsage)
 	maxConcUsage = len(baseConcUsage)
 	//InitCoverageTable2(baseConcUsage)
@@ -63,8 +62,7 @@ func SchedTest(app,src,x string, to,depth,iter int) *instrument.AppTest {
 		panic(err)
 	}
 
-	fmt.Println("SchedTest: Rewrites permanent schedTest version: ",test.TestPath)
-	fmt.Println("SchedTest: Test Origpath: ",test.OrigPath)
+	log.Println("SchedTest: Rewrites permanent schedTest version: ",test.TestPath)
 	// rewrite the schedTest based on the base rewritten and concusage
 	err = test.RewriteSourceSched(0)
 	if err != nil{
@@ -76,10 +74,10 @@ func SchedTest(app,src,x string, to,depth,iter int) *instrument.AppTest {
 	//    executeTrace(app.NewPath)
 	//    add dbnames to test object
 
-	fmt.Println(test.ToString())
-	fmt.Println("SchedTest: ///////////////////////////")
-	fmt.Println("SchedTest: Testing iterations begin...")
-	fmt.Println("SchedTest: ///////////////////////////")
+	//fmt.Println(test.ToString())
+	//fmt.Println("SchedTest: ///////////////////////////")
+	//fmt.Println("SchedTest: Testing iterations begin...")
+	//fmt.Println("SchedTest: ///////////////////////////")
 
 	var passed,failed,latest int
 
@@ -102,13 +100,14 @@ func SchedTest(app,src,x string, to,depth,iter int) *instrument.AppTest {
 
 		// if concurrency usage changes, do the re-write
 		testConcUsage := db.ConcUsageStruct(dbn)
-		db.DisplayConcUsageTable(testConcUsage)
+		//db.DisplayConcUsageTable(testConcUsage)
 		//InitCoverageTable2(testConcUsage)
 
 		// we can find a better way to see if concusage is updated
 		if len(testConcUsage) > maxConcUsage{
-			fmt.Println("more concurrency usage is found, REWRITE!")
+			fmt.Println("more concurrency usage is found, Update concurrency table!")
 			maxConcUsage = len(testConcUsage)
+			db.DisplayConcUsageTable(testConcUsage)
 			// obtain the base rewritten version
 			test.OrigPath = filepath.Join(test.TestPath,test.Name+"_s"+strconv.Itoa(latest)+"_sched.go")
 			latest = i

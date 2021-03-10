@@ -21,15 +21,14 @@ var (
 	flagCmd, flagOut, flagSrc, flagX, flagBase, flagApp, dbName, flagDB  string
 	flagCons, flagAtrMode, flagN, flagTO, flagDepth, flagIter            int
 	flagArgs                                                             []string
-	flagMT                                                               bool
+	flagMT, flagDebug                                                    bool
 	validCategories    = []string{"CHNL", "GCMM", "GRTN", "MISC", "MUTX", "PROC", "SYSC", "WGCV", "SCHD", "BLCK"}
-	validPrimeCmds     = []string{"word", "hac", "rr", "diff", "dineData", "cleanDB", "dev", "hb", "gtree", "cgraph", "resg"}
-	validTestSchedCmds = []string{"test","execvis"}
+	validPrimeCmds     = []string{"word", "hac", "rr", "diff", "dineData", "cleanDB", "dev", "hb", "gtree", "cgraph", "resg","leakChecker"}
+	validTestSchedCmds = []string{"test","execVis"}
 	validSrc           = []string{"native", "x", "latest", "schedTest"}
 )
 
 func main() {
-	var err error
 	fmt.Println("Initializing GOAT V.0.1 ...")
 	parseFlags()
 
@@ -44,14 +43,11 @@ func main() {
 		// New App instance
 		myapp := instrument.NewAppExec(flagApp, flagSrc, flagX, flagTO)
 		// Obtain DB
-		dbn := ""
-		if flagDB != ""{
-			dbn, err = myapp.DBPointer()
-			if err != nil {
-				panic(err)
-			}
-		}else{
-			dbn = flagDB
+
+
+		dbn, err := myapp.DBPointer()
+		if err != nil {
+			panic(err)
 		}
 
 		fmt.Println("Working DB: ",dbn)
@@ -79,6 +75,7 @@ func parseFlags() {
 	flag.IntVar(&flagDepth, "depth", 0, "Max depth for rescheduling")
 	flag.IntVar(&flagIter, "iter", 2, "Testing iteration")
 	flag.BoolVar(&flagMT, "mt", false, "Measure Times")
+	flag.BoolVar(&flagDebug, "debug", false, "Print debugging info")
 
 	flag.Parse()
 
@@ -102,7 +99,7 @@ func parseFlags() {
 		panic("Wrong schedTest command")
 	}
 
-	if flagSrc == "SchedTest" && flagCmd == "execvis" && flagDB == ""{
+	if flagSrc == "schedTest" && flagCmd == "execVis" && flagDB == ""{
 		util.PrintUsage()
 		panic("DB name required")
 	}
@@ -144,17 +141,11 @@ func parseFlags() {
 		util.PrintUsage()
 		panic("Needs X value!")
 	}
-
-	if flagMT{
-		util.MeasureTime = true
-	}else{
-		util.MeasureTime = false
-	}
+	util.MeasureTime = flagMT
+	util.Debug = flagDebug
 
 	flagArgs = flag.Args()
 
-	// init log
-	//file, err := os.OpenFile(path.Dir(flagApp)+"/GOAT_log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	file, err := os.OpenFile(path.Dir(flagApp)+"/GOAT_log.txt", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
   if err != nil {
   	log.Fatal(err)
@@ -207,11 +198,6 @@ func handlePrimaryCommands(dbName string) {
 			}
 		}
 
-	/*case "rg":
-		for _, arg := range flagArgs {
-			tl := strings.Split(arg, ",")
-			db.SwimLanes(dbName, flagOut, tl...)
-		}*/
 	case "diff":
 		baseDBName := db.Ops("x", util.AppName(flagBase), "13")
 		for _, arg := range flagArgs {
@@ -231,7 +217,7 @@ func handlePrimaryCommands(dbName string) {
 			tl := strings.Split(arg, ",")
 			hbtable := db.HBTable(dbName, tl...)
 			db.HBLog(dbName, hbtable, flagOut, true)
-			fmt.Println("****")
+			//fmt.Println("****")
 			db.HBLog(dbName, hbtable, flagOut, false)
 		}
 	case "gtree":
@@ -240,20 +226,8 @@ func handlePrimaryCommands(dbName string) {
 		db.ChannelGraph(dbName, flagOut)
 	case "resg":
 		db.ResourceGraph(dbName, flagOut)
-	case "dev":
+	case "leakChecker":
 		db.Checker(dbName,true)
-		/*for _,arg := range(flagArgs){
-		  tl := strings.Split(arg,",")
-		  hbtable := db.HBTable(dbName,tl...)
-		  db.Dev(dbName,hbtable, flagOut)
-		}*/
-
-		//fmt.Println(dbName)
-		//db.Gtree(dbName,flagOut)
-		//db.Histogram(10,dbName)
-		//db.HBLog(dbName,flagOut,true)
-		//fmt.Println("****")
-		//db.HBLog(dbName,flagOut,false)
 	}
 }
 
@@ -263,22 +237,8 @@ func handleSchedTestCommands() {
 	case "test":
 		// for measuring overhead
 		schedtest.NativeRun(flagApp)
-		//mytest := schedtest.SchedTest(flagApp, flagSrc, flagX, flagTO, flagDepth, flagIter)
 		schedtest.SchedTest(flagApp, flagSrc, flagX, flagTO, flagDepth, flagIter)
-		//fmt.Println(mytest.ToString())
-		/*for _,v := range(mytest.DBNames){
-			//fmt.Println(k)
-			//fmt.Println("-------")
-			//fmt.Println(v)
-			//db.Checker(v,true)
-			//db.SwimLanes(v,flagOut,"SCHD")
-			db.ExecVis(v,mytest.TestPath)
-			//db.MutexReport(v)
-		}*/
-	case "execvis":
-		// figure out test name
+	case "execVis":
 		db.ExecVis(flagDB,flagOut)
-		//schedTest.ExecVis()
 	}
-
 }
