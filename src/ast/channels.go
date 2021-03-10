@@ -11,6 +11,7 @@ import (
 	"go/token"
 )
 
+
 func printImportInfo(f *ast.ImportSpec){
   //if len(f.Doc.List) > 0:
   //fmt.Printf("*********<Import>**********\nDoc: %s\nName: %s\n",f.Doc.List[0].Text, f.Name.Name)

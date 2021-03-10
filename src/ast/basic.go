@@ -27,12 +27,12 @@ func channelAnalyis(source string){
 			_ = x // blank identifier
 		file := n.(*ast.File)
 		fmt.Printf("||||\nFile: %+v\npos:%+v\n||||\n",file,fset.Position(n.Pos()))
-
+/*
 		case *ast.CommClause:
 			_ = x // blank identifier
 			commClause := n.(*ast.CommClause)
 			fmt.Printf("||||\nCommClause: %+v\npos:%+v\n||||\n",commClause,fset.Position(n.Pos()))
-/*
+
 		case *ast.GenDecl:
 			_ = x // blank identifier
 		gendecl := n.(*ast.GenDecl)
