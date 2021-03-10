@@ -2,9 +2,13 @@ package main
 
 import (
   _"fmt"
+	//"runtime/trace"
+	//"os"
 )
 
 func main(){
+	//trace.Start(os.Stderr)
+	//defer trace.Stop()
   generator := func(done <-chan interface{}, integers ...int) <-chan int {
     intStream := make(chan int)
     go func() {

@@ -1,7 +1,7 @@
 package main
 
 import "time"
-//import "fmt"
+import "fmt"
 
 func main() {
     var Ball int
@@ -18,7 +18,7 @@ func player(table chan int, i int) {
   for{
     ball := <- table
     ball++
-    //fmt.Printf("Player %d: %d\n",i,ball)
+    fmt.Printf("Player %d: %d\n",i,ball)
     time.Sleep(200 * time.Millisecond)
     table <- ball
   }
