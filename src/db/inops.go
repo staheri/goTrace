@@ -210,6 +210,13 @@ func Store(events []*trace.Event, app string) (dbName string) {
 			rclock = sql.NullInt64{Valid:true, Int64: int64(chanClock[tkey])}
 
 			if desc.Name == "ChRecv"{
+
+				// ignore if it is a blocked recv
+				if e.Args[3] == 0{
+					chanClock[tkey] = chanClock[tkey] - 1
+					rclock = sql.NullInt64{Valid:true, Int64: int64(chanClock[tkey])}
+				}
+
 				rval = sql.NullInt64{Valid:true, Int64: int64(e.Args[2])} // message val
 				reid = sql.NullInt64{Valid:true, Int64: int64(e.Args[1])} // message eid
 				if vv,ok := msgs[msgKey{e.Args[0],e.Args[1],e.Args[2]}] ; ok{
@@ -224,6 +231,12 @@ func Store(events []*trace.Event, app string) (dbName string) {
 			}else{
 				// ChMake, ChSend, ChClose
 				if desc.Name == "ChSend"{
+					// ignore if it is a blocked send
+					if e.Args[3] == 0{
+						chanClock[tkey] = chanClock[tkey] - 1
+						rclock = sql.NullInt64{Valid:true, Int64: int64(chanClock[tkey])}
+					}
+
 					rval = sql.NullInt64{Valid:true, Int64: int64(e.Args[2])} // message val
 					reid = sql.NullInt64{Valid:true, Int64: int64(e.Args[1])} // message eid
 					// Set Predecessor for a receive (key to the event: {cid, eid, val})

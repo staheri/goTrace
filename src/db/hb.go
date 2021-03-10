@@ -54,7 +54,6 @@ func asp2int(asp string) (ret int){
 }
 
 func isWhite(event string, aspects ...string)(ret bool){
-	fmt.Println(aspects)
 	if len(aspects) != 0{
 		ret = false
 		for _,asp := range aspects{
@@ -79,16 +78,14 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 	}
 
 	var err             	      error
-	//var res                   sql.Result
 	var q, event, _ev   	      string
-	var p,eid       		    		int
+	var p,eid,_pos          		int
 	var g,_rid	       		   		uint64
 	var offset 									int64
 	var ts      								int64
 	var predG,predClk,linkoff	  sql.NullInt64
 	var rclock,rval,reid   	    sql.NullInt64
 	var rid,srcLine        	    sql.NullString
-	//var buff, output          string
 
 
 	// Establish connection to DB
@@ -144,6 +141,9 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 	check(err)
 	defer insertStmt.Close()
 
+	checkBlockedStmt,err := db.Prepare("Select value FROM args WHERE eventid=? and arg=\"pos\"")
+	check(err)
+	defer checkBlockedStmt.Close()
 
 	// Init vector clocks
 	msgs          := make(map[msgKey]eventPredecessor) // storing (to be) pred of a send/recv
@@ -206,8 +206,20 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 				panic("_rid")
 			}
 			if event == "ChRecv"{
-				log.Printf("Recv\n")
-				//rval = sql.NullInt32{Valid:true, Int32: int32(e.Args[2])} // message val
+				log.Printf("HB: Recv\n")
+
+				// ignore if it is a blocked recv
+				tres,terr := checkBlockedStmt.Query(eid)
+				check(terr)
+				if tres.Next(){
+					terr = tres.Scan(&_pos)
+					check(terr)
+					if _pos == 0{
+						localClock[g] = localClock[g]-1
+						continue
+					}
+				}
+
 				if vv,ok := msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] ; ok{
 					// A matching sent is found for the recv
 					//fmt.Printf("\tMatching sent is found\n")
@@ -224,6 +236,18 @@ func HBTable(dbName string,aspects ...string) (HBTableName string) {
 			}else{
 				// ChMake, ChSend, ChClose
 				if event == "ChSend"{
+					// ignore if it is a blocked send
+					tres,terr := checkBlockedStmt.Query(eid)
+					check(terr)
+					if tres.Next(){
+						terr = tres.Scan(&_pos)
+						check(terr)
+						if _pos == 0{
+							localClock[g] = localClock[g]-1
+							continue
+						}
+					}
+
 					// Set Predecessor for a receive (key to the event: {cid, eid, val})
 					log.Printf("HBTable: Send\n")
 					if vv,ok := msgs[msgKey{_rid,uint64(reid.Int64),uint64(rval.Int64)}] ; ok{

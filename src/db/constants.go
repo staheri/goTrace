@@ -136,7 +136,7 @@ var EventDescriptions = [EvCount]struct {
 	EvSelect:            {"Select", 1011, true, []string{"pos"},nil},// GOAT: select [timestamp, stack, pos]
 	EvSched:             {"Sched", 1011, true, []string{"pos","curg","aux"},nil}, // GOAT: sched [timestamp, stack, pos, curg, aux]
 	EvCvWait:            {"CvWait",1011, true, []string{"cvid"},nil}, // GOAT: cond var wait [timestamp, stack, cv id]
-  EvCvSig:             {"CvWait",1011, true, []string{"cvid","pos"},nil}, // GOAT: cond var signal [timestamp, stack, cv id, {1: signal, 2: broadcast}]
+  EvCvSig:             {"CvSig",1011, true, []string{"cvid","pos"},nil}, // GOAT: cond var signal [timestamp, stack, cv id, {1: signal, 2: broadcast}]
 }
 
 

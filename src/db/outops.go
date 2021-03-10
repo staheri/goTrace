@@ -1692,81 +1692,6 @@ func ResourceGraph(dbName, outdir string) {
 	fmt.Println("Resource Graph visualization: ", outdir+"/"+dbName+"_resg.pdf")
 }
 
-func ConcUsage(dbName string) map[string]int {
-
-	// Variables
-	var id                      int
-	var g                       uint64
-	var event,file,funct,line   string
-	var rid                     sql.NullString
-
-	concUsage := make(map[string]int)
-	fullstack := make(map[int][]string) // key: eventid, value: slice of stacks
-	blacklist := make(map[string]int)
-
-	// Establish connection to DB
-	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/"+dbName)
-	if err != nil {
-		panic(err)
-	} else {
-		log.Println("ConcUsage: Connected to ",dbName)
-	}
-	defer db.Close()
-	// END DB
-
-	// Query catSCHD
-	q := `SELECT t1.id,t1.type,t1.g,t1.rid,t3.file,t3.func,t3.line FROM Events t1
-				INNER JOIN global.catSCHD t2
-				ON t1.type=t2.eventName
-				INNER JOIN Stackframes t3 on t1.id=t3.eventid;`
-
-	res, err := db.Query(q)
-	check(err)
-
-	// store fullstack first
-	for res.Next() {
-		err = res.Scan(&id, &event, &g, &rid, &file, &funct, &line)
-		check(err)
-		if !isBadSelect(db,event,id){
-			fullstack[id] = append(fullstack[id], file+":"+funct+":"+line)
-		}else{
-			y,_ := strconv.Atoi(line)
-			fullstack[id] = append(fullstack[id], file+":"+funct+":"+strconv.Itoa(y-1))
-			blacklist[file+":"+line] = 1
-		}
-	}
-	res.Close()
-
-	// now iterate over full stack to find the last in-source location
-	for _, v := range fullstack {
-		t := strings.Split(v[len(v)-1], ":")
-		src := t[0]
-		// start from end, once source changes, break!
-		for i := len(v) - 2; i >= 0; i-- {
-			t1 := strings.Split(v[i], ":")
-			if src != t1[0] {
-				break
-			}
-			t = t1
-			src = t[0]
-		}
-
-		// add loc to concusage
-		// check if it is not in the black list
-		loc := t[0] + ":" + t[2]
-		if _, ok := concUsage[loc]; !ok {
-			if _,ok2 := blacklist[loc]; !ok2{
-				if rid.Valid {
-					concUsage[loc] = 1
-				} else {
-					concUsage[loc] = 0
-				}
-			}
-		}
-	}
-	return concUsage
-}
-
 func ExecVis(dbName, resultpath string) {
 
 	// Variables
@@ -1796,10 +1721,10 @@ func ExecVis(dbName, resultpath string) {
 
 
 	q := `SELECT t1.id,t1.type,t1.g,t1.rid,t1.src,t2.value FROM Events t1
-				LEFT JOIN (select * from Args where arg="pos") t2
-				ON t1.id=t2.eventid
 				INNER JOIN (select * from global.catBLCK union select * from global.catSCHD) t3
 				ON t1.type=t3.eventName
+				LEFT JOIN (select * from Args where arg="pos") t2
+				ON t1.id=t2.eventid
 				ORDER BY t1.id;`
 
 	r2ignoreStmt,err := db.Prepare("select file,func from stackframes where eventid=?;")
